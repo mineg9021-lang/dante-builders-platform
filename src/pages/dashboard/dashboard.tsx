@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { generateOAuthURL } from '@/components/shared';
 import { useStore } from '@/hooks/useStore';
@@ -14,6 +14,11 @@ const DashboardComponent = observer((_props: TMobileIconGuide) => {
     const { client } = useStore();
     const [section, setSection] = useState<'overview' | 'parity' | 'matches' | 'xml'>('overview');
     const [loginError, setLoginError] = useState('');
+
+    useEffect(() => {
+        document.body.classList.toggle('db-parity-workspace-active', section === 'parity');
+        return () => document.body.classList.remove('db-parity-workspace-active');
+    }, [section]);
 
     const handleConnectDeriv = async () => {
         setLoginError('');
@@ -67,14 +72,28 @@ const DashboardComponent = observer((_props: TMobileIconGuide) => {
                         </div>
                     </div>
                     <div className='db-platform__welcome'>
-                        <div><span>YOUR WORKSPACE</span><h2>Everything in its place.</h2><p>Open the dedicated Parity Bot section to analyze live ticks, review its signal and manage execution settings.</p></div>
-                        <button type='button' onClick={() => setSection('parity')}>Open Parity Bot <span aria-hidden='true'>→</span></button>
+                        <div><span>YOUR WORKSPACE</span><h2>Market tools and activity</h2><p>Open a focused tool while keeping the rest of your workspace one tap away.</p></div>
+                        <button type='button' onClick={() => setSection('parity')}>Open Even/Odd Bot <span aria-hidden='true'>→</span></button>
                     </div>
+                    <section className='db-activity-area'>
+                        <div className='db-activity-heading'><span>WORKSPACE ACTIVITIES</span><h2>Choose a tool</h2><p>Separate workspaces, one Deriv connection.</p></div>
+                        <div className='db-activity-grid'>
+                            <button type='button' onClick={() => setSection('parity')}><span className='db-activity-icon'>↕</span><strong>Even / Odd Bot</strong><small>Live parity analysis and guarded Deriv execution</small><b>Open bot →</b></button>
+                            <button type='button' onClick={() => setSection('matches')}><span className='db-activity-icon'>◎</span><strong>Digit Matches Scanner</strong><small>Live 0–9 digit distribution and contract analysis</small><b>Open scanner →</b></button>
+                            <button type='button' onClick={() => setSection('xml')}><span className='db-activity-icon'>⌘</span><strong>AI XML Generator</strong><small>Create and validate Deriv DBot XML strategies</small><b>Open generator →</b></button>
+                            <button type='button' onClick={() => setSection('overview')}><span className='db-activity-icon'>▤</span><strong>Tutorials & Help</strong><small>Platform guidance and safe demo-account setup</small><b>View guidance ↓</b></button>
+                        </div>
+                    </section>
+                    <section className='db-tutorial-strip'>
+                        <div><span>GETTING STARTED</span><h2>Connect · Analyse · Review · Execute</h2><p>Start with a Deriv demo account. Check the market feed and risk settings before you run a bot.</p></div>
+                        <button type='button' onClick={handleConnectDeriv}>{client.is_logged_in ? 'Account connected' : 'Connect Deriv →'}</button>
+                    </section>
                 </section>
             ) : section === 'parity' ? (
                 <section className='db-platform__bot-section'>
-                    <div className='db-platform__section-heading'><div><span>TRADING WORKSPACE</span><h1>Even / Odd Parity Bot</h1><p>Live market analysis and controlled execution.</p></div><button type='button' onClick={() => setSection('overview')}>← Dashboard</button></div>
+                    <div className='db-platform__section-heading'><div><span>TRADING WORKSPACE</span><h1>Even / Odd Parity Bot</h1><p>Compact live market analysis and controlled Deriv execution.</p></div><button type='button' onClick={() => setSection('overview')}>← All activities</button></div>
                     {client.is_logged_in ? <EvenOddTerminal /> : <div className='db-platform__connect-card'><h2>Connect your Deriv account</h2><p>Sign in securely to use the parity bot.</p><button type='button' className='db-platform__primary' onClick={handleConnectDeriv}>Connect Deriv account</button>{loginError && <p className='db-platform__error'>{loginError}</p>}</div>}
+                    <div className='db-compact-activities'><strong>OTHER ACTIVITIES</strong><button type='button' onClick={() => setSection('matches')}>Digit Matches Scanner</button><button type='button' onClick={() => setSection('xml')}>AI XML Generator</button><button type='button' onClick={() => setSection('overview')}>Tutorials & Dashboard</button></div>
                 </section>
             ) : section === 'matches' ? (
                 <section className='db-platform__bot-section db-product-page'>
