@@ -19,6 +19,8 @@ export type ParityExecutionInput = {
     executionPermission: boolean;
     authorized: boolean;
     isVirtual: boolean;
+    lastTickEpoch: number;
+    onPurchased?: (purchase: { contractId: number; contractType: ParityContractType; symbol: string; buyPrice: number; createdAt: number }) => void;
     timeoutMs?: number;
 };
 
@@ -29,6 +31,7 @@ export type ParityExecutionResult = {
     buyPrice: number;
     settlement: 'WON' | 'LOST' | 'VOID';
     profit: number;
+    settledAt: number;
 };
 
 const getApiError = (response: any) => response?.error?.message || response?.error?.code || null;
@@ -49,6 +52,8 @@ export const executeParityContract = async (input: ParityExecutionInput): Promis
     if (input.mode === 'live' && input.isVirtual) throw new Error('Live mode requires a Deriv real account.');
     if (!input.symbol || !input.currency) throw new Error('A valid market and account currency are required.');
     if (!Number.isFinite(input.stake) || input.stake <= 0) throw new Error('Stake must be a positive number.');
+    const tickAge = Date.now() / 1000 - input.lastTickEpoch;
+    if (!Number.isFinite(input.lastTickEpoch) || tickAge > 15 || tickAge < -5) throw new Error('Entry tick is stale; a fresh sample is required.');
     if (!['DIGITEVEN', 'DIGITODD'].includes(input.contractType)) throw new Error('Unsupported parity contract type.');
 
     const proposalResponse = await input.api.send({
@@ -71,6 +76,9 @@ export const executeParityContract = async (input: ParityExecutionInput): Promis
         throw new Error('Deriv returned an invalid proposal or a price above the configured stake.');
     }
 
+    const proposalAge = Date.now() / 1000 - input.lastTickEpoch;
+    if (proposalAge > 15 || proposalAge < -5) throw new Error('Entry confirmation expired while requesting the proposal. No purchase was sent.');
+
     const buyResponse = await input.api.send({ buy: proposalId, price: askPrice });
     const buyError = getApiError(buyResponse);
     if (buyError) throw new Error(`Deriv purchase rejected: ${buyError}`);
@@ -79,6 +87,7 @@ export const executeParityContract = async (input: ParityExecutionInput): Promis
     if (!Number.isSafeInteger(contractId) || contractId <= 0) {
         throw new Error('Deriv did not return a valid contract ID after purchase.');
     }
+    input.onPurchased?.({ contractId, contractType: input.contractType, symbol: input.symbol, buyPrice: askPrice, createdAt: Date.now() });
 
     const settlement = await monitorParityContract(input.api, contractId, input.timeoutMs ?? 90_000);
     const verified = validateSettlement(settlement);
@@ -91,6 +100,7 @@ export const executeParityContract = async (input: ParityExecutionInput): Promis
         buyPrice: askPrice,
         settlement: verified.status,
         profit: verified.profit,
+        settledAt: Date.now(),
     };
 };
 
