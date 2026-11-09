@@ -188,7 +188,7 @@ const EvenOddTerminal = () => {
                             <div><span>Latest digit</span><strong>{latest ? latest.digit : '—'}</strong></div>
                             <div><span>Even observations</span><strong>{counts.even}</strong></div>
                             <div><span>Odd observations</span><strong>{counts.odd}</strong></div>
-                            <div><span>Analysis sample</span><strong>{total}/120</strong></div>
+                            <div><span>Analysis sample</span><strong>{total}/30</strong></div>
                         </div>
                         <div className='eo-terminal__signal'>
                             <span>Observed parity lead · evidence {analysis.evidenceScore}%</span>
