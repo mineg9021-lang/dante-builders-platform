@@ -74,6 +74,7 @@ const EvenOddTerminal = () => {
     const tradesThisSession = activeLoginid ? Number(tradeCountByAccount[activeLoginid] || 0) : 0;
     const executionLock = useRef(false);
     const executionAllowed = useRef(false);
+    const autoRestartAllowed = useRef(false);
     const consumedSample = useRef('');
     const journaledSample = useRef('');
     const lastAccountId = useRef('');
@@ -84,6 +85,7 @@ const EvenOddTerminal = () => {
         if (lastAccountId.current && activeLoginid && lastAccountId.current !== activeLoginid) {
             executionAllowed.current = false;
             setExecutionArmed(false);
+            autoRestartAllowed.current = false;
             setAutoRestart(false);
             setRunning(false);
             setExecutionStatus('Disarmed · Deriv account changed; review account mode and start a fresh scan.');
@@ -331,7 +333,7 @@ const EvenOddTerminal = () => {
             const nextSessionPnl = sessionPnl + result.profit;
             const nextTradeCount = tradesThisSession + 1;
             const withinSessionLimits = Math.max(0, -nextSessionPnl) < Number(stopLoss) && Math.max(0, nextSessionPnl) < Number(takeProfit) && nextTradeCount < 10;
-            if (autoRestart && executionAllowed.current && withinSessionLimits) {
+            if (autoRestartAllowed.current && executionAllowed.current && withinSessionLimits) {
                 setSymbols([]);
                 executionAllowed.current = true;
                 setExecutionArmed(true);
@@ -517,7 +519,7 @@ const EvenOddTerminal = () => {
                         <label>Stop-loss<input type='number' min='0' step='0.01' value={stopLoss} onChange={event => setStopLoss(event.target.value)} /></label>
                         <label>Take-profit<input type='number' min='0' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
                         <label>Execution mode<select value={mode} onChange={event => changeMode(event.target.value as 'analysis' | 'demo' | 'live')}><option value='analysis'>Analysis only</option><option value='demo'>Demo auto execution</option><option value='live'>Live auto execution</option></select></label>
-                        <label className='eo-terminal__toggle'><input type='checkbox' checked={autoRestart} disabled={mode === 'analysis'} onChange={event => setAutoRestart(event.target.checked)} /> Auto-restart after settlement (fresh sample required)</label>
+                        <label className='eo-terminal__toggle'><input type='checkbox' checked={autoRestart} disabled={mode === 'analysis'} onChange={event => { autoRestartAllowed.current = event.target.checked; setAutoRestart(event.target.checked); }} /> Auto-restart after settlement (fresh sample required)</label>
                         <div className='eo-terminal__session-pnl'><span>Session P/L · Trades {tradesThisSession}/10</span><strong>{sessionPnl.toFixed(2)} {authData?.currency || ''}</strong></div>
                         <p className='eo-terminal__execution-status'>{executionStatus}</p>
                         
