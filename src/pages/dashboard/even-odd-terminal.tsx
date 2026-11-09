@@ -10,7 +10,7 @@ type TickMessage = {
 };
 
 type TickRecord = { digit: number; quote: string; epoch: number };
-type SymbolState = { symbol: string; name: string; pipSize: number; ticks: TickRecord[]; status: string };
+type SymbolState = { symbol: string; name: string; precision: number; ticks: TickRecord[]; status: string };
 
 const MAX_TICKS = 120;
 const MAX_AGE_MS = 15000;
@@ -75,7 +75,7 @@ const EvenOddTerminal = () => {
         const initial: SymbolState[] = availableSymbols.map((item: any) => ({
             symbol: item.symbol,
             name: item.display_name || item.symbol_display_name || item.symbol,
-            pipSize: Number(item.pip_size || item.pip) || 2,
+            precision: Number(api_base.pip_sizes[item.underlying_symbol || item.symbol] ?? getPrecision(Number(item.pip_size || item.pip)) ?? 2),
             ticks: [],
             status: 'Connecting',
         }));
@@ -91,7 +91,7 @@ const EvenOddTerminal = () => {
             if (quote === undefined || quote === null) return;
             setSymbols(previous => previous.map(item => {
                 if (item.symbol !== message.tick?.symbol) return item;
-                const precision = getPrecision(item.pipSize);
+                const precision = item.precision;
                 const fixed = typeof quote === 'number' ? quote.toFixed(precision) : String(quote);
                 const digit = getLastDigit(quote, precision);
                 if (digit === null) return item;
@@ -141,7 +141,7 @@ const EvenOddTerminal = () => {
     }, { even: 0, odd: 0 }) || { even: 0, odd: 0 };
     const total = counts.even + counts.odd;
     const prediction = total >= 20 && Math.abs(counts.even - counts.odd) >= 4
-        ? (counts.even > counts.odd ? 'EVEN' : 'ODD')
+        ? (counts.even > counts.odd ? 'EVEN LEADING' : 'ODD LEADING')
         : 'WAIT';
     const latest = selected?.ticks[selected.ticks.length - 1];
 
@@ -175,7 +175,7 @@ const EvenOddTerminal = () => {
                             <div><span>Analysis sample</span><strong>{total}/120</strong></div>
                         </div>
                         <div className='eo-terminal__signal'>
-                            <span>Parity assessment</span>
+                            <span>Observed parity lead</span>
                             <strong className={prediction === 'WAIT' ? 'is-wait' : 'is-signal'}>{prediction}</strong>
                             <small>{prediction === 'WAIT' ? 'Insufficient evidence for a candidate.' : 'Historical frequency candidate only — not a trade instruction.'}</small>
                         </div>
