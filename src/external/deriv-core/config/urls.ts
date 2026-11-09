@@ -42,3 +42,14 @@ export function getPublicWsUrl(): string {
 export function getAppBuilderBaseUrl(): string {
   return URLS[getEnv()].appBuilder;
 }
+
+
+/**
+ * Keep the OAuth redirect URI identical during authorization and token exchange.
+ * Set NEXT_PUBLIC_DERIV_REDIRECT_URI only when it exactly matches a URI registered
+ * for this OAuth client. The production site root remains the safe default.
+ */
+export function getOAuthRedirectUri(): string {
+  const configured = process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI?.trim();
+  return configured || window.location.origin;
+}
