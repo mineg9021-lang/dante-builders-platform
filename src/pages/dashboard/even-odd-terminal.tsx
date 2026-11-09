@@ -247,6 +247,15 @@ const EvenOddTerminal = () => {
         });
     }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, authData?.currency, authData?.is_virtual, isAuthorized]);
 
+    useEffect(() => {
+        const sampleComplete = symbols.length > 0 && symbols.every(item => item.ticks.length >= MAX_TICKS);
+        if (executionArmed && !running && sampleComplete && !pipeline.executionAuthorized) {
+            setExecutionArmed(false);
+            setExecutionStatus('WAIT · no qualifying setup in the completed sample; no trade was placed.');
+            setNotice('The bounded sample completed without a fully confirmed entry. The bot has disarmed safely.');
+        }
+    }, [executionArmed, running, symbols, pipeline.executionAuthorized]);
+
     const changeMode = (nextMode: 'analysis' | 'demo' | 'live') => {
         if (nextMode === 'live' && !window.confirm('Live mode can place real-money trades. Continue only if you understand the risk.')) return;
         setExecutionArmed(false);
