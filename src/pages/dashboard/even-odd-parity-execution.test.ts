@@ -95,6 +95,44 @@ describe('guarded parity contract execution', () => {
         expect(unsubscribe).toHaveBeenCalledTimes(1);
     });
 
+    it('rejects a stale entry tick before sending a proposal', async () => {
+        const send = jest.fn();
+        const api = { send, onMessage: jest.fn() } as unknown as DerivParityApi;
+        await expect(executeParityContract({
+            api,
+            symbol: 'R_10',
+            contractType: 'DIGITEVEN',
+            stake: 1,
+            currency: 'USD',
+            mode: 'demo',
+            executionPermission: true,
+            authorized: true,
+            isVirtual: true,
+            lastTickEpoch: Math.floor(Date.now() / 1000) - 20,
+        })).rejects.toThrow('Entry tick is stale; a fresh sample is required.');
+        expect(send).not.toHaveBeenCalled();
+    });
+
+    it('honors a user disarm while a proposal request is in flight', async () => {
+        const send = jest.fn().mockResolvedValueOnce({ proposal: { id: 'proposal-2', ask_price: 1 } });
+        const api = { send, onMessage: jest.fn() } as unknown as DerivParityApi;
+        const shouldContinue = jest.fn().mockReturnValueOnce(true).mockReturnValueOnce(false);
+        await expect(executeParityContract({
+            api,
+            symbol: 'R_10',
+            contractType: 'DIGITODD',
+            stake: 1,
+            currency: 'USD',
+            mode: 'demo',
+            executionPermission: true,
+            authorized: true,
+            isVirtual: true,
+            lastTickEpoch: Math.floor(Date.now() / 1000),
+            shouldContinue,
+        })).rejects.toThrow('Execution was disarmed before purchase. No buy request was sent.');
+        expect(send).toHaveBeenCalledTimes(1);
+    });
+
     it('rejects a proposal whose ask price exceeds the configured stake', async () => {
         const send = jest.fn().mockResolvedValueOnce({ proposal: { id: 'proposal-1', ask_price: 1.5 } });
         const api = { send, onMessage: jest.fn() } as unknown as DerivParityApi;
