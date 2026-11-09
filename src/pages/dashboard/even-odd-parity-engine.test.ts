@@ -80,6 +80,18 @@ describe('18-layer parity decision engine', () => {
         expect(result.stages[13].status).toBe('BLOCKED');
     });
 
+    it('blocks new entries when the session take-profit has been reached', () => {
+        const result = runParityPipeline({
+            symbol: 'R_10',
+            ticks: makeTicks(),
+            config: config({ mode: 'demo', armed: true, authorized: true, sessionProfit: 10, takeProfit: 10 }),
+            nowSeconds: now,
+        });
+
+        expect(result.executionAuthorized).toBe(false);
+        expect(result.stages[13].status).toBe('BLOCKED');
+    });
+
     it('waits when the sample is too small or the tick data is stale', () => {
         const short = runParityPipeline({
             symbol: 'R_10',
