@@ -14,7 +14,7 @@ type TickMessage = {
 
 type TickRecord = { digit: number; quote: string; epoch: number };
 type SymbolState = { symbol: string; name: string; precision: number; ticks: TickRecord[]; status: string };
-type TradeJournalRow = { contractId: number; contractType: ParityContractType; symbol: string; buyPrice: number; status: 'EXECUTED' | 'WON' | 'LOST' | 'VOID'; profit?: number; createdAt: number; settledAt?: number };
+type TradeJournalRow = { id: string; contractId?: number; contractType?: ParityContractType; symbol: string; buyPrice?: number; status: 'SKIPPED' | 'EXECUTED' | 'WON' | 'LOST' | 'VOID'; profit?: number; createdAt: number; settledAt?: number; sampleSize?: number; evenCount?: number; oddCount?: number; evidenceScore?: number; reason?: string };
 
 const MAX_TICKS = 30;
 const MAX_ANALYSIS_DURATION_MS = 60_000;
@@ -64,6 +64,7 @@ const EvenOddTerminal = () => {
     const executionLock = useRef(false);
     const executionAllowed = useRef(false);
     const consumedSample = useRef('');
+    const journaledSample = useRef('');
     const lastAccountId = useRef('');
     const [notice, setNotice] = useState('Connect your Deriv account to start live market analysis.');
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);
@@ -284,7 +285,7 @@ const EvenOddTerminal = () => {
             isVirtual: Boolean(authData.is_virtual),
             lastTickEpoch: latest?.epoch || 0,
             shouldContinue: () => executionAllowed.current,
-            onPurchased: purchase => setTradeJournal(previous => [{ ...purchase, status: 'EXECUTED' }, ...previous].slice(0, 50)),
+            onPurchased: purchase => setTradeJournal(previous => [{ ...purchase, id: String(purchase.contractId), status: 'EXECUTED' }, ...previous].slice(0, 50)),
             timeoutMs: 90_000,
         }).then(result => {
             if (activeLoginid) {
@@ -312,6 +313,25 @@ const EvenOddTerminal = () => {
             executionLock.current = false;
         });
     }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized]);
+
+    useEffect(() => {
+        const sampleComplete = Boolean(selected && selected.ticks.length >= MAX_TICKS);
+        const sampleKey = selected && latest ? `${selected.symbol}:${latest.epoch}` : '';
+        if (sampleComplete && !running && !pipeline.executionAuthorized && sampleKey && journaledSample.current !== sampleKey) {
+            journaledSample.current = sampleKey;
+            setTradeJournal(previous => [{
+                id: `scan-${sampleKey}`,
+                symbol: selected.symbol,
+                status: 'SKIPPED',
+                createdAt: Date.now(),
+                sampleSize: pipeline.sampleSize,
+                evenCount: pipeline.evenCount,
+                oddCount: pipeline.oddCount,
+                evidenceScore: pipeline.evidenceScore,
+                reason: pipeline.reason,
+            }, ...previous].slice(0, 50));
+        }
+    }, [selected?.symbol, latest?.epoch, selected?.ticks.length, running, pipeline.executionAuthorized, pipeline.sampleSize, pipeline.evenCount, pipeline.oddCount, pipeline.evidenceScore, pipeline.reason]);
 
     useEffect(() => {
         const sampleComplete = symbols.length > 0 && symbols.every(item => item.ticks.length >= MAX_TICKS);
@@ -431,8 +451,8 @@ const EvenOddTerminal = () => {
                     <div className='eo-terminal__card eo-terminal__journal'>
                         <div className='eo-terminal__card-heading'><h3>Trading journal</h3><span>{tradeJournal.length} saved records</span></div>
                         {tradeJournal.length ? tradeJournal.slice(0, 8).map(row => (
-                            <div className='eo-terminal__journal-row' key={row.contractId}>
-                                <div><strong>{row.symbol} · {row.contractType}</strong><small>Contract #{row.contractId} · {new Date(row.createdAt).toLocaleTimeString()}</small></div>
+                            <div className='eo-terminal__journal-row' key={row.id}>
+                                <div><strong>{row.symbol}{row.contractType ? ` · ${row.contractType}` : ''}</strong><small>{row.contractId ? `Contract #${row.contractId} · ` : row.status === 'SKIPPED' ? `Scan skipped · ${row.sampleSize || 0} ticks · ` : ''}{new Date(row.createdAt).toLocaleTimeString()}</small></div>
                                 <b className={`eo-terminal__journal-status eo-terminal__journal-status--${row.status.toLowerCase()}`}>{row.status}</b>
                                 <span>{row.profit === undefined ? '—' : row.profit.toFixed(2)}</span>
                             </div>
