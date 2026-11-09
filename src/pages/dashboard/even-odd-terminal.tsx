@@ -234,7 +234,7 @@ const EvenOddTerminal = () => {
         config: {
             mode,
             armed: executionArmed,
-            authorized: isAuthorized,
+            authorized: isAuthorized && connectionStatus === 'opened',
             demoAccount: Boolean(authData?.is_virtual),
             maxTicks: MAX_TICKS,
             minSample: 30,
@@ -363,7 +363,7 @@ const EvenOddTerminal = () => {
         }).finally(() => {
             executionLock.current = false;
         });
-    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, autoRestart, stopLoss, takeProfit, sessionPnl, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized, tradesThisSession]);
+    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, autoRestart, stopLoss, takeProfit, sessionPnl, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized, connectionStatus, tradesThisSession]);
 
     useEffect(() => {
         if (selected && latest && selected.ticks.length >= MAX_TICKS && !running && !pipeline.executionAuthorized) {
@@ -423,8 +423,8 @@ const EvenOddTerminal = () => {
             setNotice('Choose Demo or Live mode before arming execution. Analysis mode never places orders.');
             return;
         }
-        if (!isAuthorized) {
-            setNotice('Connect and authorize your Deriv account before arming execution.');
+        if (!isAuthorized || connectionStatus !== 'opened') {
+            setNotice('Connect and authorize your Deriv account with an open WebSocket before arming execution.');
             return;
         }
         if (mode === 'demo' && !Boolean(authData?.is_virtual)) {
