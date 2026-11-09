@@ -3,6 +3,7 @@ import { api_base } from '@/external/bot-skeleton';
 import { useApiBase } from '@/hooks/useApiBase';
 import { validateTick } from './even-odd-analysis-engine';
 import { runParityPipeline } from './even-odd-parity-engine';
+import { advanceMartingaleAfterSettlement, calculateParityStake, MAX_MARTINGALE_STEPS } from './even-odd-martingale';
 import { executeParityContract, type DerivParityApi, type ParityContractType } from './even-odd-parity-execution';
 import './even-odd-terminal.scss';
 
@@ -37,8 +38,7 @@ const EvenOddTerminal = () => {
     const [stake, setStake] = useState('1');
     const [martingaleEnabled, setMartingaleEnabled] = useState(false);
     const [lossProgression, setLossProgression] = useState(0);
-    const MAX_MARTINGALE_STEPS = 3;
-    const effectiveStake = Number((Number(stake) * (martingaleEnabled ? Math.pow(1.5, lossProgression) : 1)).toFixed(2));
+    const effectiveStake = calculateParityStake(Number(stake), martingaleEnabled, lossProgression);
     const [stopLoss, setStopLoss] = useState('10');
     const [takeProfit, setTakeProfit] = useState('10');
     const [running, setRunning] = useState(false);
@@ -348,12 +348,20 @@ const EvenOddTerminal = () => {
                 ? { ...row, status: result.settlement, profit: result.profit, settledAt: result.settledAt }
                 : row));
             setExecutionStatus(`${result.settlement} · ${result.contractType} · P/L ${result.profit.toFixed(2)} ${authData.currency}`);
-            if (result.settlement === 'WON' || result.settlement === 'VOID') setLossProgression(0);
-            else if (result.settlement === 'LOST') setLossProgression(previous => martingaleEnabled && previous < MAX_MARTINGALE_STEPS ? previous + 1 : 0);
+            const martingaleProgress = advanceMartingaleAfterSettlement(lossProgression, result.settlement, martingaleEnabled);
+            setLossProgression(martingaleProgress.nextStep);
             const nextSessionPnl = sessionPnl + result.profit;
             const nextTradeCount = tradesThisSession + 1;
             const withinSessionLimits = Math.max(0, -nextSessionPnl) < Number(stopLoss) && Math.max(0, nextSessionPnl) < Number(takeProfit) && nextTradeCount < 10;
-            if (autoRestartAllowed.current && executionAllowed.current && withinSessionLimits) {
+            if (martingaleProgress.halt) {
+                executionAllowed.current = false;
+                setExecutionArmed(false);
+                autoRestartAllowed.current = false;
+                setAutoRestart(false);
+                setRunning(false);
+                setExecutionStatus('Martingale limit reached · bot paused after the maximum three 1.5× progression steps.');
+                setNotice('Martingale safety limit reached. No further trade will be placed; review the session before manually restarting.');
+            } else if (autoRestartAllowed.current && executionAllowed.current && withinSessionLimits) {
                 setSymbols([]);
                 executionAllowed.current = true;
                 setExecutionArmed(true);
