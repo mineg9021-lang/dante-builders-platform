@@ -130,6 +130,8 @@ const EvenOddAiDashboard = observer(() => {
         stream.current = api_base.api.onMessage().subscribe(({ data }: any) => {
             if (data?.msg_type !== 'tick' || data?.error || !data?.tick) return;
             const tick = data.tick;
+            const subscriptionId = tick?.subscription?.id;
+            if (subscriptionId) subscriptions.current.add(String(subscriptionId));
             const symbol = String(tick.symbol || '');
             const current = marketCache.current.get(symbol);
             if (!current) return;
@@ -158,7 +160,18 @@ const EvenOddAiDashboard = observer(() => {
 
         symbols.forEach(symbol => {
             try {
-                api_base.api?.send({ ticks: symbol.symbol, subscribe: 1 });
+                const request = (api_base.api as any)?.send({ ticks: symbol.symbol, subscribe: 1 });
+                Promise.resolve(request).then((response: any) => {
+                    const subscriptionId = response?.tick?.subscription?.id || response?.subscription?.id;
+                    if (!subscriptionId) return;
+                    if (marketCache.current.has(symbol.symbol)) {
+                        subscriptions.current.add(String(subscriptionId));
+                    } else {
+                        api_base.api?.send({ forget: String(subscriptionId) });
+                    }
+                }).catch((error: unknown) => {
+                    console.error(`[EvenOdd AI] Tick subscription failed for ${symbol.symbol}:`, error);
+                });
             } catch (error) {
                 console.error(`[EvenOdd AI] Tick subscription failed for ${symbol.symbol}:`, error);
             }
