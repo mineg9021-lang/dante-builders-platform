@@ -191,7 +191,8 @@ const EvenOddTerminal = () => {
     });
     const counts = { even: pipeline.evenCount, odd: pipeline.oddCount };
     const total = pipeline.sampleSize;
-    const prediction = pipeline.selectedParity === 'NONE' ? 'WAIT' : `${pipeline.selectedParity} LEADING`;
+    const candidateReady = pipeline.stages[9]?.status === 'PASS' && pipeline.stages[10]?.status === 'PASS' && pipeline.sampleSize >= 30;
+    const prediction = candidateReady ? `${pipeline.selectedParity} LEADING` : 'WAIT';
     const latest = selected?.ticks[selected.ticks.length - 1];
 
     return (
@@ -226,7 +227,7 @@ const EvenOddTerminal = () => {
                         <div className='eo-terminal__signal'>
                             <span>Observed parity lead · evidence {pipeline.evidenceScore}%</span>
                             <strong className={prediction === 'WAIT' ? 'is-wait' : 'is-signal'}>{prediction}</strong>
-                            <small>{prediction === 'WAIT' ? 'Insufficient sample or parity difference. No entry candidate.' : `Observed sample lead only · evidence difference ${analysis.evidenceScore}% · not a next-tick forecast.`}</small>
+                            <small>{prediction === 'WAIT' ? 'Insufficient sample or parity difference. No entry candidate.' : `Observed sample lead only · evidence difference ${pipeline.evidenceScore}% · not a next-tick forecast.`}</small>
                         </div>
                     </div>
                     <div className='eo-terminal__card'>
