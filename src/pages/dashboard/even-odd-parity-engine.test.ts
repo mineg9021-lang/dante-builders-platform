@@ -31,6 +31,7 @@ const config = (overrides: Partial<ParityEngineConfig> = {}): ParityEngineConfig
     availableBalance: 100,
     maxStakePercent: 2,
     sessionLoss: 0,
+    sessionProfit: 0,
     stopLoss: 10,
     takeProfit: 10,
     ...overrides,
