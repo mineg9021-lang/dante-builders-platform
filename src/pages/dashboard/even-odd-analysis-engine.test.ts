@@ -5,6 +5,8 @@ describe('Even/Odd analysis engine', () => {
         expect(extractLastDigit(123.45, 2)).toBe(5);
         expect(extractLastDigit('123.4500', 2)).toBe(5);
         expect(extractLastDigit('123.4', 2)).toBe(0);
+        expect(extractLastDigit(123.4, 2)).toBe(0);
+        expect(extractLastDigit(1.23e-7, 9)).toBe(3);
     });
 
     it('rejects malformed quotes and duplicate or out-of-order ticks', () => {
