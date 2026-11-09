@@ -40,6 +40,7 @@ const EvenOddTerminal = () => {
     const [running, setRunning] = useState(false);
     const [mode, setMode] = useState<'analysis' | 'demo' | 'live'>('analysis');
     const [executionArmed, setExecutionArmed] = useState(false);
+    const [autoRestart, setAutoRestart] = useState(false);
     const [executionStatus, setExecutionStatus] = useState('Not armed');
     const [tradeJournal, setTradeJournal] = useState<TradeJournalRow[]>(() => {
         try {
@@ -73,6 +74,7 @@ const EvenOddTerminal = () => {
         if (lastAccountId.current && activeLoginid && lastAccountId.current !== activeLoginid) {
             executionAllowed.current = false;
             setExecutionArmed(false);
+            setAutoRestart(false);
             setRunning(false);
             setExecutionStatus('Disarmed · Deriv account changed; review account mode and start a fresh scan.');
         }
@@ -185,6 +187,7 @@ const EvenOddTerminal = () => {
                 setNotice('Analysis time limit reached. The bounded scan has stopped without forcing a trade.');
                 executionAllowed.current = false;
                 setExecutionArmed(false);
+                setAutoRestart(false);
                 setExecutionStatus('WAIT · scan timeout; no order was placed.');
                 setRunning(false);
             }
@@ -302,21 +305,35 @@ const EvenOddTerminal = () => {
                 ? { ...row, status: result.settlement, profit: result.profit, settledAt: result.settledAt }
                 : row));
             setExecutionStatus(`${result.settlement} · ${result.contractType} · P/L ${result.profit.toFixed(2)} ${authData.currency}`);
-            setNotice(`Contract ${result.contractId} settled as ${result.settlement}. Start a fresh bounded scan before another trade.`);
-            executionAllowed.current = false;
-            setExecutionArmed(false);
-            setRunning(false);
+            const nextSessionPnl = sessionPnl + result.profit;
+            const withinSessionLimits = Math.max(0, -nextSessionPnl) < Number(stopLoss) && Math.max(0, nextSessionPnl) < Number(takeProfit);
+            if (autoRestart && withinSessionLimits) {
+                setSymbols([]);
+                executionAllowed.current = true;
+                setExecutionArmed(true);
+                setRunning(true);
+                setExecutionStatus(`${result.settlement} · starting a new bounded scan for the next setup`);
+                setNotice(`Contract ${result.contractId} settled. Auto-restart is active; the bot will wait for a fresh validated sample.`);
+            } else {
+                executionAllowed.current = false;
+                setExecutionArmed(false);
+                setAutoRestart(false);
+                setRunning(false);
+                setNotice(`Contract ${result.contractId} settled as ${result.settlement}. The bot is disarmed; start a fresh scan before another trade.`);
+            }
         }).catch(error => {
             const message = error instanceof Error ? error.message : 'Trade execution failed.';
             setExecutionStatus(`BLOCKED · ${message}`);
             setNotice(message);
             executionAllowed.current = false;
+            executionAllowed.current = false;
             setExecutionArmed(false);
+            setAutoRestart(false);
             setRunning(false);
         }).finally(() => {
             executionLock.current = false;
         });
-    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized]);
+    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, autoRestart, stopLoss, takeProfit, sessionPnl, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized]);
 
     useEffect(() => {
         if (selected && latest && selected.ticks.length >= MAX_TICKS && !running && !pipeline.executionAuthorized) {
@@ -344,6 +361,7 @@ const EvenOddTerminal = () => {
         if (executionArmed && !running && sampleComplete && !pipeline.executionAuthorized) {
             executionAllowed.current = false;
             setExecutionArmed(false);
+            setAutoRestart(false);
             setExecutionStatus('WAIT · no qualifying setup in the completed sample; no trade was placed.');
             setNotice('The bounded sample completed without a fully confirmed entry. The bot has disarmed safely.');
         }
@@ -352,6 +370,7 @@ const EvenOddTerminal = () => {
     const changeMode = (nextMode: 'analysis' | 'demo' | 'live') => {
         if (nextMode === 'live' && !window.confirm('Live mode can place real-money trades. Continue only if you understand the risk.')) return;
         setExecutionArmed(false);
+        setAutoRestart(false);
         setMode(nextMode);
         setExecutionStatus(nextMode === 'analysis' ? 'Analysis only · orders disabled' : `${nextMode.toUpperCase()} mode · disarmed`);
     };
@@ -360,6 +379,7 @@ const EvenOddTerminal = () => {
         setSymbols([]);
         executionAllowed.current = false;
         setExecutionArmed(false);
+        setAutoRestart(false);
         setExecutionStatus('Not armed');
         setNotice('Starting a fresh bounded market scan…');
         setRunning(true);
@@ -386,13 +406,14 @@ const EvenOddTerminal = () => {
         setExecutionStatus('Armed · waiting for a fresh 30-tick sample and all safety checks');
         executionAllowed.current = true;
         setExecutionArmed(true);
-        setNotice('Bot armed for one trade only. It will wait for a fresh, validated candidate.');
+        setNotice('Bot armed. It will wait for a fresh, validated candidate and only restart after settlement if auto-restart is enabled.');
         if (!running) setRunning(true);
     };
 
     const stopBot = () => {
         executionAllowed.current = false;
         setExecutionArmed(false);
+        setAutoRestart(false);
         setRunning(false);
         setExecutionStatus(executionLock.current ? 'Disarmed · any already accepted buy cannot be recalled; monitoring will continue.' : 'Disarmed by user');
         setNotice(executionLock.current ? 'Bot disarmed. If a buy request was already accepted, the contract will still be monitored.' : 'Bot stopped. No further orders will be submitted.');
@@ -473,10 +494,11 @@ const EvenOddTerminal = () => {
                         <label>Stop-loss<input type='number' min='0' step='0.01' value={stopLoss} onChange={event => setStopLoss(event.target.value)} /></label>
                         <label>Take-profit<input type='number' min='0' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
                         <label>Execution mode<select value={mode} onChange={event => changeMode(event.target.value as 'analysis' | 'demo' | 'live')}><option value='analysis'>Analysis only</option><option value='demo'>Demo auto execution</option><option value='live'>Live auto execution</option></select></label>
+                        <label className='eo-terminal__toggle'><input type='checkbox' checked={autoRestart} disabled={mode === 'analysis'} onChange={event => setAutoRestart(event.target.checked)} /> Auto-restart after settlement (fresh sample required)</label>
                         <div className='eo-terminal__session-pnl'><span>Session P/L</span><strong>{sessionPnl.toFixed(2)} {authData?.currency || ''}</strong></div>
                         <p className='eo-terminal__execution-status'>{executionStatus}</p>
                         
-                        <p className='eo-terminal__disclaimer'>Stake, stop-loss and take-profit are enforced by the session risk gate. One trade per fresh sample; no martingale or recovery progression.</p>
+                        <p className='eo-terminal__disclaimer'>Stake, stop-loss and take-profit are enforced by the session risk gate. One trade per fresh sample. Optional auto-restart starts a new bounded scan after settlement; no martingale or recovery progression.</p>
                         <button type='button' onClick={startFreshAnalysis} disabled={running || executionLock.current}>Start analysis</button>
                         <button type='button' className='eo-terminal__arm' onClick={armOneTrade} disabled={executionArmed || executionLock.current}>Arm bot · one trade</button>
                         <button type='button' className='eo-terminal__stop' onClick={stopBot} disabled={!running && !executionArmed && !executionLock.current}>Stop / disarm</button>
