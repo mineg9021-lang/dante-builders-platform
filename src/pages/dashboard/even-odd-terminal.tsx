@@ -309,8 +309,8 @@ const EvenOddTerminal = () => {
             <header className='eo-terminal__header'>
                 <div>
                     <span className='eo-terminal__eyebrow'>DANTE BUILDERS · MARKET INTELLIGENCE</span>
-                    <h2>AI Even / Odd Terminal</h2>
-                    <p>Live tick observation, parity statistics and disciplined entry screening.</p>
+                    <h2>Even / Odd Parity Bot</h2>
+                    <p>Live Deriv tick analysis, evidence scoring and guarded one-trade execution.</p>
                 </div>
                 <div className={`eo-terminal__connection ${isAuthorized && connectionStatus === 'opened' ? 'is-live' : ''}`}>
                     <span /> {isAuthorized && connectionStatus === 'opened' ? 'DERIV CONNECTED' : 'NOT CONNECTED'}
