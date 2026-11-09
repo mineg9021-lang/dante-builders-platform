@@ -13,6 +13,7 @@ const DigitMatchesScanner = () => {
  const [status, setStatus] = useState<'STOPPED'|'CONNECTING'|'SCANNING'|'PAUSED'|'ERROR'>('STOPPED');
  const [error, setError] = useState('');
  const [revision, setRevision] = useState(0);
+ const [scanRequested, setScanRequested] = useState(false);
  const activeSymbols = useMemo(() => (Array.isArray(api_base.active_symbols) ? api_base.active_symbols : []).filter((item: any) => /volatility/i.test(String(item.display_name || item.symbol_display_name || ''))), [revision, connectionStatus]);
  const marketOptions = activeSymbols.length ? activeSymbols : [
   {symbol:'R_10',display_name:'Volatility 10'},{symbol:'1HZ10V',display_name:'Volatility 10 (1s)'},
@@ -23,7 +24,7 @@ const DigitMatchesScanner = () => {
  ];
  const report = useMemo(() => analyzeDigitTicks({ticks, windowSize, minSample: Math.min(100, windowSize)}), [ticks, windowSize]);
  useEffect(() => {
-  if (status !== 'SCANNING') return;
+  if (!scanRequested) return;
   if (!isAuthorized || connectionStatus !== 'opened' || !api_base.api) { setStatus('ERROR'); setError('Connect and authorize Deriv before starting the scanner.'); return; }
   let mounted = true;
   let subscriptionId: string | undefined;
@@ -68,15 +69,15 @@ const DigitMatchesScanner = () => {
    mounted = false; sub.unsubscribe(); window.clearInterval(refresh);
    if (subscriptionId) void api_base.api?.send({forget:subscriptionId});
   };
- }, [status === 'SCANNING', symbol, windowSize, isAuthorized, connectionStatus]);
- const start = () => { setTicks([]); setError(''); setStatus('SCANNING'); };
- const pause = () => setStatus('PAUSED');
- const stop = () => { setStatus('STOPPED'); setTicks([]); setError(''); };
+ }, [scanRequested, symbol, windowSize, isAuthorized, connectionStatus]);
+ const start = () => { setTicks([]); setError(''); setStatus('CONNECTING'); setScanRequested(true); };
+ const pause = () => { setScanRequested(false); setStatus('PAUSED'); };
+ const stop = () => { setScanRequested(false); setStatus('STOPPED'); setTicks([]); setError(''); };
  const candidates = (kind:'MATCHES'|'DIFFERS') => kind === 'MATCHES' ? report.matches : report.differs;
  return <div className='dmi-scanner'>
   <div className='dmi-topline'><span className='dmi-kicker'>INDEPENDENT MARKET INTELLIGENCE</span><span className={`dmi-status dmi-status--${status.toLowerCase()}`}>● {status}</span></div>
   <div className='dmi-controls'>
-   <label>Deriv market<select value={symbol} onChange={e=>{setSymbol(e.target.value);setTicks([]);}}>{marketOptions.map((m:any)=><option key={m.symbol} value={m.symbol}>{m.display_name || m.symbol}</option>)}</select></label>
+   <label>Deriv market<select value={symbol} onChange={e=>{setScanRequested(false);setStatus('STOPPED');setSymbol(e.target.value);setTicks([]);}}>{marketOptions.map((m:any)=><option key={m.symbol} value={m.symbol}>{m.display_name || m.symbol}</option>)}</select></label>
    <label>Analysis window<select value={windowSize} onChange={e=>setWindowSize(Number(e.target.value))}>{WINDOWS.map(n=><option key={n} value={n}>{n} ticks</option>)}</select></label>
    <div className='dmi-actions'><button onClick={start} disabled={status==='SCANNING'}>Start scanner</button><button onClick={pause} disabled={status!=='SCANNING'}>Pause</button><button onClick={stop}>Stop</button></div>
   </div>
