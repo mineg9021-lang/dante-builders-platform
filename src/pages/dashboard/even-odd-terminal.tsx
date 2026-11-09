@@ -508,18 +508,6 @@ const EvenOddTerminal = () => {
                             {!selected?.ticks.length && <p>Waiting for live ticks from Deriv…</p>}
                         </div>
                     </div>
-                    <div className='eo-terminal__card eo-terminal__layers'>
-                        <div className='eo-terminal__card-heading'><h3>18 engine layers</h3><span>Live pipeline status</span></div>
-                        <div className='eo-terminal__layer-list'>
-                            {pipeline.stages.map(item => (
-                                <div className={`eo-terminal__layer eo-terminal__layer--${item.status.toLowerCase()}`} key={item.id}>
-                                    <b>{String(item.id).padStart(2, '0')}</b>
-                                    <div><strong>{item.name}</strong><small>{item.detail}</small></div>
-                                    <em>{item.status}</em>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
                     <div className='eo-terminal__card eo-terminal__journal'>
                         <div className='eo-terminal__card-heading'><h3>Trading journal</h3><span>{accountJournal.length} saved records</span></div>
                         {accountJournal.length ? accountJournal.slice(0, 8).map(row => (
@@ -575,7 +563,7 @@ const EvenOddTerminal = () => {
                                 <path d='M44 4 48 0 52 4' fill='none' stroke='#baf2cf' strokeWidth='2'/>
                             </svg>
                         </div>
-                        <div><strong>Parity intelligence</strong><span>18 connected analysis and safety layers</span></div>
+                        <div><strong>Parity intelligence</strong><span>Parity analysis and execution controls</span></div>
                     </div>
                 </aside>
             </div>
