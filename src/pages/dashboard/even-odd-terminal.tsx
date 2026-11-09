@@ -39,7 +39,17 @@ const EvenOddTerminal = () => {
     const [notice, setNotice] = useState('Connect your Deriv account to start live market analysis.');
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
-    useEffect(() => {\n        if (!isAuthorized || connectionStatus !== 'opened') return;\n        const timer = window.setInterval(() => {\n            if (Array.isArray(api_base.active_symbols) && api_base.active_symbols.length) {\n                setLastUpdated(previous => previous === null ? Date.now() : previous);\n            }\n        }, 750);\n        return () => window.clearInterval(timer);\n    }, [isAuthorized, connectionStatus]);\n\n    const availableSymbols = useMemo(() => {
+    useEffect(() => {
+        if (!isAuthorized || connectionStatus !== 'opened') return;
+        const timer = window.setInterval(() => {
+            if (Array.isArray(api_base.active_symbols) && api_base.active_symbols.length) {
+                setLastUpdated(previous => previous === null ? Date.now() : previous);
+            }
+        }, 750);
+        return () => window.clearInterval(timer);
+    }, [isAuthorized, connectionStatus]);
+
+    const availableSymbols = useMemo(() => {
         const active = Array.isArray(api_base.active_symbols) ? api_base.active_symbols : [];
         return active.filter((item: any) => {
             const name = String(item.display_name || item.symbol_display_name || '');
@@ -49,8 +59,11 @@ const EvenOddTerminal = () => {
     }, [connectionStatus, isAuthorized, lastUpdated]);
 
     useEffect(() => {
-        if (!running || !isAuthorized || connectionStatus !== 'opened' || !api_base.api) {
-            setRunning(false);
+        if (!running) {
+            setNotice('Analysis stopped.');
+            return;
+        }
+        if (!isAuthorized || connectionStatus !== 'opened' || !api_base.api) {
             setNotice('Waiting for an authorized Deriv connection.');
             return;
         }
@@ -91,7 +104,6 @@ const EvenOddTerminal = () => {
                     ticks: [...item.ticks, { digit, quote: fixed, epoch }].slice(-MAX_TICKS),
                 };
             }));
-            setLastUpdated(Date.now());
         });
         const connect = async () => {
             for (const item of initial) {
@@ -183,8 +195,8 @@ const EvenOddTerminal = () => {
                         <label>Take-profit<input type='number' min='0' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
                         <label className='eo-terminal__toggle'><input type='checkbox' checked={recoveryEnabled} onChange={event => setRecoveryEnabled(event.target.checked)} /> Enable capped recovery (off by default)</label>
                         <p className='eo-terminal__disclaimer'>These settings are saved in this screen only. No orders are placed and no recovery progression is executed.</p>
-                        <button type='button' disabled>Start trading — not enabled</button>
-                        <button type='button' className='eo-terminal__stop' onClick={() => setRunning(false)}>Stop analysis</button>
+                        <button type='button' onClick={() => setRunning(true)} disabled={running}>Start analysis</button>
+                        <button type='button' className='eo-terminal__stop' onClick={() => setRunning(false)} disabled={!running}>Stop analysis</button>
                     </div>
                     <div className='eo-terminal__card eo-terminal__portrait'>
                         <div className='eo-terminal__robot' aria-hidden='true'>AI</div>
