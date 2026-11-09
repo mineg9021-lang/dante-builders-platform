@@ -88,7 +88,9 @@ export const validateMarketData = (ticks: EngineTick[], symbol: string, nowSecon
     let previousEpoch = 0;
     ticks.forEach(tick => {
         if (tick.symbol !== symbol || !Number.isFinite(tick.epoch) || tick.epoch <= previousEpoch) return;
-        if (nowSeconds - tick.epoch > 15 || tick.epoch - nowSeconds > 5) return;
+        // Historical samples may span longer than the live-entry freshness window.
+        // Keep ordered source ticks here; confirmEntry checks the newest tick separately.
+        if (tick.epoch - nowSeconds > 5) return;
         if (typeof tick.quote !== 'string' || !tick.quote.trim()) return;
         valid.push(tick);
         previousEpoch = tick.epoch;
@@ -158,7 +160,7 @@ export const confirmEntry = (
     config: ParityEngineConfig,
     nowSeconds: number
 ) => ticks.length >= config.minSample && evidenceValid && ticks.length > 0 &&
-    nowSeconds - ticks[ticks.length - 1].epoch <= 15;
+    nowSeconds - ticks[ticks.length - 1].epoch <= 15 && ticks[ticks.length - 1].epoch - nowSeconds <= 5;
 
 /** 13 — Contract validation: map the selected parity to a supported parity contract identifier. */
 export const validateParityContract = (side: ParitySide | 'NONE') => {
