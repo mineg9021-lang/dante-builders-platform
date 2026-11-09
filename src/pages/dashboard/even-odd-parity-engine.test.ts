@@ -108,8 +108,9 @@ describe('18-layer parity decision engine', () => {
         });
 
         expect(short.status).toBe('WAIT');
-        expect(stale.sampleSize).toBe(0);
+        expect(stale.sampleSize).toBe(30);
         expect(stale.executionAuthorized).toBe(false);
+        expect(stale.stages[11].status).toBe('WAIT');
     });
 
     it('accepts only verified settlement states', () => {
