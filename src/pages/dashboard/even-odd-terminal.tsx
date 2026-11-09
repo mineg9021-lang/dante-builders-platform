@@ -35,6 +35,10 @@ const EvenOddTerminal = () => {
     const [symbols, setSymbols] = useState<SymbolState[]>([]);
     const [selectedSymbol, setSelectedSymbol] = useState('');
     const [stake, setStake] = useState('1');
+    const [martingaleEnabled, setMartingaleEnabled] = useState(false);
+    const [lossProgression, setLossProgression] = useState(0);
+    const MAX_MARTINGALE_STEPS = 3;
+    const effectiveStake = Number((Number(stake) * (martingaleEnabled ? Math.pow(1.5, lossProgression) : 1)).toFixed(2));
     const [stopLoss, setStopLoss] = useState('10');
     const [takeProfit, setTakeProfit] = useState('10');
     const [running, setRunning] = useState(false);
@@ -251,7 +255,7 @@ const EvenOddTerminal = () => {
             minSample: 30,
             minLead: 0.12,
             minStableRatio: 1,
-            stake: Number(stake),
+            stake: effectiveStake,
             availableBalance: Number(authData?.balance || 0),
             maxStakePercent: 2,
             sessionLoss: Math.max(0, -sessionPnl),
@@ -319,7 +323,7 @@ const EvenOddTerminal = () => {
             api: api_base.api as unknown as DerivParityApi,
             symbol: selected.symbol,
             contractType: pipeline.contractType,
-            stake: Number(stake),
+            stake: effectiveStake,
             currency: authData.currency,
             mode,
             executionPermission: pipeline.executionAuthorized,
@@ -344,6 +348,8 @@ const EvenOddTerminal = () => {
                 ? { ...row, status: result.settlement, profit: result.profit, settledAt: result.settledAt }
                 : row));
             setExecutionStatus(`${result.settlement} · ${result.contractType} · P/L ${result.profit.toFixed(2)} ${authData.currency}`);
+            if (result.settlement === 'WON' || result.settlement === 'VOID') setLossProgression(0);
+            else if (result.settlement === 'LOST') setLossProgression(previous => martingaleEnabled && previous < MAX_MARTINGALE_STEPS ? previous + 1 : 0);
             const nextSessionPnl = sessionPnl + result.profit;
             const nextTradeCount = tradesThisSession + 1;
             const withinSessionLimits = Math.max(0, -nextSessionPnl) < Number(stopLoss) && Math.max(0, nextSessionPnl) < Number(takeProfit) && nextTradeCount < 10;
@@ -374,7 +380,7 @@ const EvenOddTerminal = () => {
         }).finally(() => {
             executionLock.current = false;
         });
-    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, autoRestart, stopLoss, takeProfit, sessionPnl, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized, connectionStatus, tradesThisSession]);
+    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, effectiveStake, martingaleEnabled, autoRestart, stopLoss, takeProfit, sessionPnl, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized, connectionStatus, tradesThisSession]);
 
     useEffect(() => {
         if (selected && latest && selected.ticks.length >= MAX_TICKS && !running && !pipeline.executionAuthorized) {
@@ -414,6 +420,7 @@ const EvenOddTerminal = () => {
         setExecutionArmed(false);
         autoRestartAllowed.current = false;
         setAutoRestart(false);
+        setLossProgression(0);
         setMode(nextMode);
         setExecutionStatus(nextMode === 'analysis' ? 'Analysis only · orders disabled' : `${nextMode.toUpperCase()} mode · disarmed`);
     };
@@ -523,7 +530,8 @@ const EvenOddTerminal = () => {
                 <aside className='eo-terminal__side'>
                     <div className='eo-terminal__card'>
                         <h3>Risk configuration</h3>
-                        <label>Stake amount<input type='number' min='0.35' step='0.01' value={stake} onChange={event => setStake(event.target.value)} /></label>
+                        <label>Base stake amount<input type='number' min='0.35' step='0.01' value={stake} onChange={event => { setStake(event.target.value); setLossProgression(0); }} /></label>
+                        <div className='eo-terminal__martingale'><div><strong>Martingale · 1.5×</strong><small>{martingaleEnabled ? `Enabled · loss step ${lossProgression}/${MAX_MARTINGALE_STEPS} · next stake ${effectiveStake.toFixed(2)} ${authData?.currency || ''}` : 'Disabled · fixed base stake'}</small></div><label className='eo-terminal__switch'><input type='checkbox' checked={martingaleEnabled} onChange={event => { setMartingaleEnabled(event.target.checked); setLossProgression(0); }} /><span>{martingaleEnabled ? 'ON' : 'OFF'}</span></label></div>
                         <label>Stop-loss<input type='number' min='0' step='0.01' value={stopLoss} onChange={event => setStopLoss(event.target.value)} /></label>
                         <label>Take-profit<input type='number' min='0' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
                         <label>Execution mode<select value={mode} onChange={event => changeMode(event.target.value as 'analysis' | 'demo' | 'live')}><option value='analysis'>Analysis only</option><option value='demo'>Demo auto execution</option><option value='live'>Live auto execution</option></select></label>
@@ -531,7 +539,7 @@ const EvenOddTerminal = () => {
                         <div className='eo-terminal__session-pnl'><span>Session P/L · Trades {tradesThisSession}/10</span><strong>{sessionPnl.toFixed(2)} {authData?.currency || ''}</strong></div>
                         <p className='eo-terminal__execution-status'>{executionStatus}</p>
                         
-                        <p className='eo-terminal__disclaimer'>Stake, stop-loss and take-profit are enforced by the session risk gate. One trade per fresh sample · max 10 per session. Auto-restart uses a new bounded sample; stop-loss, take-profit and trade-count limits still apply. No martingale or recovery progression.</p>
+                        <p className='eo-terminal__disclaimer'>Stake, stop-loss and take-profit are enforced by the session risk gate. One trade per fresh sample · max 10 per session. Optional Martingale is capped at three 1.5× loss steps and remains subject to the same 2% balance exposure gate; it can be blocked when the next stake exceeds that limit.</p>
                         <button type='button' onClick={startFreshAnalysis} disabled={running || executionLock.current}>Start analysis</button>
                         <button type='button' className='eo-terminal__arm' onClick={armOneTrade} disabled={executionArmed || executionLock.current}>Arm bot</button>
                         <button type='button' className='eo-terminal__stop' onClick={stopBot} disabled={!running && !executionArmed && !executionLock.current}>Stop / disarm</button>
