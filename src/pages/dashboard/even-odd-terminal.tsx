@@ -53,6 +53,8 @@ const EvenOddTerminal = () => {
         });
     }, [connectionStatus, isAuthorized, lastUpdated]);
 
+    const availableSymbolKey = availableSymbols.map((item: any) => item.symbol).join('|');
+
     useEffect(() => {
         if (!running) {
             setNotice('Analysis stopped.');
@@ -132,8 +134,6 @@ const EvenOddTerminal = () => {
             subscriptions.forEach(subscription => subscription.unsubscribe());
         };
     }, [running, isAuthorized, connectionStatus, availableSymbolKey]);
-
-    const availableSymbolKey = availableSymbols.map((item: any) => item.symbol).join('|');
 
     const selected = symbols.find(item => item.symbol === selectedSymbol);
     const analysis = analyseParity(selected?.ticks.map(tick => tick.digit) || []);
