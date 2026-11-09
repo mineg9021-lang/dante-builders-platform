@@ -109,7 +109,7 @@ export const monitorParityContract = (
         });
 
         const cleanup = () => {
-            window.clearTimeout(timeout);
+            clearTimeout(timeout);
             messageSubscription.unsubscribe();
             if (subscriptionId) {
                 void api.send({ forget: subscriptionId }).catch(() => undefined);
@@ -123,7 +123,7 @@ export const monitorParityContract = (
             resolve(contract);
         };
 
-        const timeout = window.setTimeout(() => {
+        const timeout = setTimeout(() => {
             if (completed) return;
             completed = true;
             cleanup();
