@@ -192,7 +192,7 @@ export const authorizeExecution = (
 };
 
 /** 17 — Execution monitor: validate a returned settlement before recording an outcome. */
-export const validateSettlement = (settlement?: { status?: string; profit?: number }) => {
+export const validateSettlement = (settlement?: { status?: string; profit?: number | string }) => {
     if (!settlement || !['won', 'lost', 'sold', 'void'].includes(String(settlement.status || '').toLowerCase())) {
         return null;
     }
@@ -216,7 +216,7 @@ export const runParityPipeline = (
         config: ParityEngineConfig;
         nowSeconds?: number;
         startedAt?: number;
-        settlement?: { status?: string; profit?: number };
+        settlement?: { status?: string; profit?: number | string };
     }
 ): PipelineResult => {
     const nowSeconds = input.nowSeconds ?? Date.now() / 1000;
