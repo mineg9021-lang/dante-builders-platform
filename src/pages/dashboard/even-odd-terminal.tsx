@@ -94,6 +94,17 @@ const EvenOddTerminal = () => {
     }, [activeLoginid]);
 
     useEffect(() => {
+        if (connectionStatus !== 'opened' && executionArmed) {
+            executionAllowed.current = false;
+            setExecutionArmed(false);
+            autoRestartAllowed.current = false;
+            setAutoRestart(false);
+            setRunning(false);
+            setExecutionStatus('Disarmed · Deriv connection closed; any accepted contract will still be monitored.');
+        }
+    }, [connectionStatus, executionArmed]);
+
+    useEffect(() => {
         if (!isAuthorized || connectionStatus !== 'opened') return;
         const timer = window.setInterval(() => {
             if (Array.isArray(api_base.active_symbols) && api_base.active_symbols.length) {
@@ -312,7 +323,7 @@ const EvenOddTerminal = () => {
             currency: authData.currency,
             mode,
             executionPermission: pipeline.executionAuthorized,
-            authorized: isAuthorized,
+            authorized: isAuthorized && connectionStatus === 'opened',
             isVirtual: Boolean(authData.is_virtual),
             lastTickEpoch: latest?.epoch || 0,
             shouldContinue: () => executionAllowed.current,
