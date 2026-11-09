@@ -3,7 +3,7 @@ import { api_base } from '@/external/bot-skeleton';
 import { useApiBase } from '@/hooks/useApiBase';
 import { validateTick } from './even-odd-analysis-engine';
 import { runParityPipeline } from './even-odd-parity-engine';
-import { executeParityContract, type DerivParityApi } from './even-odd-parity-execution';
+import { executeParityContract, type DerivParityApi, type ParityContractType } from './even-odd-parity-execution';
 import './even-odd-terminal.scss';
 
 type TickMessage = {
@@ -14,6 +14,7 @@ type TickMessage = {
 
 type TickRecord = { digit: number; quote: string; epoch: number };
 type SymbolState = { symbol: string; name: string; precision: number; ticks: TickRecord[]; status: string };
+type TradeJournalRow = { contractId: number; contractType: ParityContractType; symbol: string; buyPrice: number; status: 'EXECUTED' | 'WON' | 'LOST' | 'VOID'; profit?: number; createdAt: number; settledAt?: number };
 
 const MAX_TICKS = 30;
 const MAX_ANALYSIS_DURATION_MS = 60_000;
@@ -40,6 +41,15 @@ const EvenOddTerminal = () => {
     const [mode, setMode] = useState<'analysis' | 'demo' | 'live'>('analysis');
     const [executionArmed, setExecutionArmed] = useState(false);
     const [executionStatus, setExecutionStatus] = useState('Not armed');
+    const [tradeJournal, setTradeJournal] = useState<TradeJournalRow[]>(() => {
+        try {
+            const saved = window.localStorage.getItem('dante-parity-trade-journal');
+            const parsed = saved ? JSON.parse(saved) : [];
+            return Array.isArray(parsed) ? parsed.slice(0, 50) : [];
+        } catch {
+            return [];
+        }
+    });
     const [sessionPnl, setSessionPnl] = useState(0);
     const executionLock = useRef(false);
     const consumedSample = useRef('');
@@ -206,6 +216,14 @@ const EvenOddTerminal = () => {
     const latest = selected?.ticks[selected.ticks.length - 1];
 
     useEffect(() => {
+        try {
+            window.localStorage.setItem('dante-parity-trade-journal', JSON.stringify(tradeJournal.slice(0, 50)));
+        } catch {
+            // Journal persistence is best-effort; trading safety does not depend on local storage.
+        }
+    }, [tradeJournal]);
+
+    useEffect(() => {
         if (!executionArmed || !pipeline.executionAuthorized || executionLock.current || !selected || !pipeline.contractType) return;
         if (!api_base.api || !authData?.currency) {
             setExecutionStatus('Blocked: Deriv connection or account currency is unavailable.');
@@ -231,9 +249,14 @@ const EvenOddTerminal = () => {
             executionPermission: pipeline.executionAuthorized,
             authorized: isAuthorized,
             isVirtual: Boolean(authData.is_virtual),
+            lastTickEpoch: latest?.epoch || 0,
+            onPurchased: purchase => setTradeJournal(previous => [{ ...purchase, status: 'EXECUTED' }, ...previous].slice(0, 50)),
             timeoutMs: 90_000,
         }).then(result => {
             setSessionPnl(previous => previous + result.profit);
+            setTradeJournal(previous => previous.map(row => row.contractId === result.contractId
+                ? { ...row, status: result.settlement, profit: result.profit, settledAt: result.settledAt }
+                : row));
             setExecutionStatus(`${result.settlement} · ${result.contractType} · P/L ${result.profit.toFixed(2)} ${authData.currency}`);
             setNotice(`Contract ${result.contractId} settled as ${result.settlement}. Start a fresh bounded scan before another trade.`);
             setExecutionArmed(false);
@@ -359,6 +382,16 @@ const EvenOddTerminal = () => {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                    <div className='eo-terminal__card eo-terminal__journal'>
+                        <div className='eo-terminal__card-heading'><h3>Trading journal</h3><span>{tradeJournal.length} saved records</span></div>
+                        {tradeJournal.length ? tradeJournal.slice(0, 8).map(row => (
+                            <div className='eo-terminal__journal-row' key={row.contractId}>
+                                <div><strong>{row.symbol} · {row.contractType}</strong><small>Contract #{row.contractId} · {new Date(row.createdAt).toLocaleTimeString()}</small></div>
+                                <b className={`eo-terminal__journal-status eo-terminal__journal-status--${row.status.toLowerCase()}`}>{row.status}</b>
+                                <span>{row.profit === undefined ? '—' : row.profit.toFixed(2)}</span>
+                            </div>
+                        )) : <p className='eo-terminal__journal-empty'>No contracts executed yet. Analysis scans remain separate from executed trades.</p>}
                     </div>
                 </div>
 
