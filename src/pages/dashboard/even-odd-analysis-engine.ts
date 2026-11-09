@@ -32,11 +32,11 @@ export const extractLastDigit = (quote: number | string, precision: number): num
     if (typeof quote === 'number' && !Number.isFinite(quote)) return null;
 
     const source = typeof quote === 'number' ? quote.toFixed(precision) : quote.trim();
-    if (!/^[-+]?\\d+(?:\\.\\d+)?$/.test(source)) return null;
+    if (!/^[-+]?\d+(?:\.\d+)?$/.test(source)) return null;
 
     const decimal = source.split('.')[1] || '';
     const normalized = precision > 0 ? decimal.padEnd(precision, '0').slice(0, precision) : source.split('.')[0];
-    const digit = normalized.length ? Number(normalized[normalized.length - 1]) : Number(source.replace(/\\D/g, '').slice(-1));
+    const digit = normalized.length ? Number(normalized[normalized.length - 1]) : Number(source.replace(/\D/g, '').slice(-1));
     return Number.isInteger(digit) && digit >= 0 && digit <= 9 ? digit : null;
 };
 
