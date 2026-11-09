@@ -86,6 +86,7 @@ const EvenOddTerminal = () => {
             executionAllowed.current = false;
             setExecutionArmed(false);
             autoRestartAllowed.current = false;
+            autoRestartAllowed.current = false;
             setAutoRestart(false);
             setRunning(false);
             setExecutionStatus('Disarmed · Deriv account changed; review account mode and start a fresh scan.');
@@ -199,6 +200,7 @@ const EvenOddTerminal = () => {
                 setNotice('Analysis time limit reached. The bounded scan has stopped without forcing a trade.');
                 executionAllowed.current = false;
                 setExecutionArmed(false);
+                autoRestartAllowed.current = false;
                 setAutoRestart(false);
                 setExecutionStatus('WAIT · scan timeout; no order was placed.');
                 setRunning(false);
@@ -287,6 +289,7 @@ const EvenOddTerminal = () => {
             setExecutionStatus('Blocked: Deriv connection or account currency is unavailable.');
             executionAllowed.current = false;
             setExecutionArmed(false);
+            autoRestartAllowed.current = false;
             setAutoRestart(false);
             return;
         }
@@ -295,6 +298,7 @@ const EvenOddTerminal = () => {
             setExecutionStatus('This sample was already used. Start a fresh analysis before another trade.');
             executionAllowed.current = false;
             setExecutionArmed(false);
+            autoRestartAllowed.current = false;
             setAutoRestart(false);
             return;
         }
@@ -343,6 +347,7 @@ const EvenOddTerminal = () => {
             } else {
                 executionAllowed.current = false;
                 setExecutionArmed(false);
+                autoRestartAllowed.current = false;
                 setAutoRestart(false);
                 setRunning(false);
                 setNotice(`Contract ${result.contractId} settled as ${result.settlement}. The bot is disarmed; start a fresh scan before another trade.`);
@@ -353,6 +358,7 @@ const EvenOddTerminal = () => {
             setNotice(message);
             executionAllowed.current = false;
             setExecutionArmed(false);
+            autoRestartAllowed.current = false;
             setAutoRestart(false);
             setRunning(false);
         }).finally(() => {
@@ -386,6 +392,7 @@ const EvenOddTerminal = () => {
         if (executionArmed && !running && sampleComplete && !pipeline.executionAuthorized) {
             executionAllowed.current = false;
             setExecutionArmed(false);
+            autoRestartAllowed.current = false;
             setAutoRestart(false);
             setExecutionStatus('WAIT · no qualifying setup in the completed sample; no trade was placed.');
             setNotice('The bounded sample completed without a fully confirmed entry. The bot has disarmed safely.');
@@ -395,6 +402,7 @@ const EvenOddTerminal = () => {
     const changeMode = (nextMode: 'analysis' | 'demo' | 'live') => {
         if (nextMode === 'live' && !window.confirm('Live mode can place real-money trades. Continue only if you understand the risk.')) return;
         setExecutionArmed(false);
+        autoRestartAllowed.current = false;
         setAutoRestart(false);
         setMode(nextMode);
         setExecutionStatus(nextMode === 'analysis' ? 'Analysis only · orders disabled' : `${nextMode.toUpperCase()} mode · disarmed`);
@@ -404,6 +412,7 @@ const EvenOddTerminal = () => {
         setSymbols([]);
         executionAllowed.current = false;
         setExecutionArmed(false);
+        autoRestartAllowed.current = false;
         setAutoRestart(false);
         setExecutionStatus('Not armed');
         setNotice('Starting a fresh bounded market scan…');
@@ -438,6 +447,7 @@ const EvenOddTerminal = () => {
     const stopBot = () => {
         executionAllowed.current = false;
         setExecutionArmed(false);
+        autoRestartAllowed.current = false;
         setAutoRestart(false);
         setRunning(false);
         setExecutionStatus(executionLock.current ? 'Disarmed · any already accepted buy cannot be recalled; monitoring will continue.' : 'Disarmed by user');
