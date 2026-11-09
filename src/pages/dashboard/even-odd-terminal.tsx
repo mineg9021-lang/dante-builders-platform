@@ -39,7 +39,7 @@ const EvenOddTerminal = () => {
     const [notice, setNotice] = useState('Connect your Deriv account to start live market analysis.');
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
-    const availableSymbols = useMemo(() => {
+    useEffect(() => {\n        if (!isAuthorized || connectionStatus !== 'opened') return;\n        const timer = window.setInterval(() => {\n            if (Array.isArray(api_base.active_symbols) && api_base.active_symbols.length) {\n                setLastUpdated(previous => previous === null ? Date.now() : previous);\n            }\n        }, 750);\n        return () => window.clearInterval(timer);\n    }, [isAuthorized, connectionStatus]);\n\n    const availableSymbols = useMemo(() => {
         const active = Array.isArray(api_base.active_symbols) ? api_base.active_symbols : [];
         return active.filter((item: any) => {
             const name = String(item.display_name || item.symbol_display_name || '');
