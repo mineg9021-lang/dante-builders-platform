@@ -14,7 +14,7 @@ type TickMessage = {
 
 type TickRecord = { digit: number; quote: string; epoch: number };
 type SymbolState = { symbol: string; name: string; precision: number; ticks: TickRecord[]; status: string };
-type TradeJournalRow = { id: string; contractId?: number; contractType?: ParityContractType; symbol: string; buyPrice?: number; status: 'SKIPPED' | 'EXECUTED' | 'WON' | 'LOST' | 'VOID'; profit?: number; createdAt: number; settledAt?: number; sampleSize?: number; evenCount?: number; oddCount?: number; evidenceScore?: number; reason?: string };
+type TradeJournalRow = { id: string; accountId: string; contractId?: number; contractType?: ParityContractType; symbol: string; buyPrice?: number; status: 'SKIPPED' | 'EXECUTED' | 'WON' | 'LOST' | 'VOID'; profit?: number; createdAt: number; settledAt?: number; sampleSize?: number; evenCount?: number; oddCount?: number; evidenceScore?: number; reason?: string };
 
 const MAX_TICKS = 30;
 const MAX_ANALYSIS_DURATION_MS = 60_000;
@@ -238,6 +238,7 @@ const EvenOddTerminal = () => {
     const candidateReady = pipeline.stages[9]?.status === 'PASS' && pipeline.stages[10]?.status === 'PASS' && pipeline.sampleSize >= 30;
     const prediction = candidateReady ? `${pipeline.selectedParity} LEADING` : 'WAIT';
     const latest = selected?.ticks[selected.ticks.length - 1];
+    const accountJournal = tradeJournal.filter(row => row.accountId === activeLoginid);
 
     useEffect(() => {
         try {
@@ -287,7 +288,7 @@ const EvenOddTerminal = () => {
             shouldContinue: () => executionAllowed.current,
             onPurchased: purchase => {
                 journaledSample.current = `${selected.symbol}:${latest?.epoch || 0}`;
-                setTradeJournal(previous => [{ ...purchase, id: String(purchase.contractId), status: 'EXECUTED' }, ...previous].slice(0, 50));
+                setTradeJournal(previous => [{ ...purchase, id: String(purchase.contractId), accountId: activeLoginid, status: 'EXECUTED' }, ...previous].slice(0, 50));
             },
             timeoutMs: 90_000,
         }).then(result => {
@@ -324,6 +325,7 @@ const EvenOddTerminal = () => {
             journaledSample.current = sampleKey;
             setTradeJournal(previous => [{
                 id: `scan-${sampleKey}`,
+                accountId: activeLoginid,
                 symbol: selected.symbol,
                 status: 'SKIPPED',
                 createdAt: Date.now(),
@@ -452,8 +454,8 @@ const EvenOddTerminal = () => {
                         </div>
                     </div>
                     <div className='eo-terminal__card eo-terminal__journal'>
-                        <div className='eo-terminal__card-heading'><h3>Trading journal</h3><span>{tradeJournal.length} saved records</span></div>
-                        {tradeJournal.length ? tradeJournal.slice(0, 8).map(row => (
+                        <div className='eo-terminal__card-heading'><h3>Trading journal</h3><span>{accountJournal.length} saved records</span></div>
+                        {accountJournal.length ? accountJournal.slice(0, 8).map(row => (
                             <div className='eo-terminal__journal-row' key={row.id}>
                                 <div><strong>{row.symbol}{row.contractType ? ` · ${row.contractType}` : ''}</strong><small title={row.reason}>{row.contractId ? `Contract #${row.contractId} · ` : row.status === 'SKIPPED' ? `Skipped · ${row.sampleSize || 0} ticks · E ${row.evenCount || 0}/O ${row.oddCount || 0} · score ${row.evidenceScore || 0}% · ` : ''}{new Date(row.createdAt).toLocaleTimeString()}</small></div>
                                 <b className={`eo-terminal__journal-status eo-terminal__journal-status--${row.status.toLowerCase()}`}>{row.status}</b>
