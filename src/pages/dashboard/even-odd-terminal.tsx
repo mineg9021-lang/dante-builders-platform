@@ -16,9 +16,14 @@ type SymbolState = { symbol: string; name: string; precision: number; ticks: Tic
 const MAX_TICKS = 120;
 
 const getPrecision = (pipSize?: number) => {
-    if (!pipSize || !Number.isFinite(pipSize)) return 2;
-    const value = String(pipSize);
-    return value.includes('.') ? value.split('.')[1].length : 0;
+    if (pipSize === undefined || !Number.isFinite(pipSize) || pipSize <= 0) return 2;
+    const value = String(pipSize).toLowerCase();
+    if (value.includes('e')) {
+        const [coefficient, exponentText] = value.split('e');
+        const fractionalPlaces = coefficient.split('.')[1]?.length || 0;
+        return Math.max(0, Math.min(10, fractionalPlaces - Number(exponentText)));
+    }
+    return Math.min(10, value.split('.')[1]?.length || 0);
 };
 
 const EvenOddTerminal = () => {
