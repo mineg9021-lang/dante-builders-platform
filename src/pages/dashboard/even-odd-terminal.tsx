@@ -52,6 +52,7 @@ const EvenOddTerminal = () => {
     });
     const [sessionPnl, setSessionPnl] = useState(0);
     const executionLock = useRef(false);
+    const executionAllowed = useRef(false);
     const consumedSample = useRef('');
     const [notice, setNotice] = useState('Connect your Deriv account to start live market analysis.');
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);
@@ -160,6 +161,7 @@ const EvenOddTerminal = () => {
         const timeout = window.setTimeout(() => {
             if (mounted) {
                 setNotice('Analysis time limit reached. The bounded scan has stopped without forcing a trade.');
+                executionAllowed.current = false;
                 setExecutionArmed(false);
                 setExecutionStatus('WAIT · scan timeout; no order was placed.');
                 setRunning(false);
@@ -227,12 +229,14 @@ const EvenOddTerminal = () => {
         if (!executionArmed || !pipeline.executionAuthorized || executionLock.current || !selected || !pipeline.contractType) return;
         if (!api_base.api || !authData?.currency) {
             setExecutionStatus('Blocked: Deriv connection or account currency is unavailable.');
+            executionAllowed.current = false;
             setExecutionArmed(false);
             return;
         }
         const sampleKey = `${selected.symbol}:${latest?.epoch || 0}:${pipeline.selectedParity}:${pipeline.evidenceScore}`;
         if (consumedSample.current === sampleKey) {
             setExecutionStatus('This sample was already used. Start a fresh analysis before another trade.');
+            executionAllowed.current = false;
             setExecutionArmed(false);
             return;
         }
@@ -250,6 +254,7 @@ const EvenOddTerminal = () => {
             authorized: isAuthorized,
             isVirtual: Boolean(authData.is_virtual),
             lastTickEpoch: latest?.epoch || 0,
+            shouldContinue: () => executionAllowed.current,
             onPurchased: purchase => setTradeJournal(previous => [{ ...purchase, status: 'EXECUTED' }, ...previous].slice(0, 50)),
             timeoutMs: 90_000,
         }).then(result => {
@@ -259,12 +264,14 @@ const EvenOddTerminal = () => {
                 : row));
             setExecutionStatus(`${result.settlement} · ${result.contractType} · P/L ${result.profit.toFixed(2)} ${authData.currency}`);
             setNotice(`Contract ${result.contractId} settled as ${result.settlement}. Start a fresh bounded scan before another trade.`);
+            executionAllowed.current = false;
             setExecutionArmed(false);
             setRunning(false);
         }).catch(error => {
             const message = error instanceof Error ? error.message : 'Trade execution failed.';
             setExecutionStatus(`BLOCKED · ${message}`);
             setNotice(message);
+            executionAllowed.current = false;
             setExecutionArmed(false);
             setRunning(false);
         }).finally(() => {
@@ -275,6 +282,7 @@ const EvenOddTerminal = () => {
     useEffect(() => {
         const sampleComplete = symbols.length > 0 && symbols.every(item => item.ticks.length >= MAX_TICKS);
         if (executionArmed && !running && sampleComplete && !pipeline.executionAuthorized) {
+            executionAllowed.current = false;
             setExecutionArmed(false);
             setExecutionStatus('WAIT · no qualifying setup in the completed sample; no trade was placed.');
             setNotice('The bounded sample completed without a fully confirmed entry. The bot has disarmed safely.');
@@ -290,6 +298,7 @@ const EvenOddTerminal = () => {
 
     const startFreshAnalysis = () => {
         setSymbols([]);
+        executionAllowed.current = false;
         setExecutionArmed(false);
         setExecutionStatus('Not armed');
         setNotice('Starting a fresh bounded market scan…');
@@ -315,16 +324,18 @@ const EvenOddTerminal = () => {
         }
         if (!running) setSymbols([]);
         setExecutionStatus('Armed · waiting for a fresh 30-tick sample and all safety checks');
+        executionAllowed.current = true;
         setExecutionArmed(true);
         setNotice('Bot armed for one trade only. It will wait for a fresh, validated candidate.');
         if (!running) setRunning(true);
     };
 
     const stopBot = () => {
+        executionAllowed.current = false;
         setExecutionArmed(false);
         setRunning(false);
-        setExecutionStatus('Disarmed by user');
-        setNotice('Bot stopped. No further orders will be submitted.');
+        setExecutionStatus(executionLock.current ? 'Disarmed · any already accepted buy cannot be recalled; monitoring will continue.' : 'Disarmed by user');
+        setNotice(executionLock.current ? 'Bot disarmed. If a buy request was already accepted, the contract will still be monitored.' : 'Bot stopped. No further orders will be submitted.');
     };
 
     return (
