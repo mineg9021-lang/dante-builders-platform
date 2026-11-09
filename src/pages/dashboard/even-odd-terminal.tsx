@@ -329,7 +329,7 @@ const EvenOddTerminal = () => {
             shouldContinue: () => executionAllowed.current,
             onPurchased: purchase => {
                 journaledSample.current = `${selected.symbol}:${latest?.epoch || 0}`;
-                setTradeJournal(previous => [{ ...purchase, id: String(purchase.contractId), accountId: activeLoginid, status: 'EXECUTED' }, ...previous].slice(0, 50));
+                setTradeJournal(previous => [{ ...purchase, id: String(purchase.contractId), accountId: activeLoginid, status: 'EXECUTED' as const }, ...previous].slice(0, 50));
                 if (activeLoginid) setTradeCountByAccount(previous => ({ ...previous, [activeLoginid]: Number(previous[activeLoginid] || 0) + 1 }));
             },
             timeoutMs: 90_000,
@@ -385,7 +385,7 @@ const EvenOddTerminal = () => {
                     id: `scan-${sampleKey}`,
                     accountId: activeLoginid,
                     symbol: selected.symbol,
-                    status: 'SKIPPED',
+                    status: 'SKIPPED' as const,
                     createdAt: Date.now(),
                     sampleSize: pipeline.sampleSize,
                     evenCount: pipeline.evenCount,
