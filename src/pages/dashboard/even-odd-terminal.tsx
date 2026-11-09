@@ -285,6 +285,7 @@ const EvenOddTerminal = () => {
             setExecutionStatus('Blocked: Deriv connection or account currency is unavailable.');
             executionAllowed.current = false;
             setExecutionArmed(false);
+            setAutoRestart(false);
             return;
         }
         const sampleKey = `${selected.symbol}:${latest?.epoch || 0}:${pipeline.selectedParity}:${pipeline.evidenceScore}`;
@@ -292,6 +293,7 @@ const EvenOddTerminal = () => {
             setExecutionStatus('This sample was already used. Start a fresh analysis before another trade.');
             executionAllowed.current = false;
             setExecutionArmed(false);
+            setAutoRestart(false);
             return;
         }
         consumedSample.current = sampleKey;
@@ -521,7 +523,7 @@ const EvenOddTerminal = () => {
                         
                         <p className='eo-terminal__disclaimer'>Stake, stop-loss and take-profit are enforced by the session risk gate. One trade per fresh sample · max 10 per session. Auto-restart uses a new bounded sample; stop-loss, take-profit and trade-count limits still apply. No martingale or recovery progression.</p>
                         <button type='button' onClick={startFreshAnalysis} disabled={running || executionLock.current}>Start analysis</button>
-                        <button type='button' className='eo-terminal__arm' onClick={armOneTrade} disabled={executionArmed || executionLock.current}>Arm bot · one trade</button>
+                        <button type='button' className='eo-terminal__arm' onClick={armOneTrade} disabled={executionArmed || executionLock.current}>Arm bot</button>
                         <button type='button' className='eo-terminal__stop' onClick={stopBot} disabled={!running && !executionArmed && !executionLock.current}>Stop / disarm</button>
                     </div>
                     <div className='eo-terminal__card eo-terminal__portrait'>
