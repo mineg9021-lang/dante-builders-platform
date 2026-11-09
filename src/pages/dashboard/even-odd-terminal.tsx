@@ -452,7 +452,7 @@ const EvenOddTerminal = () => {
                         <div className='eo-terminal__card-heading'><h3>Trading journal</h3><span>{tradeJournal.length} saved records</span></div>
                         {tradeJournal.length ? tradeJournal.slice(0, 8).map(row => (
                             <div className='eo-terminal__journal-row' key={row.id}>
-                                <div><strong>{row.symbol}{row.contractType ? ` · ${row.contractType}` : ''}</strong><small>{row.contractId ? `Contract #${row.contractId} · ` : row.status === 'SKIPPED' ? `Scan skipped · ${row.sampleSize || 0} ticks · ` : ''}{new Date(row.createdAt).toLocaleTimeString()}</small></div>
+                                <div><strong>{row.symbol}{row.contractType ? ` · ${row.contractType}` : ''}</strong><small title={row.reason}>{row.contractId ? `Contract #${row.contractId} · ` : row.status === 'SKIPPED' ? `Skipped · ${row.sampleSize || 0} ticks · E ${row.evenCount || 0}/O ${row.oddCount || 0} · score ${row.evidenceScore || 0}% · ` : ''}{new Date(row.createdAt).toLocaleTimeString()}</small></div>
                                 <b className={`eo-terminal__journal-status eo-terminal__journal-status--${row.status.toLowerCase()}`}>{row.status}</b>
                                 <span>{row.profit === undefined ? '—' : row.profit.toFixed(2)}</span>
                             </div>
