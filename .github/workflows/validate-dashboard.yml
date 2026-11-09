@@ -32,7 +32,7 @@ jobs:
         run: npm ci
 
       - name: Run unit tests
-        run: npm test -- --runInBand src/pages/dashboard/even-odd-analysis-engine.test.ts src/pages/dashboard/even-odd-parity-engine.test.ts
+        run: npm test -- --runInBand src/pages/dashboard/even-odd-analysis-engine.test.ts src/pages/dashboard/even-odd-parity-engine.test.ts src/pages/dashboard/even-odd-parity-execution.test.ts
 
       - name: Run TypeScript check
         run: npm run type-check
