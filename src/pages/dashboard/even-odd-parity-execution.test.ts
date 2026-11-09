@@ -13,6 +13,7 @@ describe('guarded parity contract execution', () => {
             executionPermission: true,
             authorized: true,
             isVirtual: true,
+            lastTickEpoch: Math.floor(Date.now() / 1000),
         })).rejects.toThrow('Analysis mode cannot place orders.');
         expect(api.send).not.toHaveBeenCalled();
     });
@@ -27,6 +28,7 @@ describe('guarded parity contract execution', () => {
             currency: 'USD',
             executionPermission: true,
             authorized: true,
+            lastTickEpoch: Math.floor(Date.now() / 1000),
         };
         await expect(executeParityContract({ ...base, mode: 'demo', isVirtual: false }))
             .rejects.toThrow('Demo mode requires a Deriv demo account.');
@@ -49,6 +51,7 @@ describe('guarded parity contract execution', () => {
             send,
             onMessage: () => ({ subscribe: () => ({ unsubscribe }) }),
         } as unknown as DerivParityApi;
+        const onPurchased = jest.fn();
 
         const result = await executeParityContract({
             api,
@@ -60,10 +63,12 @@ describe('guarded parity contract execution', () => {
             executionPermission: true,
             authorized: true,
             isVirtual: true,
+            lastTickEpoch: Math.floor(Date.now() / 1000),
+            onPurchased,
             timeoutMs: 1000,
         });
 
-        expect(result).toEqual({
+        expect(result).toMatchObject({
             contractId: 12345,
             contractType: 'DIGITEVEN',
             symbol: 'R_10',
@@ -71,6 +76,8 @@ describe('guarded parity contract execution', () => {
             settlement: 'WON',
             profit: 0.95,
         });
+        expect(result.settledAt).toEqual(expect.any(Number));
+        expect(onPurchased).toHaveBeenCalledWith(expect.objectContaining({ contractId: 12345, contractType: 'DIGITEVEN' }));
         expect(send).toHaveBeenNthCalledWith(1, expect.objectContaining({
             proposal: 1,
             contract_type: 'DIGITEVEN',
@@ -101,6 +108,7 @@ describe('guarded parity contract execution', () => {
             executionPermission: true,
             authorized: true,
             isVirtual: true,
+            lastTickEpoch: Math.floor(Date.now() / 1000),
         })).rejects.toThrow('Deriv returned an invalid proposal or a price above the configured stake.');
         expect(send).toHaveBeenCalledTimes(1);
     });
