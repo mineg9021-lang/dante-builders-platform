@@ -2,8 +2,8 @@
     "brand_name": "Dante Builders",
     "brand_domain": "dantebuilders.site",
     "brand_hostname": {
-        "staging": "dante-builders-platform.netlify.app/dashboard",
-        "production": "dantebuilders.site/dashboard"
+        "staging": "dante-builders-platform.netlify.app",
+        "production": "dantebuilders.site"
     },
     "domain_name": "Dante Builders",
     "colors": {
