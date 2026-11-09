@@ -37,7 +37,8 @@ const EvenOddTerminal = () => {
         if (!isAuthorized || connectionStatus !== 'opened') return;
         const timer = window.setInterval(() => {
             if (Array.isArray(api_base.active_symbols) && api_base.active_symbols.length) {
-                setLastUpdated(previous => previous === null ? Date.now() : previous);
+                // Refresh the derived market list while the existing APIBase loads/enriches symbols.
+                setLastUpdated(Date.now());
             }
         }, 750);
         return () => window.clearInterval(timer);
@@ -129,7 +130,9 @@ const EvenOddTerminal = () => {
             messageSubscription.unsubscribe();
             subscriptions.forEach(subscription => subscription.unsubscribe());
         };
-    }, [running, isAuthorized, connectionStatus, availableSymbols.length]);
+    }, [running, isAuthorized, connectionStatus, availableSymbolKey]);
+
+    const availableSymbolKey = availableSymbols.map((item: any) => item.symbol).join('|');
 
     const selected = symbols.find(item => item.symbol === selectedSymbol);
     const analysis = analyseParity(selected?.ticks.map(tick => tick.digit) || []);
