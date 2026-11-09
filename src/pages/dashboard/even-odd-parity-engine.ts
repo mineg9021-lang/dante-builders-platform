@@ -230,7 +230,7 @@ export const runParityPipeline = (
     stages.push(stage(1, 'Live market acquisition', acquired.length ? 'PASS' : 'WAIT', `${acquired.length} source ticks received`));
 
     const validated = validateMarketData(acquired, symbol, nowSeconds);
-    stages.push(stage(2, 'Tick data validation', validated.length === acquired.length && acquired.length ? 'PASS' : 'WAIT', `${validated.length}/${acquired.length} fresh ordered ticks accepted`));
+    stages.push(stage(2, 'Tick data validation', validated.length === acquired.length && acquired.length ? 'PASS' : 'WAIT', `${validated.length}/${acquired.length} ordered source ticks accepted`));
 
     const processed = processDigits(validated);
     stages.push(stage(3, 'Digit processor', processed.length === validated.length && processed.length ? 'PASS' : 'WAIT', `${processed.length} digits linked to source quotes`));
