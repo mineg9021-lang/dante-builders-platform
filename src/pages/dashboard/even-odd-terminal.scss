@@ -10,3 +10,5 @@
 
 
 .eo-terminal__journal{margin-top:16px}.eo-terminal__journal-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid #edf2ee}.eo-terminal__journal-row strong,.eo-terminal__journal-row small{display:block}.eo-terminal__journal-row strong{font-size:11px;color:#244333}.eo-terminal__journal-row small{font-size:10px;color:#859188;margin-top:3px}.eo-terminal__journal-row>span{font-size:11px;color:#45614f;font-variant-numeric:tabular-nums}.eo-terminal__journal-status{font-size:9px;letter-spacing:.5px;font-style:normal;color:#a77a2c}.eo-terminal__journal-status--won{color:#16834a}.eo-terminal__journal-status--lost{color:#b54b4b}.eo-terminal__journal-status--void{color:#78877d}.eo-terminal__journal-empty{font-size:11px;color:#829087;line-height:1.5}
+
+.eo-terminal__journal-status--skipped{color:#8b9690}
