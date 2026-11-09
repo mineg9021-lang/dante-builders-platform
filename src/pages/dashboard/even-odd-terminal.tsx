@@ -13,7 +13,8 @@ type TickMessage = {
 type TickRecord = { digit: number; quote: string; epoch: number };
 type SymbolState = { symbol: string; name: string; precision: number; ticks: TickRecord[]; status: string };
 
-const MAX_TICKS = 120;
+const MAX_TICKS = 30;
+const MAX_ANALYSIS_DURATION_MS = 60_000;
 
 const getPrecision = (pipSize?: number) => {
     if (pipSize === undefined || !Number.isFinite(pipSize) || pipSize <= 0) return 2;
@@ -61,10 +62,7 @@ const EvenOddTerminal = () => {
     const availableSymbolKey = availableSymbols.map((item: any) => item.symbol).join('|');
 
     useEffect(() => {
-        if (!running) {
-            setNotice('Analysis stopped.');
-            return;
-        }
+        if (!running) return;
         if (!isAuthorized || connectionStatus !== 'opened' || !api_base.api) {
             setNotice('Waiting for an authorized Deriv connection.');
             return;
@@ -94,6 +92,7 @@ const EvenOddTerminal = () => {
             setSymbols(previous => previous.map(item => {
                 if (item.symbol !== message.tick?.symbol) return item;
                 const epoch = Number(message.tick?.epoch || 0);
+                if (item.ticks.length >= MAX_TICKS) return item;
                 const last = item.ticks[item.ticks.length - 1];
                 const validation = validateTick(
                     item.symbol,
@@ -104,10 +103,11 @@ const EvenOddTerminal = () => {
                 );
                 if (!validation.accepted || !validation.tick) return item;
                 const { digit, quote: fixed, epoch: validEpoch } = validation.tick;
+                const ticks = [...item.ticks, { digit, quote: fixed, epoch: validEpoch }];
                 return {
                     ...item,
-                    status: 'Live',
-                    ticks: [...item.ticks, { digit, quote: fixed, epoch: validEpoch }].slice(-MAX_TICKS),
+                    status: ticks.length >= MAX_TICKS ? 'Sample complete' : 'Live',
+                    ticks,
                 };
             }));
         });
@@ -130,15 +130,29 @@ const EvenOddTerminal = () => {
                 }
             }));
         };
-        setNotice('Live tick analysis is active. Trading is disabled in this module.');
+        setNotice(`Bounded scan active: up to ${MAX_TICKS} valid ticks per market, with a ${MAX_ANALYSIS_DURATION_MS / 1000}-second time limit. Trading is disabled.`);
         connect();
+        const timeout = window.setTimeout(() => {
+            if (mounted) {
+                setNotice('Analysis time limit reached. The bounded scan has stopped.');
+                setRunning(false);
+            }
+        }, MAX_ANALYSIS_DURATION_MS);
 
         return () => {
+            window.clearTimeout(timeout);
             mounted = false;
             messageSubscription.unsubscribe();
             subscriptions.forEach(subscription => subscription.unsubscribe());
         };
     }, [running, isAuthorized, connectionStatus, availableSymbolKey]);
+
+    useEffect(() => {
+        if (running && symbols.length > 0 && symbols.every(item => item.ticks.length >= MAX_TICKS)) {
+            setNotice('All detected markets completed their 30-tick samples. The bounded scan has stopped.');
+            setRunning(false);
+        }
+    }, [running, symbols]);
 
     const selected = symbols.find(item => item.symbol === selectedSymbol);
     const analysis = analyseParity(selected?.ticks.map(tick => tick.digit) || []);
@@ -201,8 +215,8 @@ const EvenOddTerminal = () => {
                         <label>Take-profit<input type='number' min='0' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
                         <label className='eo-terminal__toggle'><input type='checkbox' checked={recoveryEnabled} onChange={event => setRecoveryEnabled(event.target.checked)} /> Enable capped recovery (off by default)</label>
                         <p className='eo-terminal__disclaimer'>These settings are saved in this screen only. No orders are placed and no recovery progression is executed.</p>
-                        <button type='button' onClick={() => setRunning(true)} disabled={running}>Start analysis</button>
-                        <button type='button' className='eo-terminal__stop' onClick={() => setRunning(false)} disabled={!running}>Stop analysis</button>
+                        <button type='button' onClick={() => { setNotice('Starting bounded market analysis…'); setRunning(true); }} disabled={running}>Start analysis</button>
+                        <button type='button' className='eo-terminal__stop' onClick={() => { setNotice('Analysis stopped manually.'); setRunning(false); }} disabled={!running}>Stop analysis</button>
                     </div>
                     <div className='eo-terminal__card eo-terminal__portrait'>
                         <div className='eo-terminal__robot' aria-hidden='true'>AI</div>
