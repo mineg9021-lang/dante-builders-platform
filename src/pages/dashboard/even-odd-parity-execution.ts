@@ -132,7 +132,11 @@ export const monitorParityContract = (
 
         api.send({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1 })
             .then(response => {
-                if (completed) return;
+                if (completed) {
+                    const lateSubscriptionId = response?.subscription?.id;
+                    if (lateSubscriptionId) void api.send({ forget: lateSubscriptionId }).catch(() => undefined);
+                    return;
+                }
                 const error = getApiError(response);
                 if (error) {
                     completed = true;
