@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import React from 'react';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router';
 import { cleanupUrl, handleOAuthCallback } from '@/external/deriv-core';
+import { getOAuthRedirectUri } from '@/external/deriv-core/config/urls';
 import ChunkLoader from '@/components/loader/chunk-loader';
 import LocalStorageSyncWrapper from '@/components/localStorage-sync-wrapper';
 import RoutePromptDialog from '@/components/route-prompt-dialog';
@@ -83,7 +84,7 @@ function App() {
             try {
                 const authInfo = await handleOAuthCallback(window.location.href, {
                     clientId: process.env.NEXT_PUBLIC_DERIV_APP_ID || '',
-                    redirectUri: window.location.origin,
+                    redirectUri: getOAuthRedirectUri(),
                     scopes: 'trade',
                 });
 
@@ -106,7 +107,7 @@ function App() {
             } catch (error) {
                 console.error('OAuth callback error:', error);
             } finally {
-                cleanupUrl(window.location.origin);
+                cleanupUrl(getOAuthRedirectUri());
             }
         };
 
