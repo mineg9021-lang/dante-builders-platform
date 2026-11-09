@@ -105,7 +105,8 @@ const EvenOddTerminal = () => {
             }));
         });
         const connect = async () => {
-            for (const item of initial) {
+            // Start all market subscriptions together so one slow symbol cannot block the scanner.
+            await Promise.all(initial.map(async item => {
                 try {
                     const pending = api_base.api?.send({ ticks: item.symbol, subscribe: 1 }) as any;
                     if (pending?.then) {
@@ -115,12 +116,12 @@ const EvenOddTerminal = () => {
                             else result.subscription.unsubscribe();
                         }
                     }
-                    if (!mounted) break;
                 } catch (error) {
+                    if (!mounted) return;
                     setSymbols(previous => previous.map(row => row.symbol === item.symbol
                         ? { ...row, status: 'Unavailable' } : row));
                 }
-            }
+            }));
         };
         setNotice('Live tick analysis is active. Trading is disabled in this module.');
         connect();
