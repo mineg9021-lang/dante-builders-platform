@@ -60,8 +60,8 @@ const EvenOddTerminal = () => {
     const availableSymbols = useMemo(() => {
         const active = Array.isArray(api_base.active_symbols) ? api_base.active_symbols : [];
         return active.filter((item: any) => {
-            const name = String(item.display_name || item.symbol_display_name || '');
-            const symbol = String(item.symbol || '');
+            const name = String(item.display_name || item.symbol_display_name || item.underlying_symbol_name || '');
+            const symbol = String(item.symbol || item.underlying_symbol || '');
             return /volatility/i.test(name) && Boolean(symbol);
         });
     }, [connectionStatus, isAuthorized, lastUpdated]);
@@ -80,8 +80,8 @@ const EvenOddTerminal = () => {
         }
 
         const initial: SymbolState[] = availableSymbols.map((item: any) => ({
-            symbol: item.symbol,
-            name: item.display_name || item.symbol_display_name || item.symbol,
+            symbol: item.symbol || item.underlying_symbol,
+            name: item.display_name || item.symbol_display_name || item.underlying_symbol_name || item.symbol || item.underlying_symbol,
             precision: Number(api_base.pip_sizes[item.underlying_symbol || item.symbol] ?? getPrecision(Number(item.pip_size || item.pip)) ?? 2),
             ticks: [],
             status: 'Connecting',
