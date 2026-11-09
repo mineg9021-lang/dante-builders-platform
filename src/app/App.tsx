@@ -59,6 +59,8 @@ const router = createBrowserRouter(
             <Route index element={<AppRoot />} />
             {/* App Builder embeds the template at /preview — render the same app shell */}
             <Route path='preview' element={<AppRoot />} />
+            {/* Partner Netlify deploy-preview links may include a legacy trailing path; keep the SPA shell reachable. */}
+            <Route path='*' element={<AppRoot />} />
         </Route>
     ),
     { basename: routerBasename }
