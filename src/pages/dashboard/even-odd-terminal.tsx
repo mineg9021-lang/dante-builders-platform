@@ -66,7 +66,7 @@ const EvenOddTerminal = () => {
         });
     }, [connectionStatus, isAuthorized, lastUpdated]);
 
-    const availableSymbolKey = availableSymbols.map((item: any) => item.symbol).join('|');
+    const availableSymbolKey = availableSymbols.map((item: any) => item.symbol || item.underlying_symbol).join('|');
 
     useEffect(() => {
         if (!running) return;
