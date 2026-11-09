@@ -25,6 +25,7 @@ const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
 
     return (
         <React.Fragment>
+            {client.is_logged_in && <EvenOddTerminal />}
             <div
                 className={classNames('tab__dashboard', {
                     'tab__dashboard--tour-active': active_tour,
@@ -72,7 +73,6 @@ const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
                     </div>
                 </div>
             </div>
-            {client.is_logged_in && <EvenOddTerminal />}
             <InfoPanel />
             {active_tab === 0 && <OnboardTourHandler is_mobile={!isDesktop} />}
         </React.Fragment>
