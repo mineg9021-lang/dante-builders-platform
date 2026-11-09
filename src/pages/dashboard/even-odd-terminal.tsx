@@ -35,7 +35,7 @@ const EvenOddTerminal = () => {
     const [stopLoss, setStopLoss] = useState('10');
     const [takeProfit, setTakeProfit] = useState('10');
     const [recoveryEnabled, setRecoveryEnabled] = useState(false);
-    const [running, setRunning] = useState(false);
+    const [running, setRunning] = useState(true);
     const [notice, setNotice] = useState('Connect your Deriv account to start live market analysis.');
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
@@ -49,7 +49,7 @@ const EvenOddTerminal = () => {
     }, [connectionStatus, isAuthorized, lastUpdated]);
 
     useEffect(() => {
-        if (!isAuthorized || connectionStatus !== 'opened' || !api_base.api) {
+        if (!running || !isAuthorized || connectionStatus !== 'opened' || !api_base.api) {
             setRunning(false);
             setNotice('Waiting for an authorized Deriv connection.');
             return;
@@ -116,7 +116,7 @@ const EvenOddTerminal = () => {
             messageSubscription.unsubscribe();
             subscriptions.forEach(subscription => subscription.unsubscribe());
         };
-    }, [isAuthorized, connectionStatus, availableSymbols.length]);
+    }, [running, isAuthorized, connectionStatus, availableSymbols.length]);
 
     const selected = symbols.find(item => item.symbol === selectedSymbol);
     const counts = selected?.ticks.reduce((acc, tick) => {
