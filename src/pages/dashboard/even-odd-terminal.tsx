@@ -86,7 +86,6 @@ const EvenOddTerminal = () => {
             executionAllowed.current = false;
             setExecutionArmed(false);
             autoRestartAllowed.current = false;
-            autoRestartAllowed.current = false;
             setAutoRestart(false);
             setRunning(false);
             setExecutionStatus('Disarmed · Deriv account changed; review account mode and start a fresh scan.');
