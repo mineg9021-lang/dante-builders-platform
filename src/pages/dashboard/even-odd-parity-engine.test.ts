@@ -32,6 +32,8 @@ const config = (overrides: Partial<ParityEngineConfig> = {}): ParityEngineConfig
     maxStakePercent: 2,
     sessionLoss: 0,
     sessionProfit: 0,
+    tradesThisSession: 0,
+    maxTradesPerSession: 10,
     stopLoss: 10,
     takeProfit: 10,
     ...overrides,
@@ -85,6 +87,18 @@ describe('18-layer parity decision engine', () => {
             symbol: 'R_10',
             ticks: makeTicks(),
             config: config({ mode: 'demo', armed: true, authorized: true, sessionProfit: 10, takeProfit: 10 }),
+            nowSeconds: now,
+        });
+
+        expect(result.executionAuthorized).toBe(false);
+        expect(result.stages[13].status).toBe('BLOCKED');
+    });
+
+    it('blocks entries after the configured per-session trade limit', () => {
+        const result = runParityPipeline({
+            symbol: 'R_10',
+            ticks: makeTicks(),
+            config: config({ mode: 'demo', armed: true, authorized: true, tradesThisSession: 10, maxTradesPerSession: 10 }),
             nowSeconds: now,
         });
 
