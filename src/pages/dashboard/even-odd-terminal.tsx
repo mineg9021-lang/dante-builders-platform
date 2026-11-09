@@ -50,7 +50,17 @@ const EvenOddTerminal = () => {
             return [];
         }
     });
-    const [sessionPnl, setSessionPnl] = useState(0);
+    const [sessionPnlByAccount, setSessionPnlByAccount] = useState<Record<string, number>>(() => {
+        try {
+            const saved = window.sessionStorage.getItem('dante-parity-session-pnl');
+            const parsed = saved ? JSON.parse(saved) : {};
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch {
+            return {};
+        }
+    });
+    const activeLoginid = authData?.loginid || '';
+    const sessionPnl = activeLoginid ? Number(sessionPnlByAccount[activeLoginid] || 0) : 0;
     const executionLock = useRef(false);
     const executionAllowed = useRef(false);
     const consumedSample = useRef('');
@@ -226,6 +236,14 @@ const EvenOddTerminal = () => {
     }, [tradeJournal]);
 
     useEffect(() => {
+        try {
+            window.sessionStorage.setItem('dante-parity-session-pnl', JSON.stringify(sessionPnlByAccount));
+        } catch {
+            // Session P/L persistence is best-effort; execution still checks the current in-memory value.
+        }
+    }, [sessionPnlByAccount]);
+
+    useEffect(() => {
         if (!executionArmed || !pipeline.executionAuthorized || executionLock.current || !selected || !pipeline.contractType) return;
         if (!api_base.api || !authData?.currency) {
             setExecutionStatus('Blocked: Deriv connection or account currency is unavailable.');
@@ -258,7 +276,12 @@ const EvenOddTerminal = () => {
             onPurchased: purchase => setTradeJournal(previous => [{ ...purchase, status: 'EXECUTED' }, ...previous].slice(0, 50)),
             timeoutMs: 90_000,
         }).then(result => {
-            setSessionPnl(previous => previous + result.profit);
+            if (activeLoginid) {
+                setSessionPnlByAccount(previous => ({
+                    ...previous,
+                    [activeLoginid]: Number(previous[activeLoginid] || 0) + result.profit,
+                }));
+            }
             setTradeJournal(previous => previous.map(row => row.contractId === result.contractId
                 ? { ...row, status: result.settlement, profit: result.profit, settledAt: result.settledAt }
                 : row));
