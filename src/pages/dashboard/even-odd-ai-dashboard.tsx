@@ -72,7 +72,7 @@ const EvenOddAiDashboard = observer(() => {
     const [stake, setStake] = useState('1');
     const [stopLoss, setStopLoss] = useState('10');
     const [takeProfit, setTakeProfit] = useState('5');
-    const [recoveryEnabled, setRecoveryEnabled] = useState(false);
+    const [recoveryEnabled] = useState(false);
     const [lastUpdate, setLastUpdate] = useState('');
     const subscriptions = useRef<Set<string>>(new Set());
     const stream = useRef<{ unsubscribe: () => void } | null>(null);
@@ -263,8 +263,8 @@ const EvenOddAiDashboard = observer(() => {
                     <label>Stop loss<input inputMode='decimal' value={stopLoss} onChange={updateNumber(setStopLoss)} /></label>
                     <label>Take profit<input inputMode='decimal' value={takeProfit} onChange={updateNumber(setTakeProfit)} /></label>
                     <label className='even-odd-ai__toggle'>
-                        <span><strong>Recovery mode</strong><small>Three recovery layers · 1.5 multiplier</small></span>
-                        <input type='checkbox' checked={recoveryEnabled} onChange={event => setRecoveryEnabled(event.target.checked)} />
+                        <span><strong>Recovery mode</strong><small>OFF by default · unavailable until execution safeguards are implemented</small></span>
+                        <input type='checkbox' checked={recoveryEnabled} disabled onChange={event => setRecoveryEnabled(event.target.checked)} />
                     </label>
                     <div className='even-odd-ai__locked'><span>EXECUTION LOCKED</span><strong>Analysis-only mode</strong><small>No proposals, purchases or account transactions are sent by this dashboard yet.</small></div>
                 </aside>
