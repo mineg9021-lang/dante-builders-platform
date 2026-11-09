@@ -115,15 +115,12 @@ export const monitorParityContract = (
     new Promise((resolve, reject) => {
         let completed = false;
         let subscriptionId: string | undefined;
-        const messageSubscription = api.onMessage().subscribe(message => {
-            if (Number(message?.proposal_open_contract?.contract_id) !== contractId) return;
-            const contract = message.proposal_open_contract;
-            if (isTerminalContract(contract)) finish(contract);
-        });
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        let messageSubscription: DerivMessageSubscription | undefined;
 
         const cleanup = () => {
-            clearTimeout(timeout);
-            messageSubscription.unsubscribe();
+            if (timeout) clearTimeout(timeout);
+            messageSubscription?.unsubscribe();
             if (subscriptionId) {
                 void api.send({ forget: subscriptionId }).catch(() => undefined);
             }
@@ -136,12 +133,19 @@ export const monitorParityContract = (
             resolve(contract);
         };
 
-        const timeout = setTimeout(() => {
+        timeout = setTimeout(() => {
             if (completed) return;
             completed = true;
             cleanup();
             reject(new Error('Contract settlement monitoring timed out. Trading has been paused.'));
         }, timeoutMs);
+
+        messageSubscription = api.onMessage().subscribe(message => {
+            if (Number(message?.proposal_open_contract?.contract_id) !== contractId) return;
+            const contract = message.proposal_open_contract;
+            if (isTerminalContract(contract)) finish(contract);
+        });
+        if (completed) messageSubscription.unsubscribe();
 
         api.send({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1 })
             .then(response => {
