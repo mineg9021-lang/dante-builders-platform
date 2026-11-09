@@ -24,6 +24,8 @@ export type ParityEngineConfig = {
     maxStakePercent: number;
     sessionLoss: number;
     sessionProfit: number;
+    tradesThisSession: number;
+    maxTradesPerSession: number;
     stopLoss: number;
     takeProfit: number;
 };
@@ -175,7 +177,8 @@ export const controlRisk = (config: ParityEngineConfig) => {
     return Number.isFinite(config.stake) && config.stake > 0 &&
         config.stake <= stakeLimit && config.stake <= config.availableBalance &&
         config.stopLoss > 0 && config.takeProfit > 0 &&
-        config.sessionLoss < config.stopLoss && config.sessionProfit < config.takeProfit;
+        config.sessionLoss < config.stopLoss && config.sessionProfit < config.takeProfit &&
+        config.tradesThisSession < config.maxTradesPerSession;
 };
 
 /** 15 — Sniper gate: require a fresh confirmed candidate and stable evidence. */
