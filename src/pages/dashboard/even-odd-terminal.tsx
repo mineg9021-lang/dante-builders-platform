@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api_base } from '@/external/bot-skeleton';
 import { useApiBase } from '@/hooks/useApiBase';
+import { analyseParity, validateTick } from './even-odd-analysis-engine';
 import './even-odd-terminal.scss';
 
 type TickMessage = {
@@ -13,18 +14,11 @@ type TickRecord = { digit: number; quote: string; epoch: number };
 type SymbolState = { symbol: string; name: string; precision: number; ticks: TickRecord[]; status: string };
 
 const MAX_TICKS = 120;
-const MAX_AGE_MS = 15000;
 
 const getPrecision = (pipSize?: number) => {
     if (!pipSize || !Number.isFinite(pipSize)) return 2;
     const value = String(pipSize);
     return value.includes('.') ? value.split('.')[1].length : 0;
-};
-
-const getLastDigit = (quote: number | string, precision: number) => {
-    const fixed = typeof quote === 'number' ? quote.toFixed(precision) : String(quote);
-    const digits = fixed.replace(/[^0-9]/g, '');
-    return digits.length ? Number(digits[digits.length - 1]) : null;
 };
 
 const EvenOddTerminal = () => {
@@ -35,7 +29,7 @@ const EvenOddTerminal = () => {
     const [stopLoss, setStopLoss] = useState('10');
     const [takeProfit, setTakeProfit] = useState('10');
     const [recoveryEnabled, setRecoveryEnabled] = useState(false);
-    const [running, setRunning] = useState(true);
+    const [running, setRunning] = useState(false);
     const [notice, setNotice] = useState('Connect your Deriv account to start live market analysis.');
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
@@ -54,7 +48,7 @@ const EvenOddTerminal = () => {
         return active.filter((item: any) => {
             const name = String(item.display_name || item.symbol_display_name || '');
             const symbol = String(item.symbol || '');
-            return symbol.startsWith('R_') || /volatility .* index/i.test(name);
+            return /volatility/i.test(name) && Boolean(symbol);
         });
     }, [connectionStatus, isAuthorized, lastUpdated]);
 
@@ -91,18 +85,21 @@ const EvenOddTerminal = () => {
             if (quote === undefined || quote === null) return;
             setSymbols(previous => previous.map(item => {
                 if (item.symbol !== message.tick?.symbol) return item;
-                const precision = item.precision;
-                const fixed = typeof quote === 'number' ? quote.toFixed(precision) : String(quote);
-                const digit = getLastDigit(quote, precision);
-                if (digit === null) return item;
                 const epoch = Number(message.tick?.epoch || 0);
                 const last = item.ticks[item.ticks.length - 1];
-                if (epoch > 0 && Date.now() / 1000 - epoch > MAX_AGE_MS / 1000) return item;
-                if (last && epoch > 0 && epoch <= last.epoch) return item;
+                const validation = validateTick(
+                    item.symbol,
+                    quote,
+                    epoch,
+                    item.precision,
+                    last?.epoch
+                );
+                if (!validation.accepted || !validation.tick) return item;
+                const { digit, quote: fixed, epoch: validEpoch } = validation.tick;
                 return {
                     ...item,
                     status: 'Live',
-                    ticks: [...item.ticks, { digit, quote: fixed, epoch }].slice(-MAX_TICKS),
+                    ticks: [...item.ticks, { digit, quote: fixed, epoch: validEpoch }].slice(-MAX_TICKS),
                 };
             }));
         });
@@ -135,14 +132,10 @@ const EvenOddTerminal = () => {
     }, [running, isAuthorized, connectionStatus, availableSymbols.length]);
 
     const selected = symbols.find(item => item.symbol === selectedSymbol);
-    const counts = selected?.ticks.reduce((acc, tick) => {
-        acc[tick.digit % 2 === 0 ? 'even' : 'odd'] += 1;
-        return acc;
-    }, { even: 0, odd: 0 }) || { even: 0, odd: 0 };
-    const total = counts.even + counts.odd;
-    const prediction = total >= 20 && Math.abs(counts.even - counts.odd) >= 4
-        ? (counts.even > counts.odd ? 'EVEN LEADING' : 'ODD LEADING')
-        : 'WAIT';
+    const analysis = analyseParity(selected?.ticks.map(tick => tick.digit) || []);
+    const counts = { even: analysis.evenCount, odd: analysis.oddCount };
+    const total = analysis.sampleSize;
+    const prediction = analysis.decision === 'CANDIDATE' ? `${analysis.lead} LEADING` : 'WAIT';
     const latest = selected?.ticks[selected.ticks.length - 1];
 
     return (
@@ -175,9 +168,9 @@ const EvenOddTerminal = () => {
                             <div><span>Analysis sample</span><strong>{total}/120</strong></div>
                         </div>
                         <div className='eo-terminal__signal'>
-                            <span>Observed parity lead</span>
+                            <span>Observed parity lead · evidence {analysis.evidenceScore}%</span>
                             <strong className={prediction === 'WAIT' ? 'is-wait' : 'is-signal'}>{prediction}</strong>
-                            <small>{prediction === 'WAIT' ? 'Insufficient evidence for a candidate.' : 'Historical frequency candidate only — not a trade instruction.'}</small>
+                            <small>{prediction === 'WAIT' ? 'Insufficient sample or parity difference. No entry candidate.' : `Observed sample lead only · evidence difference ${analysis.evidenceScore}% · not a next-tick forecast.`}</small>
                         </div>
                     </div>
                     <div className='eo-terminal__card'>
