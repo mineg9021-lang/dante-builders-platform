@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api_base } from '@/external/bot-skeleton';
 import { useApiBase } from '@/hooks/useApiBase';
-import { analyseParity, validateTick } from './even-odd-analysis-engine';
+import { validateTick } from './even-odd-analysis-engine';
+import { runParityPipeline } from './even-odd-parity-engine';
 import './even-odd-terminal.scss';
 
 type TickMessage = {
@@ -28,13 +29,12 @@ const getPrecision = (pipSize?: number) => {
 };
 
 const EvenOddTerminal = () => {
-    const { isAuthorized, connectionStatus } = useApiBase();
+    const { isAuthorized, connectionStatus, authData } = useApiBase();
     const [symbols, setSymbols] = useState<SymbolState[]>([]);
     const [selectedSymbol, setSelectedSymbol] = useState('');
     const [stake, setStake] = useState('1');
     const [stopLoss, setStopLoss] = useState('10');
     const [takeProfit, setTakeProfit] = useState('10');
-    const [recoveryEnabled, setRecoveryEnabled] = useState(false);
     const [running, setRunning] = useState(false);
     const [notice, setNotice] = useState('Connect your Deriv account to start live market analysis.');
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);
@@ -163,10 +163,35 @@ const EvenOddTerminal = () => {
     }, [running, symbols]);
 
     const selected = symbols.find(item => item.symbol === selectedSymbol);
-    const analysis = analyseParity(selected?.ticks.map(tick => tick.digit) || []);
-    const counts = { even: analysis.evenCount, odd: analysis.oddCount };
-    const total = analysis.sampleSize;
-    const prediction = analysis.decision === 'CANDIDATE' ? `${analysis.lead} LEADING` : 'WAIT';
+    const pipeline = runParityPipeline({
+        symbol: selected?.symbol || '',
+        ticks: (selected?.ticks || []).map(tick => ({
+            symbol: selected?.symbol || '',
+            quote: tick.quote,
+            epoch: tick.epoch,
+            digit: tick.digit,
+            parity: tick.digit % 2 === 0 ? 'EVEN' as const : 'ODD' as const,
+        })),
+        config: {
+            mode: 'analysis',
+            armed: false,
+            authorized: isAuthorized,
+            demoAccount: Boolean(authData?.is_virtual),
+            maxTicks: MAX_TICKS,
+            minSample: 30,
+            minLead: 0.12,
+            minStableRatio: 1,
+            stake: Number(stake),
+            availableBalance: Number(authData?.balance || 0),
+            maxStakePercent: 2,
+            sessionLoss: 0,
+            stopLoss: Number(stopLoss),
+            takeProfit: Number(takeProfit),
+        },
+    });
+    const counts = { even: pipeline.evenCount, odd: pipeline.oddCount };
+    const total = pipeline.sampleSize;
+    const prediction = pipeline.selectedParity === 'NONE' ? 'WAIT' : `${pipeline.selectedParity} LEADING`;
     const latest = selected?.ticks[selected.ticks.length - 1];
 
     return (
@@ -199,7 +224,7 @@ const EvenOddTerminal = () => {
                             <div><span>Analysis sample</span><strong>{total}/30</strong></div>
                         </div>
                         <div className='eo-terminal__signal'>
-                            <span>Observed parity lead · evidence {analysis.evidenceScore}%</span>
+                            <span>Observed parity lead · evidence {pipeline.evidenceScore}%</span>
                             <strong className={prediction === 'WAIT' ? 'is-wait' : 'is-signal'}>{prediction}</strong>
                             <small>{prediction === 'WAIT' ? 'Insufficient sample or parity difference. No entry candidate.' : `Observed sample lead only · evidence difference ${analysis.evidenceScore}% · not a next-tick forecast.`}</small>
                         </div>
@@ -213,6 +238,18 @@ const EvenOddTerminal = () => {
                             {!selected?.ticks.length && <p>Waiting for live ticks from Deriv…</p>}
                         </div>
                     </div>
+                    <div className='eo-terminal__card eo-terminal__layers'>
+                        <div className='eo-terminal__card-heading'><h3>18 engine layers</h3><span>Live pipeline status</span></div>
+                        <div className='eo-terminal__layer-list'>
+                            {pipeline.stages.map(item => (
+                                <div className={`eo-terminal__layer eo-terminal__layer--${item.status.toLowerCase()}`} key={item.id}>
+                                    <b>{String(item.id).padStart(2, '0')}</b>
+                                    <div><strong>{item.name}</strong><small>{item.detail}</small></div>
+                                    <em>{item.status}</em>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 <aside className='eo-terminal__side'>
@@ -221,14 +258,36 @@ const EvenOddTerminal = () => {
                         <label>Stake amount<input type='number' min='0.35' step='0.01' value={stake} onChange={event => setStake(event.target.value)} /></label>
                         <label>Stop-loss<input type='number' min='0' step='0.01' value={stopLoss} onChange={event => setStopLoss(event.target.value)} /></label>
                         <label>Take-profit<input type='number' min='0' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
-                        <label className='eo-terminal__toggle'><input type='checkbox' checked={recoveryEnabled} onChange={event => setRecoveryEnabled(event.target.checked)} /> Enable capped recovery (off by default)</label>
-                        <p className='eo-terminal__disclaimer'>These settings are saved in this screen only. No orders are placed and no recovery progression is executed.</p>
+                        
+                        <p className='eo-terminal__disclaimer'>Stake and limits feed the risk-control layer. No orders are placed in this analysis build; recovery and martingale are not used.</p>
                         <button type='button' onClick={() => { setNotice('Starting bounded market analysis…'); setRunning(true); }} disabled={running}>Start analysis</button>
                         <button type='button' className='eo-terminal__stop' onClick={() => { setNotice('Analysis stopped manually.'); setRunning(false); }} disabled={!running}>Stop analysis</button>
                     </div>
                     <div className='eo-terminal__card eo-terminal__portrait'>
-                        <div className='eo-terminal__robot' aria-hidden='true'>AI</div>
-                        <div><strong>Analysis engine</strong><span>Tick validation · parity statistics</span></div>
+                        <div className='eo-terminal__robot' aria-hidden='true'>
+                            <svg viewBox='0 0 96 96' role='img'>
+                                <defs>
+                                    <linearGradient id='eo-android-metal' x1='0' y1='0' x2='1' y2='1'>
+                                        <stop offset='0%' stopColor='#f9fffb' />
+                                        <stop offset='55%' stopColor='#c6e8d2' />
+                                        <stop offset='100%' stopColor='#4d9b6c' />
+                                    </linearGradient>
+                                    <linearGradient id='eo-android-glow' x1='0' y1='0' x2='1' y2='1'>
+                                        <stop offset='0%' stopColor='#1b9b58' />
+                                        <stop offset='100%' stopColor='#063d28' />
+                                    </linearGradient>
+                                </defs>
+                                <path d='M48 5 69 13 82 31 86 55 73 80 48 92 23 80 10 55 14 31 27 13Z' fill='url(#eo-android-metal)' stroke='#247a4b' strokeWidth='2'/>
+                                <path d='M29 26Q48 13 67 26L72 52Q68 72 48 78Q28 72 24 52Z' fill='#f7fff9' stroke='#287c4d' strokeWidth='2'/>
+                                <path d='M25 34 16 26 21 48 27 49M71 34 80 26 75 48 69 49' fill='url(#eo-android-glow)' stroke='#145c38' strokeWidth='2'/>
+                                <path d='M31 43Q39 37 44 43M52 43Q59 37 65 43' fill='none' stroke='#17683f' strokeWidth='3' strokeLinecap='round'/>
+                                <ellipse cx='38' cy='48' rx='4' ry='3' fill='#16834a'/><ellipse cx='59' cy='48' rx='4' ry='3' fill='#16834a'/>
+                                <path d='M48 48 45 57 51 57M39 65Q48 70 57 65' fill='none' stroke='#397e56' strokeWidth='2' strokeLinecap='round'/>
+                                <path d='M36 9 48 3 60 9 56 20 40 20Z' fill='url(#eo-android-glow)' stroke='#247a4b' strokeWidth='2'/>
+                                <path d='M44 4 48 0 52 4' fill='none' stroke='#baf2cf' strokeWidth='2'/>
+                            </svg>
+                        </div>
+                        <div><strong>Parity intelligence</strong><span>18 connected analysis and safety layers</span></div>
                     </div>
                 </aside>
             </div>
