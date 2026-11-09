@@ -94,15 +94,15 @@ const EvenOddTerminal = () => {
     }, [activeLoginid]);
 
     useEffect(() => {
-        if (connectionStatus !== 'opened' && executionArmed) {
+        if (connectionStatus !== 'opened' && (executionArmed || running)) {
             executionAllowed.current = false;
             setExecutionArmed(false);
             autoRestartAllowed.current = false;
             setAutoRestart(false);
             setRunning(false);
-            setExecutionStatus('Disarmed · Deriv connection closed; any accepted contract will still be monitored.');
+            setExecutionStatus('Stopped · Deriv connection closed; any accepted contract will still be monitored.');
         }
-    }, [connectionStatus, executionArmed]);
+    }, [connectionStatus, executionArmed, running]);
 
     useEffect(() => {
         if (!isAuthorized || connectionStatus !== 'opened') return;
