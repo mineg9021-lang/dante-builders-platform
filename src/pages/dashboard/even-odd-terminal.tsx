@@ -62,6 +62,16 @@ const EvenOddTerminal = () => {
     });
     const activeLoginid = authData?.loginid || '';
     const sessionPnl = activeLoginid ? Number(sessionPnlByAccount[activeLoginid] || 0) : 0;
+    const [tradeCountByAccount, setTradeCountByAccount] = useState<Record<string, number>>(() => {
+        try {
+            const saved = window.sessionStorage.getItem('dante-parity-session-trades');
+            const parsed = saved ? JSON.parse(saved) : {};
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch {
+            return {};
+        }
+    });
+    const tradesThisSession = activeLoginid ? Number(tradeCountByAccount[activeLoginid] || 0) : 0;
     const executionLock = useRef(false);
     const executionAllowed = useRef(false);
     const consumedSample = useRef('');
@@ -232,6 +242,8 @@ const EvenOddTerminal = () => {
             maxStakePercent: 2,
             sessionLoss: Math.max(0, -sessionPnl),
             sessionProfit: Math.max(0, sessionPnl),
+            tradesThisSession,
+            maxTradesPerSession: 10,
             stopLoss: Number(stopLoss),
             takeProfit: Number(takeProfit),
         },
@@ -258,6 +270,14 @@ const EvenOddTerminal = () => {
             // Session P/L persistence is best-effort; execution still checks the current in-memory value.
         }
     }, [sessionPnlByAccount]);
+
+    useEffect(() => {
+        try {
+            window.sessionStorage.setItem('dante-parity-session-trades', JSON.stringify(tradeCountByAccount));
+        } catch {
+            // Session trade count persistence is best-effort; order execution remains gated in memory.
+        }
+    }, [tradeCountByAccount]);
 
     useEffect(() => {
         if (!executionArmed || !pipeline.executionAuthorized || executionLock.current || !selected || !pipeline.contractType) return;
@@ -292,6 +312,7 @@ const EvenOddTerminal = () => {
             onPurchased: purchase => {
                 journaledSample.current = `${selected.symbol}:${latest?.epoch || 0}`;
                 setTradeJournal(previous => [{ ...purchase, id: String(purchase.contractId), accountId: activeLoginid, status: 'EXECUTED' }, ...previous].slice(0, 50));
+                if (activeLoginid) setTradeCountByAccount(previous => ({ ...previous, [activeLoginid]: Number(previous[activeLoginid] || 0) + 1 }));
             },
             timeoutMs: 90_000,
         }).then(result => {
@@ -306,7 +327,8 @@ const EvenOddTerminal = () => {
                 : row));
             setExecutionStatus(`${result.settlement} · ${result.contractType} · P/L ${result.profit.toFixed(2)} ${authData.currency}`);
             const nextSessionPnl = sessionPnl + result.profit;
-            const withinSessionLimits = Math.max(0, -nextSessionPnl) < Number(stopLoss) && Math.max(0, nextSessionPnl) < Number(takeProfit);
+            const nextTradeCount = tradesThisSession + 1;
+            const withinSessionLimits = Math.max(0, -nextSessionPnl) < Number(stopLoss) && Math.max(0, nextSessionPnl) < Number(takeProfit) && nextTradeCount < 10;
             if (autoRestart && withinSessionLimits) {
                 setSymbols([]);
                 executionAllowed.current = true;
@@ -326,14 +348,13 @@ const EvenOddTerminal = () => {
             setExecutionStatus(`BLOCKED · ${message}`);
             setNotice(message);
             executionAllowed.current = false;
-            executionAllowed.current = false;
             setExecutionArmed(false);
             setAutoRestart(false);
             setRunning(false);
         }).finally(() => {
             executionLock.current = false;
         });
-    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, autoRestart, stopLoss, takeProfit, sessionPnl, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized]);
+    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, autoRestart, stopLoss, takeProfit, sessionPnl, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized, tradesThisSession]);
 
     useEffect(() => {
         if (selected && latest && selected.ticks.length >= MAX_TICKS && !running && !pipeline.executionAuthorized) {
@@ -495,10 +516,10 @@ const EvenOddTerminal = () => {
                         <label>Take-profit<input type='number' min='0' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
                         <label>Execution mode<select value={mode} onChange={event => changeMode(event.target.value as 'analysis' | 'demo' | 'live')}><option value='analysis'>Analysis only</option><option value='demo'>Demo auto execution</option><option value='live'>Live auto execution</option></select></label>
                         <label className='eo-terminal__toggle'><input type='checkbox' checked={autoRestart} disabled={mode === 'analysis'} onChange={event => setAutoRestart(event.target.checked)} /> Auto-restart after settlement (fresh sample required)</label>
-                        <div className='eo-terminal__session-pnl'><span>Session P/L</span><strong>{sessionPnl.toFixed(2)} {authData?.currency || ''}</strong></div>
+                        <div className='eo-terminal__session-pnl'><span>Session P/L · Trades {tradesThisSession}/10</span><strong>{sessionPnl.toFixed(2)} {authData?.currency || ''}</strong></div>
                         <p className='eo-terminal__execution-status'>{executionStatus}</p>
                         
-                        <p className='eo-terminal__disclaimer'>Stake, stop-loss and take-profit are enforced by the session risk gate. One trade per fresh sample. Optional auto-restart starts a new bounded scan after settlement; no martingale or recovery progression.</p>
+                        <p className='eo-terminal__disclaimer'>Stake, stop-loss and take-profit are enforced by the session risk gate. One trade per fresh sample · max 10 per session. Auto-restart uses a new bounded sample; stop-loss, take-profit and trade-count limits still apply. No martingale or recovery progression.</p>
                         <button type='button' onClick={startFreshAnalysis} disabled={running || executionLock.current}>Start analysis</button>
                         <button type='button' className='eo-terminal__arm' onClick={armOneTrade} disabled={executionArmed || executionLock.current}>Arm bot · one trade</button>
                         <button type='button' className='eo-terminal__stop' onClick={stopBot} disabled={!running && !executionArmed && !executionLock.current}>Stop / disarm</button>
