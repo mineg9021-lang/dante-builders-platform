@@ -331,7 +331,7 @@ const EvenOddTerminal = () => {
             const nextSessionPnl = sessionPnl + result.profit;
             const nextTradeCount = tradesThisSession + 1;
             const withinSessionLimits = Math.max(0, -nextSessionPnl) < Number(stopLoss) && Math.max(0, nextSessionPnl) < Number(takeProfit) && nextTradeCount < 10;
-            if (autoRestart && withinSessionLimits) {
+            if (autoRestart && executionAllowed.current && withinSessionLimits) {
                 setSymbols([]);
                 executionAllowed.current = true;
                 setExecutionArmed(true);
