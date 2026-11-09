@@ -13,8 +13,9 @@ const names = [
 export const quoteWithPrecision = (quote: string | number, precision: number): string => {
  const raw = String(quote);
  if (!Number.isFinite(Number(raw))) throw new Error('Invalid quote');
- if (raw.includes('.')) return raw;
- return precision > 0 ? Number(raw).toFixed(precision) : raw;
+ if (precision <= 0) return raw.split('.')[0];
+ const [whole, fraction = ''] = raw.split('.');
+ return `${whole}.${fraction.padEnd(precision, '0').slice(0, precision)}`;
 };
 
 export const extractLastDigit = (quote: string): number => {
