@@ -46,7 +46,7 @@ const EvenOddTerminal = () => {
     useEffect(() => {
         // Demo accounts open in demo mode for a one-click guarded bot run; real accounts stay analysis-only until Live is explicitly selected.
         if (authData?.is_virtual && mode === 'analysis') setMode('demo');
-    }, [authData?.loginid, authData?.is_virtual]);
+    }, [authData?.loginid, authData?.is_virtual, mode]);
     const [executionArmed, setExecutionArmed] = useState(false);
     const [autoRestart, setAutoRestart] = useState(false);
     const [executionStatus, setExecutionStatus] = useState('Not armed');
@@ -212,7 +212,9 @@ const EvenOddTerminal = () => {
                 }
             }));
         };
-        setNotice(`Bounded scan active: up to ${MAX_TICKS} valid ticks per market, with a ${MAX_ANALYSIS_DURATION_MS / 1000}-second time limit. Trading is disabled.`);
+        setNotice(executionArmed
+            ? `BOT RUNNING · collecting up to ${MAX_TICKS} valid ticks from ${initial[0]?.name || 'the selected market'}; a Deriv proposal will be requested only when signal and risk checks pass.`
+            : `Analysis scan active · collecting up to ${MAX_TICKS} valid ticks from ${initial[0]?.name || 'the selected market'}. Select Demo or Live and press Run bot to enable guarded execution.`);
         connect();
         const timeout = window.setTimeout(() => {
             if (mounted) {
