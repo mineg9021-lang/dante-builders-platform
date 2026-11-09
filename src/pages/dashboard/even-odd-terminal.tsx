@@ -64,8 +64,19 @@ const EvenOddTerminal = () => {
     const executionLock = useRef(false);
     const executionAllowed = useRef(false);
     const consumedSample = useRef('');
+    const lastAccountId = useRef('');
     const [notice, setNotice] = useState('Connect your Deriv account to start live market analysis.');
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (lastAccountId.current && activeLoginid && lastAccountId.current !== activeLoginid) {
+            executionAllowed.current = false;
+            setExecutionArmed(false);
+            setRunning(false);
+            setExecutionStatus('Disarmed · Deriv account changed; review account mode and start a fresh scan.');
+        }
+        lastAccountId.current = activeLoginid;
+    }, [activeLoginid]);
 
     useEffect(() => {
         if (!isAuthorized || connectionStatus !== 'opened') return;
@@ -300,7 +311,7 @@ const EvenOddTerminal = () => {
         }).finally(() => {
             executionLock.current = false;
         });
-    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, authData?.currency, authData?.is_virtual, isAuthorized]);
+    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized]);
 
     useEffect(() => {
         const sampleComplete = symbols.length > 0 && symbols.every(item => item.ticks.length >= MAX_TICKS);
