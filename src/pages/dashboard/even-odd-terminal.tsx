@@ -154,7 +154,7 @@ const EvenOddTerminal = () => {
             <div className='eo-terminal__grid'>
                 <div className='eo-terminal__main'>
                     <div className='eo-terminal__card eo-terminal__market'>
-                        <div className='eo-terminal__card-heading'><h3>Market scanner</h3><span>{symbols.length} eligible markets</span></div>
+                        <div className='eo-terminal__card-heading'><h3>Market scanner</h3><span>{availableSymbols.length} eligible markets detected</span></div>
                         <div className='eo-terminal__market-row'>
                             <label htmlFor='eo-symbol'>Selected volatility index</label>
                             <select id='eo-symbol' value={selectedSymbol} onChange={event => setSelectedSymbol(event.target.value)}>
@@ -197,7 +197,7 @@ const EvenOddTerminal = () => {
                     </div>
                     <div className='eo-terminal__card eo-terminal__portrait'>
                         <div className='eo-terminal__robot' aria-hidden='true'>AI</div>
-                        <div><strong>Analysis engine</strong><span>18-stage architecture planned</span></div>
+                        <div><strong>Analysis engine</strong><span>Tick validation · parity statistics</span></div>
                     </div>
                 </aside>
             </div>
