@@ -83,7 +83,15 @@ const EvenOddTerminal = () => {
         if (!selectedSymbol && initial.length) setSelectedSymbol(initial[0].symbol);
 
         let mounted = true;
-        const subscriptions: Array<{ unsubscribe: () => void }> = [];
+        const subscriptions: Array<{ id?: string; unsubscribe?: () => void }> = [];
+        const forgetSubscription = (subscription: { id?: string; unsubscribe?: () => void }) => {
+            if (subscription.id) {
+                // Match APIBase's established Deriv subscription cleanup contract.
+                api_base.api?.send({ forget: subscription.id });
+            } else {
+                subscription.unsubscribe?.();
+            }
+        };
         const messageSubscription = api_base.api.onMessage().subscribe((raw: unknown) => {
             const message = raw as TickMessage;
             if (!mounted || message.msg_type !== 'tick' || !message.tick?.symbol) return;
@@ -120,7 +128,7 @@ const EvenOddTerminal = () => {
                         const result = await pending;
                         if (result?.subscription) {
                             if (mounted) subscriptions.push(result.subscription);
-                            else result.subscription.unsubscribe();
+                            else forgetSubscription(result.subscription);
                         }
                     }
                 } catch (error) {
@@ -143,7 +151,7 @@ const EvenOddTerminal = () => {
             window.clearTimeout(timeout);
             mounted = false;
             messageSubscription.unsubscribe();
-            subscriptions.forEach(subscription => subscription.unsubscribe());
+            subscriptions.forEach(forgetSubscription);
         };
     }, [running, isAuthorized, connectionStatus, availableSymbolKey]);
 
