@@ -67,18 +67,21 @@ const DigitMatchesScanner = () => {
   if (!isAuthorized || connectionStatus !== 'opened' || !api_base.api) { setStatus('ERROR'); setError('Connect and authorize Deriv before starting the scanner.'); return; }
   let mounted = true;
   let subscriptionId: string | undefined;
-  const sub = api_base.api.onMessage().subscribe((raw: any) => {
-   if (!mounted || raw?.msg_type !== 'tick' || raw?.tick?.symbol !== symbol) return;
+  const appendTick = (tick: any) => {
+   if (!mounted || !tick || tick.symbol !== symbol || tick.quote === undefined || tick.epoch === undefined) return;
    try {
     const precision = Number(api_base.pip_sizes?.[symbol] ?? 2);
-    const quote = quoteWithPrecision(raw.tick.quote, precision);
+    const quote = quoteWithPrecision(tick.quote, precision);
     const digit = extractLastDigit(quote);
-    const epoch = Number(raw.tick.epoch);
+    const epoch = Number(tick.epoch);
     setTicks(previous => {
      if (!Number.isFinite(epoch) || (previous.length && epoch <= previous[previous.length - 1].epoch)) return previous;
      return [...previous, {symbol, quote, digit, epoch}].slice(-windowSize);
     });
    } catch { /* malformed source tick is rejected */ }
+  };
+  const sub = api_base.api.onMessage().subscribe((raw: any) => {
+   if (raw?.msg_type === 'tick') appendTick(raw.tick);
   });
   const start = async () => {
    try {
@@ -97,6 +100,8 @@ const DigitMatchesScanner = () => {
     if (!mounted) { if (live?.subscription?.id) void api_base.api?.send({forget:live.subscription.id}); return; }
     if (live?.error) throw new Error(live.error.message || 'Live tick subscription failed');
     subscriptionId = live?.subscription?.id;
+    // Some Deriv API clients return the first subscribed tick in the send response as well as on the message stream.
+    if (live?.tick) appendTick(live.tick);
     setError('');
     setStatus('SCANNING');
    } catch (e) { if (mounted) { setStatus('ERROR'); setError(e instanceof Error ? e.message : 'Scanner connection failed'); } }
@@ -163,8 +168,8 @@ const DigitMatchesScanner = () => {
   {finding && <section className='dmi-ai-result' aria-live='polite'><div><small>AI ANALYSIS RESULT {analysedAt ? `· ${new Date(analysedAt).toLocaleTimeString()}` : ''}</small><h3>{finding.title}</h3><p>{finding.detail}</p></div><strong>{finding.score}</strong><p>{finding.note}</p></section>}
   {error && <p className='dmi-error' role='alert'>{error}</p>}
   <div className='dmi-kpis'><div><small>VALID TICKS</small><b>{report.sampleSize}</b></div><div><small>EVEN OBSERVED</small><b>{report.even}</b></div><div><small>ODD OBSERVED</small><b>{report.odd}</b></div><div><small>DATA QUALITY</small><b>{report.sampleSize ? 'ORDERED' : 'WAITING'}</b></div></div>
-  <h3>Digit occurrence distribution</h3>
-  <div className='dmi-digits'>{report.digits.map(d=><div key={d.digit}><b>{d.digit}</b><span>{d.count}</span><small>{(d.frequency*100).toFixed(1)}%</small><i><em style={{width:`${Math.max(0,Math.min(100,d.frequency*1000))}%`}} /></i></div>)}</div>
+  <div className='dmi-digit-heading'><div><h3>Live last-digit intelligence · 0–9</h3><p>Latest digit: <strong>{ticks.length ? ticks[ticks.length-1].digit : '—'}</strong> · strongest observed digit: <strong>{report.sampleSize ? [...report.digits].sort((a,b)=>b.count-a.count)[0].digit : '—'}</strong></p></div><span>{report.sampleSize} validated ticks</span></div>
+  <div className='dmi-digits'>{report.digits.map(d=>{const aboveBaseline=d.frequency>=0.1;return <div key={d.digit} className={`dmi-digit-card ${aboveBaseline?'is-above':'is-below'}`}><b className='dmi-digit-circle'>{d.digit}</b><span>{d.count} hits</span><strong>{(d.frequency*100).toFixed(1)}%</strong><i><em style={{width:`${Math.max(0,Math.min(100,d.frequency*1000))}%`}} /></i><small>{aboveBaseline?'Above 10% sample baseline':'Below 10% sample baseline'}</small></div>})}</div>
   <div className='dmi-candidate-grid'>{(['MATCHES','DIFFERS'] as const).map(kind=><section key={kind}><h3>{kind} candidate review</h3>{candidates(kind).sort((a,b)=>b.score-a.score).slice(0,5).map(c=><div className='dmi-candidate' key={c.digit}><strong>Digit {c.digit}</strong><span>{(c.observedRate*100).toFixed(1)}% observed</span><b>{c.status}</b></div>)}</section>)}</div>
   <div className='dmi-layers'><h3>20-stage scanner pipeline</h3><div>{report.layers.map((layer,i)=><span key={layer.name} className={layer.status==='PASS'?'is-pass':''}>{String(i+1).padStart(2,'0')} · {layer.name} <b>{layer.status}</b></span>)}</div></div>
   <p className='dmi-disclaimer'>AI Analyse is an evidence summary of observed ticks, not a proven next-tick probability model. Contract types are discovered from Deriv when available. Scanner mode is analysis-only and never purchases a contract.</p>
