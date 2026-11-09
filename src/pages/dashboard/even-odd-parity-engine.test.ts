@@ -113,7 +113,7 @@ describe('18-layer parity decision engine', () => {
             config: config(),
             nowSeconds: now,
         });
-        const staleTicks = makeTicks().map(tick => ({ ...tick, epoch: 100 }));
+        const staleTicks = makeTicks().map((tick, index) => ({ ...tick, epoch: 70 + index }));
         const stale = runParityPipeline({
             symbol: 'R_10',
             ticks: staleTicks,
