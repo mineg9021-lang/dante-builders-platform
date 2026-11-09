@@ -563,11 +563,14 @@ const EvenOddTerminal = () => {
                                     </linearGradient>
                                 </defs>
                                 <path d='M48 5 69 13 82 31 86 55 73 80 48 92 23 80 10 55 14 31 27 13Z' fill='url(#eo-android-metal)' stroke='#247a4b' strokeWidth='2'/>
+                                <path d='M25 30Q17 17 33 10Q48 3 63 10Q79 17 71 30L77 58Q74 76 64 87L59 77L64 49Q62 28 48 25Q34 28 32 49L37 77L31 87Q22 76 19 58Z' fill='#124b32' stroke='#0d6039' strokeWidth='2'/>
                                 <path d='M29 26Q48 13 67 26L72 52Q68 72 48 78Q28 72 24 52Z' fill='#f7fff9' stroke='#287c4d' strokeWidth='2'/>
                                 <path d='M25 34 16 26 21 48 27 49M71 34 80 26 75 48 69 49' fill='url(#eo-android-glow)' stroke='#145c38' strokeWidth='2'/>
-                                <path d='M31 43Q39 37 44 43M52 43Q59 37 65 43' fill='none' stroke='#17683f' strokeWidth='3' strokeLinecap='round'/>
+                                <path d='M31 40Q39 34 44 40M52 40Q59 34 65 40' fill='none' stroke='#17683f' strokeWidth='2.5' strokeLinecap='round'/>
+                                <path d='M33 44 30 41M43 44 45 41M54 41 56 44M64 41 66 44' fill='none' stroke='#17683f' strokeWidth='1.5' strokeLinecap='round'/>
                                 <ellipse cx='38' cy='48' rx='4' ry='3' fill='#16834a'/><ellipse cx='59' cy='48' rx='4' ry='3' fill='#16834a'/>
                                 <path d='M48 48 45 57 51 57M39 65Q48 70 57 65' fill='none' stroke='#397e56' strokeWidth='2' strokeLinecap='round'/>
+                                <path d='M28 57 34 62M68 57 62 62' fill='none' stroke='#8ac9a0' strokeWidth='2' strokeLinecap='round'/>
                                 <path d='M36 9 48 3 60 9 56 20 40 20Z' fill='url(#eo-android-glow)' stroke='#247a4b' strokeWidth='2'/>
                                 <path d='M44 4 48 0 52 4' fill='none' stroke='#baf2cf' strokeWidth='2'/>
                             </svg>
