@@ -393,7 +393,7 @@ const EvenOddTerminal = () => {
     };
 
     return (
-        <section className='eo-terminal'>
+        <section className='eo-terminal' id='parity-bot'>
             <header className='eo-terminal__header'>
                 <div>
                     <span className='eo-terminal__eyebrow'>DANTE BUILDERS · MARKET INTELLIGENCE</span>
