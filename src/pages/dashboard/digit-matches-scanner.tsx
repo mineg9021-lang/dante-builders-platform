@@ -44,7 +44,7 @@ const DigitMatchesScanner = () => {
   const start = async () => {
    try {
     const precision = Number(api_base.pip_sizes?.[symbol] ?? 2);
-    const history = await api_base.api!.send({ticks_history:symbol, count:windowSize, end:'latest', style:'ticks'});
+    const history = await (api_base.api!.send({ticks_history:symbol, count:windowSize, end:'latest', style:'ticks'}) as unknown as Promise<any>);
     if (!mounted) return;
     if (history?.error) throw new Error(history.error.message || 'Historical tick request failed');
     const prices: Array<string|number> = history?.history?.prices || [];
@@ -54,7 +54,7 @@ const DigitMatchesScanner = () => {
      return {symbol, quote, digit:extractLastDigit(quote), epoch:Number(times[index])};
     }).filter(t => Number.isFinite(t.epoch));
     setTicks(historical.slice(-windowSize));
-    const live = await api_base.api!.send({ticks:symbol, subscribe:1});
+    const live = await (api_base.api!.send({ticks:symbol, subscribe:1}) as unknown as Promise<any>);
     if (!mounted) { if (live?.subscription?.id) void api_base.api?.send({forget:live.subscription.id}); return; }
     if (live?.error) throw new Error(live.error.message || 'Live tick subscription failed');
     subscriptionId = live?.subscription?.id;
