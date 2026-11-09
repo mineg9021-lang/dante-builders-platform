@@ -97,7 +97,8 @@ const EvenOddTerminal = () => {
                 if (digit === null) return item;
                 const epoch = Number(message.tick?.epoch || 0);
                 const last = item.ticks[item.ticks.length - 1];
-                if (last && (epoch <= last.epoch || fixed === last.quote)) return item;
+                if (epoch > 0 && Date.now() / 1000 - epoch > MAX_AGE_MS / 1000) return item;
+                if (last && epoch > 0 && epoch <= last.epoch) return item;
                 return {
                     ...item,
                     status: 'Live',
@@ -111,7 +112,10 @@ const EvenOddTerminal = () => {
                     const pending = api_base.api?.send({ ticks: item.symbol, subscribe: 1 }) as any;
                     if (pending?.then) {
                         const result = await pending;
-                        if (result?.subscription) subscriptions.push(result.subscription);
+                        if (result?.subscription) {
+                            if (mounted) subscriptions.push(result.subscription);
+                            else result.subscription.unsubscribe();
+                        }
                     }
                     if (!mounted) break;
                 } catch (error) {
