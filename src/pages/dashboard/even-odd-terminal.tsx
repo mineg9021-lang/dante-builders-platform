@@ -319,24 +319,25 @@ const EvenOddTerminal = () => {
     }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized]);
 
     useEffect(() => {
-        const sampleComplete = Boolean(selected && selected.ticks.length >= MAX_TICKS);
-        const sampleKey = selected && latest ? `${selected.symbol}:${latest.epoch}` : '';
-        if (sampleComplete && !running && !pipeline.executionAuthorized && sampleKey && journaledSample.current !== sampleKey) {
-            journaledSample.current = sampleKey;
-            setTradeJournal(previous => [{
-                id: `scan-${sampleKey}`,
-                accountId: activeLoginid,
-                symbol: selected.symbol,
-                status: 'SKIPPED',
-                createdAt: Date.now(),
-                sampleSize: pipeline.sampleSize,
-                evenCount: pipeline.evenCount,
-                oddCount: pipeline.oddCount,
-                evidenceScore: pipeline.evidenceScore,
-                reason: pipeline.reason,
-            }, ...previous].slice(0, 50));
+        if (selected && latest && selected.ticks.length >= MAX_TICKS && !running && !pipeline.executionAuthorized) {
+            const sampleKey = `${selected.symbol}:${latest.epoch}`;
+            if (journaledSample.current !== sampleKey) {
+                journaledSample.current = sampleKey;
+                setTradeJournal(previous => [{
+                    id: `scan-${sampleKey}`,
+                    accountId: activeLoginid,
+                    symbol: selected.symbol,
+                    status: 'SKIPPED',
+                    createdAt: Date.now(),
+                    sampleSize: pipeline.sampleSize,
+                    evenCount: pipeline.evenCount,
+                    oddCount: pipeline.oddCount,
+                    evidenceScore: pipeline.evidenceScore,
+                    reason: pipeline.reason,
+                }, ...previous].slice(0, 50));
+            }
         }
-    }, [selected?.symbol, latest?.epoch, selected?.ticks.length, running, pipeline.executionAuthorized, pipeline.sampleSize, pipeline.evenCount, pipeline.oddCount, pipeline.evidenceScore, pipeline.reason]);
+    }, [selected?.symbol, latest?.epoch, selected?.ticks.length, running, pipeline.executionAuthorized, pipeline.sampleSize, pipeline.evenCount, pipeline.oddCount, pipeline.evidenceScore, pipeline.reason, activeLoginid]);
 
     useEffect(() => {
         const sampleComplete = symbols.length > 0 && symbols.every(item => item.ticks.length >= MAX_TICKS);
