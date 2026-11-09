@@ -18,7 +18,7 @@ type SymbolState = { symbol: string; name: string; precision: number; ticks: Tic
 type TradeJournalRow = { id: string; accountId: string; contractId?: number; contractType?: ParityContractType; symbol: string; buyPrice?: number; status: 'SKIPPED' | 'EXECUTED' | 'WON' | 'LOST' | 'VOID'; profit?: number; createdAt: number; settledAt?: number; sampleSize?: number; evenCount?: number; oddCount?: number; evidenceScore?: number; reason?: string };
 
 const MAX_TICKS = 30;
-const MAX_ANALYSIS_DURATION_MS = 60_000;
+const MAX_ANALYSIS_DURATION_MS = 180_000;
 
 const getPrecision = (pipSize?: number) => {
     if (pipSize === undefined || !Number.isFinite(pipSize) || pipSize <= 0) return 2;
@@ -43,6 +43,10 @@ const EvenOddTerminal = () => {
     const [takeProfit, setTakeProfit] = useState('10');
     const [running, setRunning] = useState(false);
     const [mode, setMode] = useState<'analysis' | 'demo' | 'live'>('analysis');
+    useEffect(() => {
+        // Demo accounts open in demo mode for a one-click guarded bot run; real accounts stay analysis-only until Live is explicitly selected.
+        if (authData?.is_virtual && mode === 'analysis') setMode('demo');
+    }, [authData?.loginid, authData?.is_virtual]);
     const [executionArmed, setExecutionArmed] = useState(false);
     const [autoRestart, setAutoRestart] = useState(false);
     const [executionStatus, setExecutionStatus] = useState('Not armed');
@@ -141,15 +145,16 @@ const EvenOddTerminal = () => {
             return;
         }
 
-        const initial: SymbolState[] = availableSymbols.map((item: any) => ({
-            symbol: item.symbol || item.underlying_symbol,
-            name: item.display_name || item.symbol_display_name || item.underlying_symbol_name || item.symbol || item.underlying_symbol,
-            precision: Number(api_base.pip_sizes[item.underlying_symbol || item.symbol] ?? getPrecision(Number(item.pip_size || item.pip)) ?? 2),
+        const chosen = availableSymbols.find((item: any) => (item.symbol || item.underlying_symbol) === selectedSymbol) || availableSymbols[0];
+        const initial: SymbolState[] = chosen ? [{
+            symbol: chosen.symbol || chosen.underlying_symbol,
+            name: chosen.display_name || chosen.symbol_display_name || chosen.underlying_symbol_name || chosen.symbol || chosen.underlying_symbol,
+            precision: Number(api_base.pip_sizes[chosen.underlying_symbol || chosen.symbol] ?? getPrecision(Number(chosen.pip_size || chosen.pip))),
             ticks: [],
             status: 'Connecting',
-        }));
-        setSymbols(initial);
+        }] : [];
         if (!selectedSymbol && initial.length) setSelectedSymbol(initial[0].symbol);
+        setSymbols(initial);
 
         let mounted = true;
         const subscriptions: Array<{ id?: string; unsubscribe?: () => void }> = [];
@@ -189,7 +194,7 @@ const EvenOddTerminal = () => {
             }));
         });
         const connect = async () => {
-            // Start all market subscriptions together so one slow symbol cannot block the scanner.
+            // Subscribe only to the selected market: a slow unrelated symbol must never block this bot's entry sample.
             await Promise.all(initial.map(async item => {
                 try {
                     const pending = api_base.api?.send({ ticks: item.symbol, subscribe: 1 }) as any;
@@ -231,7 +236,7 @@ const EvenOddTerminal = () => {
 
     useEffect(() => {
         if (running && symbols.length > 0 && symbols.every(item => item.ticks.length >= MAX_TICKS)) {
-            setNotice('All detected markets completed their 30-tick samples. The bounded scan has stopped.');
+            setNotice('Selected market completed its 30-tick sample. The bounded scan has stopped.');
             setRunning(false);
         }
     }, [running, symbols]);
@@ -462,10 +467,10 @@ const EvenOddTerminal = () => {
             return;
         }
         if (!running) setSymbols([]);
-        setExecutionStatus('Armed · waiting for a fresh 30-tick sample and all safety checks');
+        setExecutionStatus('RUNNING · collecting a fresh 30-tick sample, then requesting a Deriv proposal when all entry and risk gates pass');
         executionAllowed.current = true;
         setExecutionArmed(true);
-        setNotice('Bot armed. It will wait for a fresh, validated candidate and only restart after settlement if auto-restart is enabled.');
+        setNotice('Bot is running. It will submit one Deriv trade only after the selected market produces a fresh validated signal and all account and risk checks pass.');
         if (!running) setRunning(true);
     };
 
@@ -549,7 +554,7 @@ const EvenOddTerminal = () => {
                         
                         <p className='eo-terminal__disclaimer'>Stake, stop-loss and take-profit are enforced by the session risk gate. One trade per fresh sample · max 10 per session. Optional Martingale is capped at three 1.5× loss steps and remains subject to the same 2% balance exposure gate; it can be blocked when the next stake exceeds that limit.</p>
                         <button type='button' onClick={startFreshAnalysis} disabled={running || executionLock.current}>Start analysis</button>
-                        <button type='button' className='eo-terminal__arm' onClick={armOneTrade} disabled={executionArmed || executionLock.current}>Arm bot</button>
+                        <button type='button' className='eo-terminal__arm' onClick={armOneTrade} disabled={executionArmed || executionLock.current}>Run bot · guarded execution</button>
                         <button type='button' className='eo-terminal__stop' onClick={stopBot} disabled={!running && !executionArmed && !executionLock.current}>Stop / disarm</button>
                     </div>
                     <div className='eo-terminal__card eo-terminal__portrait'>
