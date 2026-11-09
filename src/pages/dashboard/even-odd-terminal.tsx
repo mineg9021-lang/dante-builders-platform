@@ -285,7 +285,10 @@ const EvenOddTerminal = () => {
             isVirtual: Boolean(authData.is_virtual),
             lastTickEpoch: latest?.epoch || 0,
             shouldContinue: () => executionAllowed.current,
-            onPurchased: purchase => setTradeJournal(previous => [{ ...purchase, id: String(purchase.contractId), status: 'EXECUTED' }, ...previous].slice(0, 50)),
+            onPurchased: purchase => {
+                journaledSample.current = `${selected.symbol}:${latest?.epoch || 0}`;
+                setTradeJournal(previous => [{ ...purchase, id: String(purchase.contractId), status: 'EXECUTED' }, ...previous].slice(0, 50));
+            },
             timeoutMs: 90_000,
         }).then(result => {
             if (activeLoginid) {
