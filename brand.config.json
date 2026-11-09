@@ -1,20 +1,20 @@
 {
-    "brand_name": "YourBrand",
-    "brand_domain": "yourbrand.com",
+    "brand_name": "Dante Builders",
+    "brand_domain": "dantebuilders.site",
     "brand_hostname": {
-        "staging": "staging.yourbrand.com/dashboard",
-        "production": "yourbrand.com/dashboard"
+        "staging": "dante-builders-platform.netlify.app",
+        "production": "dantebuilders.site"
     },
-    "domain_name": "YourBrand.com",
+    "domain_name": "Dante Builders",
     "colors": {
-        "primary": "#00ffff",
-        "secondary": "#64748b",
-        "tertiary": "#8b5cf6",
-        "success": "#10b981",
+        "primary": "#16834a",
+        "secondary": "#166534",
+        "tertiary": "#dcfce7",
+        "success": "#15803d",
         "danger": "#ef4444",
         "warning": "#f59e0b",
-        "info": "#0ea5e9",
-        "neutral": "#6b7280",
+        "info": "#0f766e",
+        "neutral": "#64748b",
         "black": "#0f172a",
         "white": "#ffffff",
         "grey": {
@@ -79,20 +79,20 @@
         "css_variable_prefix": "--brand"
     },
     "platform": {
-        "name": "dantebuilders.site",
+        "name": "Dante Builders",
         "i18n": {
             "default_language": "EN"
         },
         "footer": {
             "enable_language_settings": false,
-            "enable_theme_toggle": true
+            "enable_theme_toggle": false
         },
         "hostname": {
             "production": {
-                "com": "bot.yourbrand.com"
+                "com": "dantebuilders.site"
             },
             "staging": {
-                "com": "staging-bot.yourbrand.com"
+                "com": "dante-builders-platform.netlify.app"
             }
         },
         "auth2_url": {

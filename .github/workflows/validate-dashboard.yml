@@ -1,0 +1,41 @@
+name: Validate dashboard changes
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/ai-even-odd-dashboard]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Tests, type-check and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test -- --runInBand --runTestsByPath src/pages/dashboard/even-odd-analysis-engine.test.ts src/pages/dashboard/even-odd-parity-engine.test.ts src/pages/dashboard/even-odd-parity-execution.test.ts
+
+      - name: Run TypeScript check
+        run: npm run type-check
+
+      - name: Build production bundle
+        run: npm run build
