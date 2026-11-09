@@ -149,7 +149,9 @@ const EvenOddTerminal = () => {
         connect();
         const timeout = window.setTimeout(() => {
             if (mounted) {
-                setNotice('Analysis time limit reached. The bounded scan has stopped.');
+                setNotice('Analysis time limit reached. The bounded scan has stopped without forcing a trade.');
+                setExecutionArmed(false);
+                setExecutionStatus('WAIT · scan timeout; no order was placed.');
                 setRunning(false);
             }
         }, MAX_ANALYSIS_DURATION_MS);
@@ -288,11 +290,11 @@ const EvenOddTerminal = () => {
             setNotice('Switch to a Deriv real account before selecting Live mode.');
             return;
         }
-        setSymbols([]);
+        if (!running) setSymbols([]);
         setExecutionStatus('Armed · waiting for a fresh 30-tick sample and all safety checks');
         setExecutionArmed(true);
         setNotice('Bot armed for one trade only. It will wait for a fresh, validated candidate.');
-        setRunning(true);
+        if (!running) setRunning(true);
     };
 
     const stopBot = () => {
