@@ -27,16 +27,28 @@ export const MAX_TICK_AGE_SECONDS = 15;
 export const MIN_ANALYSIS_SAMPLE = 30;
 export const MIN_PARITY_LEAD = 0.12;
 
+const normalizeDecimalQuote = (quote: number | string): string | null => {
+    if (typeof quote === 'number' && !Number.isFinite(quote)) return null;
+    let source = String(quote).trim();
+    if (/^[+-]?\d+(?:\.\d+)?[eE][+-]?\d+$/.test(source)) {
+        const match = source.match(/^([+-]?)(\d+)(?:\.(\d*))?[eE]([+-]?\d+)$/);
+        if (!match) return null;
+        const sign = match[1], whole = match[2], fraction = match[3] || '', exponent = Number(match[4]);
+        const digits = whole + fraction, position = whole.length + exponent;
+        if (position <= 0) source = sign + '0.' + '0'.repeat(-position) + digits;
+        else if (position >= digits.length) source = sign + digits + '0'.repeat(position - digits.length);
+        else source = sign + digits.slice(0, position) + '.' + digits.slice(position);
+    }
+    return /^[-+]?\d+(?:\.\d+)?$/.test(source) ? source : null;
+};
+
 export const extractLastDigit = (quote: number | string, precision: number): number | null => {
     if (!Number.isInteger(precision) || precision < 0 || precision > 10) return null;
-    if (typeof quote === 'number' && !Number.isFinite(quote)) return null;
-
-    const source = typeof quote === 'number' ? quote.toFixed(precision) : quote.trim();
-    if (!/^[-+]?\d+(?:\.\d+)?$/.test(source)) return null;
-
+    const source = normalizeDecimalQuote(quote);
+    if (source === null) return null;
     const decimal = source.split('.')[1] || '';
     const normalized = precision > 0 ? decimal.padEnd(precision, '0').slice(0, precision) : source.split('.')[0];
-    const digit = normalized.length ? Number(normalized[normalized.length - 1]) : Number(source.replace(/\D/g, '').slice(-1));
+    const digit = normalized.length ? Number(normalized[normalized.length - 1]) : null;
     return Number.isInteger(digit) && digit >= 0 && digit <= 9 ? digit : null;
 };
 
@@ -64,7 +76,7 @@ export const validateTick = (
         accepted: true,
         tick: {
             symbol,
-            quote: typeof quote === 'number' ? quote.toFixed(precision) : String(quote),
+            quote: normalizeDecimalQuote(quote) as string,
             epoch,
             digit,
             parity,
