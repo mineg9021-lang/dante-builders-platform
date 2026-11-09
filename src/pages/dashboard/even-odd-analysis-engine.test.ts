@@ -3,7 +3,7 @@ import { analyseParity, extractLastDigit, validateTick } from './even-odd-analys
 describe('Even/Odd analysis engine', () => {
     it('uses the configured quote precision, including trailing zeros', () => {
         expect(extractLastDigit(123.45, 2)).toBe(5);
-        expect(extractLastDigit('123.4500', 2)).toBe(0);
+        expect(extractLastDigit('123.4500', 2)).toBe(5);
         expect(extractLastDigit('123.4', 2)).toBe(0);
     });
 
