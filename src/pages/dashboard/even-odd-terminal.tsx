@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api_base } from '@/external/bot-skeleton';
 import { useApiBase } from '@/hooks/useApiBase';
 import { validateTick } from './even-odd-analysis-engine';
 import { runParityPipeline } from './even-odd-parity-engine';
+import { executeParityContract, type DerivParityApi } from './even-odd-parity-execution';
 import './even-odd-terminal.scss';
 
 type TickMessage = {
@@ -36,6 +37,12 @@ const EvenOddTerminal = () => {
     const [stopLoss, setStopLoss] = useState('10');
     const [takeProfit, setTakeProfit] = useState('10');
     const [running, setRunning] = useState(false);
+    const [mode, setMode] = useState<'analysis' | 'demo' | 'live'>('analysis');
+    const [executionArmed, setExecutionArmed] = useState(false);
+    const [executionStatus, setExecutionStatus] = useState('Not armed');
+    const [sessionPnl, setSessionPnl] = useState(0);
+    const executionLock = useRef(false);
+    const consumedSample = useRef('');
     const [notice, setNotice] = useState('Connect your Deriv account to start live market analysis.');
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
@@ -173,8 +180,8 @@ const EvenOddTerminal = () => {
             parity: tick.digit % 2 === 0 ? 'EVEN' as const : 'ODD' as const,
         })),
         config: {
-            mode: 'analysis',
-            armed: false,
+            mode,
+            armed: executionArmed,
             authorized: isAuthorized,
             demoAccount: Boolean(authData?.is_virtual),
             maxTicks: MAX_TICKS,
@@ -184,7 +191,8 @@ const EvenOddTerminal = () => {
             stake: Number(stake),
             availableBalance: Number(authData?.balance || 0),
             maxStakePercent: 2,
-            sessionLoss: 0,
+            sessionLoss: Math.max(0, -sessionPnl),
+            sessionProfit: Math.max(0, sessionPnl),
             stopLoss: Number(stopLoss),
             takeProfit: Number(takeProfit),
         },
@@ -194,6 +202,96 @@ const EvenOddTerminal = () => {
     const candidateReady = pipeline.stages[9]?.status === 'PASS' && pipeline.stages[10]?.status === 'PASS' && pipeline.sampleSize >= 30;
     const prediction = candidateReady ? `${pipeline.selectedParity} LEADING` : 'WAIT';
     const latest = selected?.ticks[selected.ticks.length - 1];
+
+    useEffect(() => {
+        if (!executionArmed || !pipeline.executionAuthorized || executionLock.current || !selected || !pipeline.contractType) return;
+        if (!api_base.api || !authData?.currency) {
+            setExecutionStatus('Blocked: Deriv connection or account currency is unavailable.');
+            setExecutionArmed(false);
+            return;
+        }
+        const sampleKey = `${selected.symbol}:${latest?.epoch || 0}:${pipeline.selectedParity}:${pipeline.evidenceScore}`;
+        if (consumedSample.current === sampleKey) {
+            setExecutionStatus('This sample was already used. Start a fresh analysis before another trade.');
+            setExecutionArmed(false);
+            return;
+        }
+        consumedSample.current = sampleKey;
+        executionLock.current = true;
+        setExecutionStatus(`Submitting one ${mode.toUpperCase()} ${pipeline.contractType} contract…`);
+        executeParityContract({
+            api: api_base.api as unknown as DerivParityApi,
+            symbol: selected.symbol,
+            contractType: pipeline.contractType,
+            stake: Number(stake),
+            currency: authData.currency,
+            mode,
+            executionPermission: pipeline.executionAuthorized,
+            authorized: isAuthorized,
+            isVirtual: Boolean(authData.is_virtual),
+            timeoutMs: 90_000,
+        }).then(result => {
+            setSessionPnl(previous => previous + result.profit);
+            setExecutionStatus(`${result.settlement} · ${result.contractType} · P/L ${result.profit.toFixed(2)} ${authData.currency}`);
+            setNotice(`Contract ${result.contractId} settled as ${result.settlement}. Start a fresh bounded scan before another trade.`);
+            setExecutionArmed(false);
+            setRunning(false);
+        }).catch(error => {
+            const message = error instanceof Error ? error.message : 'Trade execution failed.';
+            setExecutionStatus(`BLOCKED · ${message}`);
+            setNotice(message);
+            setExecutionArmed(false);
+            setRunning(false);
+        }).finally(() => {
+            executionLock.current = false;
+        });
+    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, authData?.currency, authData?.is_virtual, isAuthorized]);
+
+    const changeMode = (nextMode: 'analysis' | 'demo' | 'live') => {
+        if (nextMode === 'live' && !window.confirm('Live mode can place real-money trades. Continue only if you understand the risk.')) return;
+        setExecutionArmed(false);
+        setMode(nextMode);
+        setExecutionStatus(nextMode === 'analysis' ? 'Analysis only · orders disabled' : `${nextMode.toUpperCase()} mode · disarmed`);
+    };
+
+    const startFreshAnalysis = () => {
+        setSymbols([]);
+        setExecutionArmed(false);
+        setExecutionStatus('Not armed');
+        setNotice('Starting a fresh bounded market scan…');
+        setRunning(true);
+    };
+
+    const armOneTrade = () => {
+        if (mode === 'analysis') {
+            setNotice('Choose Demo or Live mode before arming execution. Analysis mode never places orders.');
+            return;
+        }
+        if (!isAuthorized) {
+            setNotice('Connect and authorize your Deriv account before arming execution.');
+            return;
+        }
+        if (mode === 'demo' && !Boolean(authData?.is_virtual)) {
+            setNotice('Switch to a Deriv demo account before selecting Demo mode.');
+            return;
+        }
+        if (mode === 'live' && Boolean(authData?.is_virtual)) {
+            setNotice('Switch to a Deriv real account before selecting Live mode.');
+            return;
+        }
+        setSymbols([]);
+        setExecutionStatus('Armed · waiting for a fresh 30-tick sample and all safety checks');
+        setExecutionArmed(true);
+        setNotice('Bot armed for one trade only. It will wait for a fresh, validated candidate.');
+        setRunning(true);
+    };
+
+    const stopBot = () => {
+        setExecutionArmed(false);
+        setRunning(false);
+        setExecutionStatus('Disarmed by user');
+        setNotice('Bot stopped. No further orders will be submitted.');
+    };
 
     return (
         <section className='eo-terminal'>
@@ -259,10 +357,14 @@ const EvenOddTerminal = () => {
                         <label>Stake amount<input type='number' min='0.35' step='0.01' value={stake} onChange={event => setStake(event.target.value)} /></label>
                         <label>Stop-loss<input type='number' min='0' step='0.01' value={stopLoss} onChange={event => setStopLoss(event.target.value)} /></label>
                         <label>Take-profit<input type='number' min='0' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
+                        <label>Execution mode<select value={mode} onChange={event => changeMode(event.target.value as 'analysis' | 'demo' | 'live')}><option value='analysis'>Analysis only</option><option value='demo'>Demo auto execution</option><option value='live'>Live auto execution</option></select></label>
+                        <div className='eo-terminal__session-pnl'><span>Session P/L</span><strong>{sessionPnl.toFixed(2)} {authData?.currency || ''}</strong></div>
+                        <p className='eo-terminal__execution-status'>{executionStatus}</p>
                         
-                        <p className='eo-terminal__disclaimer'>Stake and limits feed the risk-control layer. No orders are placed in this analysis build; recovery and martingale are not used.</p>
-                        <button type='button' onClick={() => { setNotice('Starting bounded market analysis…'); setRunning(true); }} disabled={running}>Start analysis</button>
-                        <button type='button' className='eo-terminal__stop' onClick={() => { setNotice('Analysis stopped manually.'); setRunning(false); }} disabled={!running}>Stop analysis</button>
+                        <p className='eo-terminal__disclaimer'>Stake, stop-loss and take-profit are enforced by the session risk gate. One trade per fresh sample; no martingale or recovery progression.</p>
+                        <button type='button' onClick={startFreshAnalysis} disabled={running || executionLock.current}>Start analysis</button>
+                        <button type='button' className='eo-terminal__arm' onClick={armOneTrade} disabled={executionArmed || executionLock.current}>Arm bot · one trade</button>
+                        <button type='button' className='eo-terminal__stop' onClick={stopBot} disabled={!running && !executionArmed && !executionLock.current}>Stop / disarm</button>
                     </div>
                     <div className='eo-terminal__card eo-terminal__portrait'>
                         <div className='eo-terminal__robot' aria-hidden='true'>
@@ -292,7 +394,7 @@ const EvenOddTerminal = () => {
                     </div>
                 </aside>
             </div>
-            <footer className='eo-terminal__notice'>{notice} <strong>Analysis-only mode · no trades will be placed.</strong></footer>
+            <footer className='eo-terminal__notice'>{notice} <strong>{mode === 'analysis' ? 'Analysis-only mode · no trades will be placed.' : `${mode.toUpperCase()} mode · execution requires an armed bot and every safety gate.`}</strong></footer>
         </section>
     );
 };
