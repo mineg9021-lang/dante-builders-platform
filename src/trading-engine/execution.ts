@@ -167,7 +167,12 @@ export async function executeDerivContract(input: ExecuteDerivContractInput): Pr
     if (buyError) throw new Error('PURCHASE_REJECTED: ' + buyError);
     const contractId = Number(buyResponse?.buy?.contract_id);
     if (!Number.isSafeInteger(contractId) || contractId <= 0) throw new Error('PURCHASE_RESULT_UNCONFIRMED');
-    input.onPurchased?.({ contractId, buyPrice: askPrice, symbol: input.symbol, contractType: input.contractType });
+    // UI/journal observers must never interrupt settlement monitoring after a confirmed purchase.
+    try {
+        input.onPurchased?.({ contractId, buyPrice: askPrice, symbol: input.symbol, contractType: input.contractType });
+    } catch {
+        // The purchase is already confirmed; continue monitoring the open contract.
+    }
 
     const settled = await monitorDerivContract(input.api, contractId, input.settlementTimeoutMs ?? 120_000);
     const status = String(settled.status || '').toLowerCase();
