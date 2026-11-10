@@ -1,5 +1,22 @@
 import { buildProposalRequest, executeDerivContract, monitorDerivContract, validateExecutionRisk } from './execution';
 import type { DerivTradingApi, ExecutionRiskContext, ExecuteDerivContractInput } from './execution';
+import type { DerivContractType } from './contracts';
+
+const proposalContractCases: Array<{ contractType: DerivContractType; barrier?: string }> = [
+    { contractType: 'CALL' },
+    { contractType: 'PUT' },
+    { contractType: 'RUNHIGH' },
+    { contractType: 'RUNLOW' },
+    { contractType: 'ASIANU' },
+    { contractType: 'ASIAND' },
+    { contractType: 'DIGITMATCH', barrier: '7' },
+    { contractType: 'DIGITDIFF', barrier: '7' },
+    { contractType: 'DIGITOVER', barrier: '4' },
+    { contractType: 'DIGITUNDER', barrier: '4' },
+    { contractType: 'DIGITEVEN' },
+    { contractType: 'DIGITODD' },
+];
+
 
 const risk = (overrides: Partial<ExecutionRiskContext> = {}): ExecutionRiskContext => ({
     mode: 'demo',
@@ -79,6 +96,37 @@ describe('shared Deriv execution guards', () => {
     it('rejects exposure above the configured balance percentage', () => {
         expect(validateExecutionRisk(risk({ stake: 3 }), 1_800_000_000)).toBe('STAKE_EXPOSURE_LIMIT');
     });
+
+
+    it.each(proposalContractCases)(
+        'builds the exact Deriv proposal fields for $contractType',
+        ({ contractType, barrier }) => {
+            const proposalFields = {
+                duration: 5,
+                duration_unit: 't' as const,
+                ...(barrier === undefined ? {} : { barrier }),
+            };
+            const request = buildProposalRequest({
+                symbol: 'R_100',
+                contractType,
+                currency: 'USD',
+                risk: risk(),
+                proposalFields,
+            });
+
+            expect(request).toEqual({
+                proposal: 1,
+                amount: 1,
+                basis: 'stake',
+                contract_type: contractType,
+                currency: 'USD',
+                underlying_symbol: 'R_100',
+                ...proposalFields,
+            });
+            if (barrier === undefined) expect(request).not.toHaveProperty('barrier');
+            else expect(request.barrier).toBe(barrier);
+        }
+    );
 
     it('builds a proposal using only recognised Deriv proposal fields', () => {
         expect(buildProposalRequest({
