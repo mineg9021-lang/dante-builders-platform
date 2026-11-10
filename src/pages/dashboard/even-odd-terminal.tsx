@@ -35,7 +35,6 @@ const getPrecision = (pipSize?: number) => {
 const EvenOddTerminal = () => {
     const { isAuthorized, connectionStatus, authData } = useApiBase();
     const [symbols, setSymbols] = useState<SymbolState[]>([]);
-    const [selectedSymbol, setSelectedSymbol] = useState('');
     const [stake, setStake] = useState('1');
     const [martingaleEnabled, setMartingaleEnabled] = useState(false);
     const [lossProgression, setLossProgression] = useState(0);
@@ -148,15 +147,16 @@ const EvenOddTerminal = () => {
             return;
         }
 
-        const chosen = availableSymbols.find((item: any) => (item.symbol || item.underlying_symbol) === selectedSymbol) || availableSymbols[0];
-        const initial: SymbolState[] = chosen ? [{
-            symbol: chosen.symbol || chosen.underlying_symbol,
-            name: chosen.display_name || chosen.symbol_display_name || chosen.underlying_symbol_name || chosen.symbol || chosen.underlying_symbol,
-            precision: Number(api_base.pip_sizes[chosen.underlying_symbol || chosen.symbol] ?? getPrecision(Number(chosen.pip_size || chosen.pip))),
-            ticks: [],
-            status: 'Connecting',
-        }] : [];
-        if (!selectedSymbol && initial.length) setSelectedSymbol(initial[0].symbol);
+        const initial: SymbolState[] = availableSymbols.map((item: any) => {
+            const symbol = String(item.symbol || item.underlying_symbol || '');
+            return {
+                symbol,
+                name: item.display_name || item.symbol_display_name || item.underlying_symbol_name || symbol,
+                precision: Number(api_base.pip_sizes[symbol] ?? getPrecision(Number(item.pip_size || item.pip))),
+                ticks: [],
+                status: 'Connecting',
+            };
+        });
         setSymbols(initial);
 
         let mounted = true;
@@ -197,7 +197,7 @@ const EvenOddTerminal = () => {
             }));
         });
         const connect = async () => {
-            // Subscribe only to the selected market: a slow unrelated symbol must never block this bot's entry sample.
+            // Subscribe to the full configured 13-market universe; each stream is isolated by its canonical symbol.
             await Promise.all(initial.map(async item => {
                 try {
                     const pending = api_base.api?.send({ ticks: item.symbol, subscribe: 1 }) as any;
@@ -216,8 +216,8 @@ const EvenOddTerminal = () => {
             }));
         };
         setNotice(executionArmed
-            ? `BOT RUNNING · collecting up to ${MAX_TICKS} valid ticks from ${initial[0]?.name || 'the selected market'}; a Deriv proposal will be requested only when signal and risk checks pass.`
-            : `Analysis scan active · collecting up to ${MAX_TICKS} valid ticks from ${initial[0]?.name || 'the selected market'}. Select Demo or Live and press Run bot to enable guarded execution.`);
+            ? `BOT RUNNING · collecting up to ${MAX_TICKS} valid ticks per market across ${initial.length} supported Volatility streams; a Deriv proposal is requested only when signal and risk checks pass.`
+            : `Analysis scan active · collecting up to ${MAX_TICKS} valid ticks per market across ${initial.length} supported Volatility streams. Select Demo or Live and press Run bot to enable guarded execution.`);
         connect();
         const timeout = window.setTimeout(() => {
             if (mounted) {
@@ -240,42 +240,51 @@ const EvenOddTerminal = () => {
     }, [running, isAuthorized, connectionStatus, availableSymbolKey]);
 
     useEffect(() => {
-        if (running && symbols.length > 0 && symbols.every(item => item.ticks.length >= MAX_TICKS)) {
-            setNotice('Selected market completed its 30-tick sample. The bounded scan has stopped.');
+        if (running && symbols.length > 0 && symbols.every(item => item.ticks.length >= MAX_TICKS || item.status === 'Unavailable')) {
+            setNotice('All available market samples completed. The bounded scan has stopped.');
             setRunning(false);
         }
     }, [running, symbols]);
 
-    const selected = symbols.find(item => item.symbol === selectedSymbol);
-    const pipeline = runParityPipeline({
-        symbol: selected?.symbol || '',
-        ticks: (selected?.ticks || []).map(tick => ({
-            symbol: selected?.symbol || '',
-            quote: tick.quote,
-            epoch: tick.epoch,
-            digit: tick.digit,
-            parity: tick.digit % 2 === 0 ? 'EVEN' as const : 'ODD' as const,
-        })),
-        config: {
-            mode,
-            armed: executionArmed,
-            authorized: isAuthorized && connectionStatus === 'opened',
-            demoAccount: Boolean(authData?.is_virtual),
-            maxTicks: MAX_TICKS,
-            minSample: 30,
-            minLead: 0.12,
-            minStableRatio: 1,
-            stake: effectiveStake,
-            availableBalance: Number(authData?.balance || 0),
-            maxStakePercent: 2,
-            sessionLoss: Math.max(0, -sessionPnl),
-            sessionProfit: Math.max(0, sessionPnl),
-            tradesThisSession,
-            maxTradesPerSession: 10,
-            stopLoss: Number(stopLoss),
-            takeProfit: Number(takeProfit),
-        },
+    const parityConfig = {
+        mode,
+        armed: executionArmed,
+        authorized: isAuthorized && connectionStatus === 'opened',
+        demoAccount: Boolean(authData?.is_virtual),
+        maxTicks: MAX_TICKS,
+        minSample: 30,
+        minLead: 0.12,
+        minStableRatio: 1,
+        stake: effectiveStake,
+        availableBalance: Number(authData?.balance || 0),
+        maxStakePercent: 2,
+        sessionLoss: Math.max(0, -sessionPnl),
+        sessionProfit: Math.max(0, sessionPnl),
+        tradesThisSession,
+        maxTradesPerSession: 10,
+        stopLoss: Number(stopLoss),
+        takeProfit: Number(takeProfit),
+    };
+    const rankedMarkets = symbols.map(market => ({
+        market,
+        result: runParityPipeline({
+            symbol: market.symbol,
+            ticks: market.ticks.map(tick => ({
+                symbol: market.symbol,
+                quote: tick.quote,
+                epoch: tick.epoch,
+                digit: tick.digit,
+                parity: tick.digit % 2 === 0 ? 'EVEN' as const : 'ODD' as const,
+            })),
+            config: parityConfig,
+        }),
+    })).sort((a, b) => {
+        if (a.result.executionAuthorized !== b.result.executionAuthorized) return a.result.executionAuthorized ? -1 : 1;
+        if (a.result.evidenceScore !== b.result.evidenceScore) return b.result.evidenceScore - a.result.evidenceScore;
+        return b.result.sampleSize - a.result.sampleSize;
     });
+    const selected = rankedMarkets[0]?.market;
+    const pipeline = rankedMarkets[0]?.result || runParityPipeline({ symbol: '', ticks: [], config: parityConfig });
     const counts = { even: pipeline.evenCount, odd: pipeline.oddCount };
     const total = pipeline.sampleSize;
     const candidateReady = pipeline.stages[9]?.status === 'PASS' && pipeline.stages[10]?.status === 'PASS' && pipeline.sampleSize >= 30;
@@ -530,10 +539,8 @@ const EvenOddTerminal = () => {
                     <div className='eo-terminal__card eo-terminal__market'>
                         <div className='eo-terminal__card-heading'><h3>Market scanner</h3><span>{availableSymbols.length} eligible markets detected</span></div>
                         <div className='eo-terminal__market-row'>
-                            <label htmlFor='eo-symbol'>Selected volatility index</label>
-                            <select id='eo-symbol' value={selectedSymbol} onChange={event => setSelectedSymbol(event.target.value)}>
-                                {symbols.map(item => <option key={item.symbol} value={item.symbol}>{item.name}</option>)}
-                            </select>
+                            <span>Background market scan</span>
+                            <strong>{symbols.length} supported markets · best evidence candidate selected automatically</strong>
                         </div>
                         <div className='eo-terminal__stats'>
                             <div><span>Latest digit</span><strong>{latest ? latest.digit : '—'}</strong></div>
@@ -542,7 +549,7 @@ const EvenOddTerminal = () => {
                             <div><span>Analysis sample</span><strong>{total}/30</strong></div>
                         </div>
                         <div className='eo-terminal__signal'>
-                            <span>Observed parity lead · evidence {pipeline.evidenceScore}%</span>
+                            <span>{selected?.name || 'Scanning markets'} · observed parity lead · evidence {pipeline.evidenceScore}%</span>
                             <strong className={prediction === 'WAIT' ? 'is-wait' : 'is-signal'}>{prediction}</strong>
                             <small>{prediction === 'WAIT' ? 'Insufficient sample or parity difference. No entry candidate.' : `Observed sample lead only · evidence difference ${pipeline.evidenceScore}% · not a next-tick forecast.`}</small>
                         </div>
