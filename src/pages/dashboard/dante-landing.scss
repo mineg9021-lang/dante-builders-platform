@@ -16,3 +16,9 @@ html,body,#root{min-height:100%;margin:0;background:#f5f3fb;color:#241b3d}body{f
 @media(max-width:1000px){.dante-bot-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.dante-system-hero{grid-template-columns:minmax(0,1fr) 220px}.terminal-account-strip{grid-template-columns:repeat(3,1fr)}.terminal-connect{grid-column:1/-1;justify-self:start}}
 @media(max-width:720px){.dante-topbar{flex-wrap:wrap;padding:12px 0}.dante-topbar nav{order:3;width:100%;justify-content:space-between}.dante-connection{font-size:8px}.dante-system-hero{grid-template-columns:1fr;padding:24px}.dante-system-portrait{min-height:175px}.dante-system-portrait img{height:180px}.dante-system-status{grid-template-columns:1fr}.dante-bot-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dante-bot-card{min-height:205px;padding:13px}.terminal-account-strip{grid-template-columns:1fr 1fr}.terminal-identity{align-items:flex-start}.terminal-identity img{width:62px;height:62px}.terminal-state-row{grid-template-columns:1fr 1fr}.dante-control-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dante-metric-grid{grid-template-columns:repeat(2,1fr)}.dante-decision-panel{grid-template-columns:1fr}.dante-decision-panel small{grid-column:1}.dante-footer{flex-direction:column}}
 @media(max-width:420px){.dante-bot-grid{grid-template-columns:1fr}.dante-control-grid{grid-template-columns:1fr}.terminal-actions{flex-wrap:wrap}.terminal-mode{width:100%;margin:3px 0 0}.dante-section-heading{align-items:flex-start;flex-direction:column}}
+
+/* Unified multi-strategy workspace cards */
+.workspace-strategy-options{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.workspace-strategy{padding:7px 9px;border:1px solid #e3ddef;border-radius:8px;background:#faf9fd;color:#5c4a7c;font-size:9px;font-weight:800;cursor:pointer}
+.workspace-strategy.active{border-color:#8050c9;background:#eee7fb;color:#56339b}
+.workspace-unavailable{color:#9b5360!important}
