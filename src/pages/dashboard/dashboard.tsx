@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import DanteAccountGate from '@/components/account-gate';
 import { observer } from 'mobx-react-lite';
 import { generateOAuthURL } from '@/components/shared';
 import { useStore } from '@/hooks/useStore';
@@ -288,4 +289,6 @@ const DashboardComponent = observer(() => {
     );
 });
 
-export default DashboardComponent;
+const PlatformDashboard = () => <DanteAccountGate><DashboardComponent /></DanteAccountGate>;
+
+export default PlatformDashboard;
