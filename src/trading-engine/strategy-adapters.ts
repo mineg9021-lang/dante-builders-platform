@@ -70,7 +70,7 @@ const validTicks = (ticks: StrategyTick[], symbol: string, maxSample: number, no
     for (const tick of selected) {
         if (!Number.isFinite(tick.epoch) || tick.epoch <= previousEpoch ||
             now - tick.epoch > 15 || tick.epoch - now > 5 ||
-            typeof tick.quote !== 'string' || !/^[-+]?\\d+(?:\\.\\d+)?$/.test(tick.quote) ||
+            typeof tick.quote !== 'string' || !/^[-+]?\d+(?:\.\d+)?$/.test(tick.quote) ||
             !Number.isInteger(tick.digit) || tick.digit < 0 || tick.digit > 9) continue;
         result.push(tick);
         previousEpoch = tick.epoch;
