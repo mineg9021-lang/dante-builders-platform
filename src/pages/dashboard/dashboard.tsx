@@ -7,6 +7,7 @@ import { useStore } from '@/hooks/useStore';
 import { startStrategyRuntime, type RuntimeHandle, type RuntimeStatus } from '@/trading-engine/runtime';
 import type { DerivTradingApi, ExecutionRiskContext } from '@/trading-engine/execution';
 import { getImplementedStrategyIds, type BotStrategyId, type StrategyDecisionResult } from '@/trading-engine/strategy-adapters';
+import { DANTE_VOLATILITY_SYMBOLS } from './market-universe';
 import './dante-landing.scss';
 
 type BotDefinition = { id: BotStrategyId; title: string; contract: string; description: string; group: string; icon: string };
@@ -84,18 +85,18 @@ const DashboardComponent = () => {
   if(!currency){setRuntimeMessage('Deriv did not provide an account currency. Refresh the account connection.');return;}
   const stakeValue=Number(stake),sl=Number(stopLoss),tp=Number(takeProfit),limit=Number(maxTrades),ticks=Number(duration);
   if(![stakeValue,sl,tp,limit,ticks].every(Number.isFinite)||stakeValue<=0||sl<=0||tp<=0||!Number.isInteger(limit)||limit<1||!Number.isInteger(ticks)||ticks<1){setRuntimeMessage('Check stake, stop loss, take profit, trade limit and duration values.');return;}
-  const symbol='R_100';
-  const precision=Number(api_base.pip_sizes?.[symbol]??2);
+  const symbols=[...DANTE_VOLATILITY_SYMBOLS];
+  const precisionBySymbol=Object.fromEntries(symbols.map(symbol=>[symbol,Number(api_base.pip_sizes?.[symbol]??2)]));
   setDecision(null);setRuntimeStatus('STARTING');setRuntimeMessage('Checking live contract availability and opening the Deriv tick stream…');
   try{
    const baseRisk=buildRisk();
    const handle=await startStrategyRuntime({
-    api:api_base.api as unknown as DerivTradingApi,symbol,precision,
+    api:api_base.api as unknown as DerivTradingApi,symbols,precisionBySymbol,
     strategy:{id:selectedBot,minSample:12,maxSample:40,runLength:Number(runLength),barrier:Number(barrier),duration:ticks,durationUnit:'t'},
     currency,risk:baseRisk,getRiskContext:buildRisk,
     onStatus:(status,message)=>{setRuntimeStatus(status);setRuntimeMessage(message);},
     onDecision:result=>setDecision(result),
-    onPurchased:purchase=>setTrades(previous=>[{id:String(purchase.contractId),contractId:purchase.contractId,contractType:purchase.contractType,symbol,status:'OPEN',time:Date.now()},...previous].slice(0,30)),
+    onPurchased:purchase=>setTrades(previous=>[{id:String(purchase.contractId),contractId:purchase.contractId,contractType:purchase.contractType,symbol:purchase.symbol,status:'OPEN',time:Date.now()},...previous].slice(0,30)),
     onSettled:result=>{
      pnlRef.current+=result.profit;tradeCountRef.current+=1;setSessionPnl(pnlRef.current);
      if(result.settlement==='WON')setWins(value=>value+1);
@@ -128,7 +129,7 @@ const DashboardComponent = () => {
   </section>
   <section className="dante-terminal" id="bot-terminal">
    <div className="dante-terminal-purple">
-    <div className="terminal-identity"><img src="/assets/images/dante-bot-portraits.webp" alt=""/><div><span className="dante-eyebrow">{bot.group.toUpperCase()} STRATEGY WORKSPACE</span><h2>{bot.title}</h2><p>Deriv contract: <strong>{bot.contract}</strong> · Market stream: <strong>R_100</strong></p></div></div>
+    <div className="terminal-identity"><img src="/assets/images/dante-bot-portraits.webp" alt=""/><div><span className="dante-eyebrow">{bot.group.toUpperCase()} STRATEGY WORKSPACE</span><h2>{bot.title}</h2><p>Deriv contract: <strong>{bot.contract}</strong> · Market stream: <strong>AUTO · 13 VOLATILITY MARKETS</strong></p></div></div>
     <div className="terminal-account-strip"><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Not connected'}</strong></div><div><span>ACCOUNT TYPE</span><strong>{accountType}</strong></div><div><span>LIVE BALANCE</span><strong>{isDerivConnected?Number(authData?.balance||0).toFixed(2)+' '+currency:'—'}</strong></div><button type="button" className="terminal-connect" onClick={connectDeriv}>{isDerivConnected?'RECONNECT DERIV':'CONNECT DERIV'}</button></div>
     {loginError&&<p className="dante-error" role="alert">{loginError}</p>}
     <div className="terminal-state-row"><div><span>RUNTIME</span><strong>{runtimeStatus.replaceAll('_',' ')}</strong></div><div><span>STRATEGY DECISION</span><strong>{decision?.decision||'WAITING'}</strong></div><div><span>LAST EVIDENCE</span><strong>{decision?decision.evidenceScore+'%':'—'}</strong></div></div>
