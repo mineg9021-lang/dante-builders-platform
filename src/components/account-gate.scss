@@ -1,0 +1,14 @@
+.dante-account-loading{min-height:100vh;display:grid;place-items:center;background:#f3faf5;color:#24683b;font:600 14px Inter,Arial,sans-serif}
+.dante-account-page{min-height:100vh;display:grid;place-items:center;padding:22px;box-sizing:border-box;background:radial-gradient(circle at 20% 15%,#e5f6e9,transparent 32%),linear-gradient(145deg,#fff,#f0f8f2);font-family:Inter,Arial,sans-serif}
+.dante-account-card{width:min(100%,440px);box-sizing:border-box;padding:30px;border:1px solid #d9e9de;border-radius:20px;background:#fff;box-shadow:0 20px 55px rgba(29,100,53,.09)}
+.dante-account-mark{width:48px;height:48px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(135deg,#19864a,#55b875);color:#fff;font-weight:950}
+.dante-account-kicker{display:block;margin-top:22px;color:#21854a;font-size:9px;font-weight:900;letter-spacing:1.5px}
+.dante-account-card h1{margin:9px 0;color:#193e29;font-size:28px}.dante-account-card>p{color:#6b8172;font-size:12px;line-height:1.7}
+.dante-account-card form{display:grid;gap:13px;margin-top:20px}.dante-account-card label{display:grid;gap:7px;color:#355d40;font-size:11px;font-weight:850}
+.dante-account-card input{width:100%;box-sizing:border-box;min-height:44px;padding:10px 12px;border:1px solid #d6e7db;border-radius:9px;background:#fbfefc;color:#173d28;font:inherit;font-size:13px}
+.dante-account-card form button{min-height:46px;margin-top:5px;border:0;border-radius:10px;background:linear-gradient(110deg,#188347,#43ad68);color:#fff;font-size:12px;font-weight:900}
+.dante-account-card form button:disabled{opacity:.6}.dante-account-message{padding:10px;border-radius:8px;background:#f0f8f2;color:#2d7043;font-size:11px;line-height:1.5}
+.dante-account-switch{width:100%;margin-top:15px;border:0;background:transparent;color:#217b43;font-size:11px;font-weight:850}
+.dante-account-card>small{display:block;margin-top:18px;color:#829186;font-size:9px;line-height:1.6}
+.dante-account-shell{min-height:100vh}.dante-account-bar{display:flex;justify-content:flex-end;align-items:center;gap:14px;padding:9px clamp(14px,3vw,44px);border-bottom:1px solid #e2eee5;background:#fff;color:#6a8070;font:10px Inter,Arial,sans-serif}.dante-account-bar strong{color:#245c36}.dante-account-bar button{border:1px solid #d8e8dc;border-radius:8px;padding:7px 11px;background:#f6fbf7;color:#217843;font-size:10px;font-weight:850}
+@media(max-width:500px){.dante-account-card{padding:22px}.dante-account-card h1{font-size:24px}.dante-account-bar{justify-content:space-between}}
