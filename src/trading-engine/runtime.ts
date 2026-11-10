@@ -25,6 +25,7 @@ export type StartStrategyRuntimeInput = {
     currency: string;
     risk: Omit<ExecutionRiskContext, 'strategyDecision' | 'lastTickEpoch'> & { liveTradingConfirmed: boolean };
     getRiskContext?: () => Omit<ExecutionRiskContext, 'strategyDecision' | 'lastTickEpoch'>;
+    shouldContinue?: () => boolean;
     onStatus?: (status: RuntimeStatus, message: string) => void;
     onDecision?: (decision: StrategyDecisionResult) => void;
     onPurchased?: (purchase: { contractId: number; buyPrice: number; symbol: string; contractType: string }) => void;
@@ -81,6 +82,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
     const subscriptionIds: string[] = [];
     let tickStream: { unsubscribe: () => void } | undefined;
     const ticksBySymbol = new Map<string, StrategyTick[]>(eligibleSymbols.map(symbol => [symbol, []]));
+    const canContinue = () => !stopped && (!input.shouldContinue || input.shouldContinue());
     const setStatus = (next: RuntimeStatus, message: string) => {
         status = next;
         input.onStatus?.(next, message);
@@ -95,7 +97,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         setStatus('STOPPED', 'Bot stopped. No new purchases will be initiated.');
     };
     const handleTick = (raw: any) => {
-        if (stopped || raw?.msg_type !== 'tick' || typeof raw?.tick?.symbol !== 'string') return;
+        if (!canContinue() || raw?.msg_type !== 'tick' || typeof raw?.tick?.symbol !== 'string') return;
         const symbol = raw.tick.symbol as string;
         const symbolTicks = ticksBySymbol.get(symbol);
         if (!symbolTicks) return;
@@ -127,7 +129,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
             proposalFields: decision.proposalFields,
             risk,
             idempotencyKey: symbol + ':' + decision.opportunityKey,
-            shouldContinue: () => !stopped,
+            shouldContinue: canContinue,
             onPurchased: purchase => input.onPurchased?.(purchase),
         }).then(result => {
             input.onSettled?.(result);
@@ -148,10 +150,15 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
 
     tickStream = input.api.onMessage().subscribe(handleTick);
     const subscriptionResults = await Promise.all(eligibleSymbols.map(async symbol => {
+        if (!canContinue()) return null;
         try {
             const response = await input.api.send({ ticks: symbol, subscribe: 1 });
             if (response?.error) return null;
             const id = response?.subscription?.id;
+            if (!canContinue()) {
+                if (typeof id === 'string') void input.api.send({ forget: id }).catch(() => undefined);
+                return null;
+            }
             if (typeof id === 'string') subscriptionIds.push(id);
             handleTick(response);
             return symbol;
@@ -159,6 +166,13 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
             return null;
         }
     }));
+    if (!canContinue()) {
+        tickStream.unsubscribe();
+        subscriptionIds.splice(0).forEach(id => void input.api.send({ forget: id }).catch(() => undefined));
+        stopped = true;
+        status = 'STOPPED';
+        return { stop, getStatus: () => status, getTicks: () => Array.from(ticksBySymbol.values()).flat() };
+    }
     if (!subscriptionResults.some(Boolean)) {
         tickStream.unsubscribe();
         throw new Error('NO_MARKET_TICK_SUBSCRIPTIONS_AVAILABLE');
