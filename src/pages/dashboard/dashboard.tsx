@@ -4,9 +4,10 @@ import { generateOAuthURL } from '@/components/shared';
 import { useStore } from '@/hooks/useStore';
 import EvenOddTerminal from './even-odd-terminal';
 import DigitMatchesScanner from './digit-matches-scanner';
+import OverTwoTerminal from './over-two-terminal';
 import './dante-landing.scss';
 
-type Workspace = 'home' | 'parity' | 'matches' | 'xml';
+type Workspace = 'home' | 'parity' | 'matches' | 'over2' | 'xml';
 
 const XML_ENTITIES: Record<string, string> = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' };
 const escapeXml = (value: string) => value.replace(/[<>&"']/g, char => XML_ENTITIES[char] || char);
@@ -228,6 +229,7 @@ const DashboardComponent = observer(() => {
                     <button className={workspace === 'home' ? 'active' : ''} onClick={() => setWorkspace('home')}>Home</button>
                     <button className={workspace === 'parity' ? 'active' : ''} onClick={() => setWorkspace('parity')}>Parity Bot</button>
                     <button className={workspace === 'matches' ? 'active' : ''} onClick={() => setWorkspace('matches')}>Matches Scanner</button>
+                    <button className={workspace === 'over2' ? 'active' : ''} onClick={() => setWorkspace('over2')}>Over 2 Bot</button>
                     <button className={workspace === 'xml' ? 'active' : ''} onClick={() => setWorkspace('xml')}>XML Generator</button>
                 </nav>
                 <span className={client.is_logged_in ? 'connection connected' : 'connection'}>{client.is_logged_in ? 'TRADING SESSION CONNECTED' : 'TRADING SESSION REQUIRED'}</span>
@@ -238,7 +240,7 @@ const DashboardComponent = observer(() => {
                     <div><span className="dante-kicker">INDEPENDENT MARKET TECHNOLOGY</span><h1>Build with intelligence.<br/><em>Operate with control.</em></h1><p>Dante Builders brings three focused tools into one clean workspace. Each product has its own engine, controls and validation.</p><div className="dante-hero-actions"><button className="primary" onClick={() => setWorkspace('parity')}>Open Parity Bot</button><button className="secondary" onClick={() => setWorkspace('matches')}>Explore Market Scanner</button></div></div>
                     <div className="dante-hero-art" aria-hidden="true"><div className="orbit orbit-one"></div><div className="orbit orbit-two"></div><div className="core">D<span>B</span></div><div className="float-chip chip-a">LIVE DATA</div><div className="float-chip chip-b">ENGINE ACTIVE</div></div>
                 </div>
-                <div className="dante-products-heading"><span>PRODUCT WORKSPACES</span><h2>Choose your tool</h2><p>Three separate products. No legacy bot-builder clutter.</p></div>
+                <div className="dante-products-heading"><span>BOT LIBRARY</span><h2>Choose a specialist bot</h2><p>Each bot opens in its own workspace with independent settings and controls.</p></div>
                 <div className="dante-product-grid">
                     <button className="product-tile parity-tile" onClick={() => setWorkspace('parity')}><span className="tile-icon">±</span><strong>Even / Odd Parity Bot</strong><p>Market sampling, parity analysis, risk gates and guarded execution.</p><b>Open workspace <i>↗</i></b></button>
                     <button className="product-tile scanner-tile" onClick={() => setWorkspace('matches')}><span className="tile-icon">◎</span><strong>Digit Intelligence Matches Scanner</strong><p>Live tick collection, precision-aware digit analysis and Matches/Differs evidence.</p><b>Open scanner <i>↗</i></b></button>
@@ -256,12 +258,17 @@ const DashboardComponent = observer(() => {
                 <DigitMatchesScanner />
             </section>}
 
+            {workspace === 'over2' && <section className="dante-workspace">
+                <div className="workspace-heading"><div><span>18-LAYER STRATEGY ENGINE</span><h1>Over 2 Specialist Bot</h1><p>Independent Over 2 contract strategy with hidden Volatility market discovery, entry validation and risk controls.</p></div><button onClick={() => setWorkspace('home')}>← Bot library</button></div>
+                {client.is_logged_in ? <OverTwoTerminal /> : <div className="connect-panel"><h2>Connect your Deriv account</h2><p>Deriv authorisation is required for account balance, proposals, purchases and verified settlement.</p><button className="primary" onClick={connectDeriv}>Connect Deriv securely</button>{loginError && <p role="alert">{loginError}</p>}</div>}
+            </section>}
+
             {workspace === 'xml' && <section className="dante-workspace xml-workspace">
                 <div className="workspace-heading"><div><span>DBOT XML ENGINE</span><h1>AI Deriv XML Bots Generator</h1><p>Describe a supported Even/Odd strategy. The local generator builds real DBot blocks, checks the required sections and exports an XML file.</p></div><button onClick={() => setWorkspace('home')}>← All products</button></div>
                 <div className="generator-panel">
                     <label>Describe the bot strategy<textarea value={request} onChange={event => setRequest(event.target.value)} placeholder="Describe the market, contract, stake, duration, entry logic and exit rules you want…"></textarea></label>
                     <div className="generator-fields">
-                        <label>Market<select value={symbol} onChange={event => setSymbol(event.target.value)}>{['R_10','R_10_1S','R_25','R_25_1S','R_50','R_50_1S','R_75','R_75_1S','R_100','R_100_1S'].map(value => <option key={value}>{value}</option>)}</select></label>
+                        <label>Market<select value={symbol} onChange={event => setSymbol(event.target.value)}>{['R_10','R_25','R_50','R_75','R_100','1HZ10V','1HZ15V','1HZ25V','1HZ30V','1HZ50V','1HZ75V','1HZ90V','1HZ100V'].map(value => <option key={value}>{value}</option>)}</select></label>
                         <label>Contract<select value={side} onChange={event => setSide(event.target.value as 'DIGITEVEN' | 'DIGITODD')}><option value="DIGITEVEN">Even</option><option value="DIGITODD">Odd</option></select></label>
                         <label>Stake<input type="number" min="0.35" step="0.01" value={stake} onChange={event => setStake(event.target.value)}/></label>
                         <label>Duration (ticks)<input type="number" min="1" max="10" step="1" value={duration} onChange={event => setDuration(event.target.value)}/></label>
