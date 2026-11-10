@@ -43,7 +43,7 @@ const toDecimalString = (value: string | number, precision: number): string | nu
 
 const extractDigit = (quote: string, precision: number): number | null => {
     const decimal = quote.split('.')[1] || '';
-    const digit = precision > 0 ? decimal[precision - 1] : quote.replace(/\\D/g, '').slice(-1);
+    const digit = precision > 0 ? decimal[precision - 1] : quote.replace(/\D/g, '').slice(-1);
     const parsed = Number(digit);
     return Number.isInteger(parsed) && parsed >= 0 && parsed <= 9 ? parsed : null;
 };
