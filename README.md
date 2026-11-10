@@ -1,14 +1,55 @@
 # Dante Builders
 
-Dante Builders is an independent market-technology workspace containing three separate products:
+Dante Builders is an independent multi-workspace market-technology platform. It has its own identity, navigation, Dante account layer, bot workspaces, activity timeline and journal. Deriv is an external market-data and execution provider connected through its API; Dante Builders is not a Deriv-branded interface.
 
-1. **Even/Odd Parity Bot** — live tick sampling, parity analysis, guarded Deriv proposals and purchases, settlement verification, and account-level risk controls.
-2. **Digit Intelligence Matches Scanner** — live tick collection, precision-aware final-digit extraction, rolling 0–9 statistics, and Matches/Differs evidence analysis. Scanner mode does not place trades.
-3. **AI Deriv XML Bots Generator** — interprets a supported strategy request, assembles XML using block types defined in this repository, checks all required sections and strategy conditions, and exports the XML. Structural validation is implemented; a full import test in the live DBot environment is still required before calling the output import-verified.
+## Unified bot workspaces
 
-The old general-purpose Blockly bot-builder screen, SmartCharts trading page, Deriv transaction modal, tutorials, and legacy trading dashboard are not part of the Dante product interface. The three products remain independent workspaces.
+The dashboard presents one bot library backed by shared platform infrastructure, rather than three separate legacy products.
 
-## Runtime and development
+| Workspace | Strategy families | Status |
+|---|---|---|
+| Parity AI | Even, Odd | Available in shared strategy runtime |
+| Flash AI | Digit Matches, Digit Differs | Available in shared strategy runtime |
+| Over / Under AI | Digit Over, Digit Under | Available in shared strategy runtime |
+| Rise / Fall AI | Rise, Fall | Available in shared strategy runtime |
+| Only Up / Only Down AI | Run High, Run Low | Available in shared strategy runtime |
+| Asian AI | Asian Up, Asian Down | Available in shared strategy runtime |
+| Touch / No Touch AI | Touch, No Touch | In development; execution disabled |
+| In / Out AI | In, Out | In development; execution disabled |
+
+The old independent parity/scanner/XML product descriptions are not the current dashboard architecture. Legacy source modules may remain in the repository without being separate top-level products.
+
+## Shared market and trading infrastructure
+
+The implemented strategy runtime includes:
+
+- Deriv-authorized account connection and account selection, including Demo and Real account types supplied by Deriv.
+- A configured Volatility market universe, dynamic contract availability discovery through `contracts_for`, and live tick subscriptions.
+- Per-symbol quote precision handling, tick buffering and strategy-specific analysis adapters.
+- Bounded analysis cycles with tick-count and elapsed-time limits. A cycle that cannot qualify an opportunity is rejected or paused safely rather than analysing indefinitely.
+- Proposal and purchase handling behind authorization, account-mode, live-confirmation and risk checks.
+- Open-contract monitoring and settlement verification.
+- A Dante activity timeline and journal for runtime status, READY / WAIT / REJECTED decisions, purchases and verified settlements.
+
+The dashboard prevents a second active runtime from being started from the same session. Execution safeguards include risk gates and protection against retrying an uncertain purchase. They do not guarantee trading outcomes.
+
+### Strategy limitations
+
+Current strategy adapters use deterministic rules and observed market data. They are not trained machine-learning models; evidence scores are not calibrated probabilities or guarantees about future ticks. Each strategy must pass its own signal, contract and risk gates before a purchase.
+
+Touch / No Touch and In / Out are planned workspaces only. Do not describe them as executable until their adapters, proposal mapping, risk checks and settlement tests are complete.
+
+## Dante activity and journal
+
+The activity timeline presents real engine and trading journal events in Dante Builders terminology. It is not populated with fabricated example trades. Persistent history depends on the backend being configured and verified; local session activity is not a substitute for durable storage.
+
+## Dante account and Deriv account
+
+Users authenticate to Dante Builders separately from connecting a Deriv account. Demo or Real status is determined from the authenticated Deriv account record, not relabelled by the client.
+
+The Dante account service uses Supabase Auth through a Netlify Function and a Secure, HttpOnly, SameSite cookie. The existing Deriv OAuth token handling has **not yet been migrated to a server-side token vault**. Complete and review that security work before production live-trading use.
+
+## Setup and development
 
 This project uses Rsbuild and React Router.
 
@@ -17,11 +58,11 @@ This project uses Rsbuild and React Router.
 - `npm run dev` — local development at `http://localhost:4003`
 - `npm test -- --runInBand`
 - `npm run type-check`
-- `npm run build` — static production output in `dist/`
+- `npm run build` — production output in `dist/`
 
-## Deriv connection
+## Deriv API configuration
 
-The parity bot requires a Deriv OAuth session to read the account balance, request proposals, purchase contracts, and monitor settlement. The Matches Scanner also uses the Deriv market-data connection. Register a Deriv application and set its exact redirect URL to the deployed site origin.
+Register a Deriv application and configure its exact redirect URL to match the deployed Dante Builders origin.
 
 Build-time environment variables:
 
@@ -32,52 +73,48 @@ NEXT_PUBLIC_DERIV_REFERRAL_LINK=
 NEXT_PUBLIC_DERIV_APP_NAME=Dante Builders
 ```
 
-Never place an account token, OAuth access token, or private credential in frontend source code.
+The Deriv application ID is public configuration. Never place an account token, OAuth access token or private credential in frontend source code. The server-side token-vault work remains a production security requirement.
 
-
-
-## Independent Over 2 bot and shared market universe
-
-The Over 2 workspace is a separate specialist bot. Its strategy engine evaluates a bounded sample, validates source ticks, computes digit metrics, scores the Over 2 evidence and returns READY / WAIT / REJECTED. Its execution adapter discovers `DIGITOVER` through `contracts_for`, requests a one-tick proposal with barrier `2`, buys only after all gates pass, and monitors the returned contract ID to a verified settlement.
-
-The background market universe is the exact 13-symbol set in `src/pages/dashboard/market-universe.ts`: five standard Volatility indices plus the eight available 1-second Volatility indices (including 15, 30 and 90). The list is not shown as a dashboard selector. Parity and Over 2 subscribe to the configured markets and rank eligible samples internally.
-
-The Over 2 pipeline has 18 logical gates and uses `market-metrics-engine.ts` plus `prediction-scoring-engine.ts`. The scoring module is deterministic statistical evidence from historical observations, not a trained machine-learning model and not a calibrated probability of the next tick. No strategy is forced to trade when evidence or safety gates fail. Recovery progression is bounded; the fourth consecutive loss pauses the bot for manual cooldown review.
-
-## Dante platform registration and login
-
-The website now places a separate Dante account registration/login gate in front of the bot library. This is distinct from Deriv OAuth: users first authenticate to Dante, then connect a Deriv account from a bot workspace when trading access is needed.
-
-The account service uses Supabase Auth through a Netlify Function and stores the access/refresh pair in a Secure, HttpOnly, SameSite cookie. The Dante password and platform session are not stored in browser local storage. The existing Deriv OAuth token handling has not yet been migrated to a server-side token vault and must be reviewed before production live-trading use.
+## Dante registration and Supabase
 
 Before enabling registration on the deployed site:
 
 1. Create a Supabase project.
-2. Add the GitHub repository secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` (the project ref is already configured in the workflow).
-3. Run **Actions → Apply Supabase database migrations → Run workflow**. This links the Supabase project and applies pending timestamped migrations from `supabase/migrations/`.
-4. Add these Netlify environment variables:
-   - `SUPABASE_URL` — the project URL.
-   - `SUPABASE_ANON_KEY` — the project's public anon/publishable key.
-5. Configure the desired email confirmation policy in Supabase Auth.
-6. Trigger a new Netlify production deploy and test signup, email confirmation, login, refresh and logout.
+2. Add GitHub repository secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` (the project reference is configured in the migration workflow).
+3. Run **Actions → Apply Supabase database migrations → Run workflow** to apply pending timestamped migrations from `supabase/migrations/`.
+4. Add Netlify environment variables `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+5. Configure the email confirmation policy in Supabase Auth.
+6. Deploy and test signup, email confirmation, login, session refresh and logout.
 
-Until those environment variables are configured, the site intentionally blocks account access and reports that registration is not configured; it does not create fake local accounts.
+Until the required Supabase variables are configured, registration is intentionally blocked rather than creating fake local accounts.
 
-The migration creates user-owned profile, bot-configuration, bot-session, trade-event and audit-event tables with row-level security. The current frontend gate establishes the secure platform session; bot configuration and event persistence still need to be connected to these tables in a later backend phase.
+Migrations define user-owned profile, bot-configuration, bot-session, trade-event and audit-event tables with row-level security. The frontend account gate establishes the Dante session; bot configuration and event persistence still need to be fully connected to these tables. Verify database policies and account isolation before production use.
 
-## XML Generator AI configuration
+## AI Deriv XML generator
 
-The XML generator can assemble and validate the local supported template without a cloud AI key. Natural-language AI interpretation is provided by the Netlify Function at `/.netlify/functions/generate-xml`.
+The XML generator is a supporting tool, not a substitute for the live strategy runtime. Its current local template supports Even and Odd digit contracts on the configured Volatility market universe. It assembles Trade Parameters, Run Once at Start, Purchase Conditions, Sell Conditions and Restart Trading Conditions, and performs structural validation.
 
-To enable cloud AI interpretation, add these as **Netlify environment variables** (not source-code values):
+Natural-language interpretation is provided by the Netlify Function at `/.netlify/functions/generate-xml`. Configure these Netlify environment variables for cloud AI interpretation:
 
-- `OPENAI_API_KEY` — a private API key for the server-side function.
-- `OPENAI_MODEL` — optional; defaults to `gpt-4o-mini`.
+- `OPENAI_API_KEY` — private server-side API key.
+- `OPENAI_MODEL` — optional model name; currently defaults to `gpt-4o-mini`.
 
-After adding or changing these values, trigger a new production deploy. The key is read only by the server-side function and is never exposed to the browser. Without the key, the UI clearly falls back to the verified local generator.
-
-The current local XML template supports Even and Odd digit contracts on the exact 13-symbol Volatility universe. Unsupported contract types and strategy instructions are rejected rather than silently converted. Generated XML includes populated Trade Parameters, Run Once at Start, digit-based Purchase Conditions, a safe hold-to-expiry Sell Conditions rule, and Restart Trading Conditions. Structural checks are implemented; import into DBot is still required to verify runtime compatibility.
+Without the key, the UI uses its local supported generator. Unsupported contract types and instructions should be rejected rather than silently converted. Structural validation is implemented, but a full import and runtime test in the live DBot environment is still required before calling XML import-verified.
 
 ## Deployment
 
-Netlify builds the `dist` directory using `npm run build`. Commits pushed to the connected `main` branch trigger production deployment when the Netlify Git connection is active. Netlify Functions are served from `netlify/functions`.
+Netlify builds `dist/` using `npm run build`; Netlify Functions are served from `netlify/functions`. Commits pushed to `main` trigger production deployment only when the Netlify Git connection is active. Confirm the deployed commit SHA in Netlify before treating a GitHub change as live.
+
+## Production readiness
+
+Before general production use, complete and verify:
+
+- Server-side Deriv OAuth token storage and refresh; no access token exposed to browser storage or logs.
+- Supabase migrations, row-level security and user/account isolation tests.
+- Durable bot configuration, session and trade-journal persistence.
+- End-to-end tests against a Deriv Demo account: account selection, market subscriptions, contract discovery, proposal, purchase, open-contract monitoring and settlement.
+- Contract-specific validation and end-to-end tests for every strategy before marking it available.
+- DBot import and runtime compatibility tests for generated XML.
+- Netlify production deployment verification against the intended Git commit.
+
+A successful CI build confirms only that the configured automated checks pass. It does not prove production services are configured, the latest commit is deployed, or live Deriv trading has been verified.
