@@ -51,10 +51,6 @@ const OverTwoTerminal = () => {
     const effectiveStake = Number((Number(stake) * Math.pow(1.5, martingaleEnabled ? lossStep : 0)).toFixed(2));
 
     useEffect(() => {
-        if (authData?.is_virtual && mode === 'analysis') setMode('demo');
-    }, [authData?.loginid, authData?.is_virtual, mode]);
-
-    useEffect(() => {
         if (!isAuthorized || connectionStatus !== 'opened') return;
         const timer = window.setInterval(() => {
             if (Array.isArray(api_base.active_symbols) && api_base.active_symbols.length) setLastUpdated(Date.now());
