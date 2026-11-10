@@ -5,8 +5,8 @@ import { extractLastDigit, quoteWithPrecision } from './digit-matches-engine';
 import { runOverTwoPipeline, type OverTwoTick } from './over-two-engine';
 import { executeOverTwoContract, type OverTwoApi } from './over-two-execution';
 import './over-two-terminal.scss';
+import { DANTE_VOLATILITY_SYMBOLS } from './market-universe';
 
-const BOT_SYMBOLS = ['R_10', 'R_25', 'R_50', 'R_75', 'R_100', '1HZ10V', '1HZ15V', '1HZ25V', '1HZ30V', '1HZ50V', '1HZ75V', '1HZ90V', '1HZ100V'];
 const MAX_TICKS = 60;
 type MarketSample = { symbol: string; name: string; precision: number; ticks: OverTwoTick[]; status: string };
 type TradeRow = { id: string; contractId?: number; symbol: string; status: 'EXECUTED' | 'WON' | 'LOST' | 'VOID'; profit?: number; time: number };
@@ -66,7 +66,7 @@ const OverTwoTerminal = () => {
         const active = Array.isArray(api_base.active_symbols) ? api_base.active_symbols : [];
         return active.filter((item: any) => {
             const symbol = String(item.symbol || item.underlying_symbol || '');
-            return BOT_SYMBOLS.includes(symbol);
+            return DANTE_VOLATILITY_SYMBOLS.includes(symbol as (typeof DANTE_VOLATILITY_SYMBOLS)[number]);
         }).map((item: any) => ({
             symbol: String(item.symbol || item.underlying_symbol),
             name: String(item.display_name || item.symbol_display_name || item.underlying_symbol_name || item.symbol || item.underlying_symbol),
