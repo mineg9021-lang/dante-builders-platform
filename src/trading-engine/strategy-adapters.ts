@@ -31,7 +31,6 @@ export type StrategyDecisionResult = {
         duration: number;
         duration_unit: 't' | 's' | 'm';
         barrier?: string;
-        prediction?: number;
     };
     sampleSize: number;
     evidenceScore: number;
