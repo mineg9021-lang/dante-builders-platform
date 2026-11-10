@@ -96,7 +96,7 @@ const DashboardComponent = () => {
     currency,risk:baseRisk,getRiskContext:buildRisk,
     onStatus:(status,message)=>{setRuntimeStatus(status);setRuntimeMessage(message);},
     onDecision:result=>setDecision(result),
-    onPurchased:purchase=>setTrades(previous=>[{id:String(purchase.contractId),contractId:purchase.contractId,contractType:purchase.contractType,symbol:purchase.symbol,status:'OPEN',time:Date.now()},...previous].slice(0,30)),
+    onPurchased:purchase=>setTrades(previous=>[{id:String(purchase.contractId),contractId:purchase.contractId,contractType:purchase.contractType,symbol:purchase.symbol,status:'OPEN' as const,time:Date.now()},...previous].slice(0,30)),
     onSettled:result=>{
      pnlRef.current+=result.profit;tradeCountRef.current+=1;setSessionPnl(pnlRef.current);
      if(result.settlement==='WON')setWins(value=>value+1);
