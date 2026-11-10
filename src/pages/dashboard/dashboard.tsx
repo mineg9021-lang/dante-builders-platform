@@ -7,6 +7,7 @@ import { useStore } from '@/hooks/useStore';
 import { startStrategyRuntime, type RuntimeHandle, type RuntimeStatus } from '@/trading-engine/runtime';
 import type { DerivTradingApi, ExecutionRiskContext } from '@/trading-engine/execution';
 import { getImplementedStrategyIds, type BotStrategyId, type StrategyDecisionResult } from '@/trading-engine/strategy-adapters';
+import type { RobotEngineReport } from '@/trading-engine/robot-18-layer-engine';
 import { DANTE_VOLATILITY_SYMBOLS } from './market-universe';
 import { appendDanteJournalEvent, loadDanteJournal } from '@/services/dante-journal.service';
 import PlatformActivity from './platform-activity';
@@ -48,6 +49,7 @@ const DashboardComponent = () => {
  const [runtimeStatus,setRuntimeStatus] = useState<RuntimeStatus>('STOPPED');
  const [runtimeMessage,setRuntimeMessage] = useState('Connect your Deriv account, configure the bot and press Start.');
  const [decision,setDecision] = useState<StrategyDecisionResult|null>(null);
+ const [engineReport,setEngineReport] = useState<RobotEngineReport|null>(null);
  const [trades,setTrades] = useState<TradeRow[]>([]);
  const [sessionPnl,setSessionPnl] = useState(0);
  const [wins,setWins] = useState(0);
@@ -145,7 +147,7 @@ const DashboardComponent = () => {
   if(![stakeValue,sl,tp,limit,ticks].every(Number.isFinite)||stakeValue<=0||sl<=0||tp<=0||!Number.isInteger(limit)||limit<1||!Number.isInteger(ticks)||ticks<1){setRuntimeMessage('Check stake, stop loss, take profit, trade limit and duration values.');return;}
   const symbols=[...DANTE_VOLATILITY_SYMBOLS];
   const precisionBySymbol=Object.fromEntries(symbols.map(symbol=>[symbol,Number(api_base.pip_sizes?.[symbol]??2)]));
-  setDecision(null);setRuntimeStatus('STARTING');setRuntimeMessage('Checking live contract availability and opening the Deriv tick stream…');
+  setDecision(null);setEngineReport(null);setRuntimeStatus('STARTING');setRuntimeMessage('Checking live contract availability and opening the Deriv tick stream…');
   try{
    const baseRisk=buildRisk();
    const handle=await startStrategyRuntime({
@@ -160,6 +162,7 @@ const DashboardComponent = () => {
        .catch(()=>setJournalError('A runtime status could not be saved to the persistent journal.'));
      }
     },
+    onEngineReport:report=>setEngineReport(report),
     onDecision:result=>{
      setDecision(result);
      const decisionKey=[result.decision,result.reason,result.contractType].join(':');
@@ -193,7 +196,7 @@ const DashboardComponent = () => {
    runtimeRef.current=handle;
   }catch(error){setRuntimeStatus('STOPPED');setRuntimeMessage(error instanceof Error?error.message:'The Deriv bot runtime could not start.');}
  };
- const selectBot=(id:BotStrategyId)=>{startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedBot(id);setDecision(null);setRuntimeMessage('Robot selected. Configure the controls below and press Start.');};
+ const selectBot=(id:BotStrategyId)=>{startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedBot(id);setDecision(null);setEngineReport(null);setRuntimeMessage('Robot selected. Configure the controls below and press Start.');};
  const currentRows=useMemo(()=>trades.slice(0,10),[trades]);
 
  return <main className="dante-platform">
@@ -244,6 +247,7 @@ const DashboardComponent = () => {
     <div className="dante-risk-note"><strong>Risk protection:</strong> fixed stake · 2% balance exposure cap · session stop loss · session take profit · trade-count limit · no martingale · no automatic purchase retries.</div>
     <div className="dante-metric-grid"><div><span>SESSION P/L</span><strong className={sessionPnl>=0?'metric-positive':'metric-negative'}>{sessionPnl.toFixed(2)} {currency}</strong></div><div><span>SETTLED WINS</span><strong>{wins}</strong></div><div><span>SETTLED LOSSES</span><strong>{losses}</strong></div><div><span>WIN RATE</span><strong>{winRate}%</strong></div></div>
     <div className="dante-decision-panel"><div><span>STRATEGY DECISION</span><strong>{decision?.decision||'WAIT'}</strong></div><p>{decision?.reason||'The strategy will report a decision after it receives a sufficient sample of fresh Deriv ticks.'}</p><small>{decision?decision.sampleSize+' source ticks · '+decision.contractType+' · '+decision.evidenceScore+'% evidence score':'No market data is fabricated or displayed before a real Deriv stream is connected.'}</small></div>
+    <section className="robot-engine-report" aria-live="polite"><div className="robot-engine-report-heading"><div><span>SHARED EXECUTION GATE</span><strong>18-layer engine diagnostics</strong></div><b>{engineReport?engineReport.passedLayers+'/18 passed':'Awaiting READY signal'}</b></div>{engineReport?<><p>{engineReport.reason}</p><div className="robot-engine-layer-grid">{engineReport.layers.map(layer=><div key={layer.name} className={layer.passed?'layer-pass':'layer-block'}><span>{layer.passed?'✓':'!'}</span><div><strong>{layer.name.replace(/_/g,' ')}</strong><small>{layer.detail}</small></div></div>)}</div></>:<p>All 18 checks run when this Robot produces a READY opportunity. WAIT decisions cannot purchase.</p>}</section>
    </div>
   </section>
   <section className="dante-journal" id="trade-journal">
