@@ -180,4 +180,63 @@ describe('strategy runtime safety', () => {
         }
     });
 
+
+    it('rejects ticks whose Deriv pip_size conflicts with the configured market precision', async () => {
+        let listener: ((message: any) => void) | undefined;
+        const api: DerivTradingApi = {
+            send: jest.fn()
+                .mockResolvedValueOnce({ contracts_for: { available: [{ contract_type: 'DIGITEVEN' }] } })
+                .mockResolvedValueOnce({ subscription: { id: 'precision-sub' } }),
+            onMessage: () => ({ subscribe: callback => {
+                listener = callback;
+                return { unsubscribe: jest.fn() };
+            } }),
+        };
+        const runtime = await startStrategyRuntime({
+            api, symbol: 'R_100', precision: 2, strategy: { id: 'EVEN' }, currency: 'USD',
+            risk: {
+                mode: 'demo', authorized: true, isVirtual: true, liveTradingConfirmed: false,
+                stake: 1, balance: 100, maxStake: 5, maxStakePercent: 2,
+                sessionPnl: 0, stopLoss: 10, takeProfit: 10,
+                tradesThisSession: 0, maxTradesPerSession: 10,
+            },
+        });
+        const epoch = Math.floor(Date.now() / 1000);
+        listener?.({ msg_type: 'tick', tick: { symbol: 'R_100', quote: '100.000', pip_size: 3, epoch } });
+        expect(runtime.getTicks()).toHaveLength(0);
+        listener?.({ msg_type: 'tick', tick: { symbol: 'R_100', quote: '100.00', pip_size: 2, epoch: epoch + 1 } });
+        expect(runtime.getTicks()).toEqual([{
+            symbol: 'R_100', quote: '100.00', epoch: epoch + 1, digit: 0,
+        }]);
+        runtime.stop();
+    });
+
+    it('preserves trailing-zero precision when Deriv reports a higher pip_size', async () => {
+        let listener: ((message: any) => void) | undefined;
+        const api: DerivTradingApi = {
+            send: jest.fn()
+                .mockResolvedValueOnce({ contracts_for: { available: [{ contract_type: 'DIGITEVEN' }] } })
+                .mockResolvedValueOnce({ subscription: { id: 'trailing-zero-sub' } }),
+            onMessage: () => ({ subscribe: callback => {
+                listener = callback;
+                return { unsubscribe: jest.fn() };
+            } }),
+        };
+        const runtime = await startStrategyRuntime({
+            api, symbol: '1HZ100V', precision: 3, strategy: { id: 'EVEN' }, currency: 'USD',
+            risk: {
+                mode: 'demo', authorized: true, isVirtual: true, liveTradingConfirmed: false,
+                stake: 1, balance: 100, maxStake: 5, maxStakePercent: 2,
+                sessionPnl: 0, stopLoss: 10, takeProfit: 10,
+                tradesThisSession: 0, maxTradesPerSession: 10,
+            },
+        });
+        const epoch = Math.floor(Date.now() / 1000);
+        listener?.({ msg_type: 'tick', tick: { symbol: '1HZ100V', quote: '123.4', pip_size: 3, epoch } });
+        expect(runtime.getTicks()).toEqual([{
+            symbol: '1HZ100V', quote: '123.400', epoch, digit: 0,
+        }]);
+        runtime.stop();
+    });
+
 });
