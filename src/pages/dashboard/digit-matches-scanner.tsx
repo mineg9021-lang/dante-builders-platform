@@ -16,7 +16,7 @@ const FALLBACK_CONTRACTS = [
 type ContractOption = { contract_type: string; label: string };
 type AiFinding = { title: string; detail: string; score: string; note: string };
 const DigitMatchesScanner = () => {
- const { isAuthorized, connectionStatus } = useApiBase();
+ const { connectionStatus } = useApiBase();
  const [symbol, setSymbol] = useState('R_10');
  const [windowSize, setWindowSize] = useState(100);
  const [ticks, setTicks] = useState<DigitTick[]>([]);
@@ -40,7 +40,7 @@ const DigitMatchesScanner = () => {
  const report = useMemo(() => analyzeDigitTicks({ticks, windowSize, minSample: Math.min(100, windowSize)}), [ticks, windowSize]);
 
  useEffect(() => {
-  if (!isAuthorized || connectionStatus !== 'opened' || !api_base.api) return;
+  if (connectionStatus !== 'opened' || !api_base.api) return;
   let active = true;
   const load = async () => {
    try {
@@ -60,11 +60,11 @@ const DigitMatchesScanner = () => {
   };
   void load();
   return () => { active = false; };
- }, [symbol, isAuthorized, connectionStatus]);
+ }, [symbol, connectionStatus]);
 
  useEffect(() => {
   if (!scanRequested) return;
-  if (!isAuthorized || connectionStatus !== 'opened' || !api_base.api) { setStatus('ERROR'); setError('Connect and authorize Deriv before starting the scanner.'); return; }
+  if (connectionStatus !== 'opened' || !api_base.api) { setStatus('ERROR'); setError('Deriv public market-data connection is not ready. Wait for the feed to connect, then retry.'); return; }
   let mounted = true;
   let subscriptionId: string | undefined;
   const appendTick = (tick: any) => {
@@ -113,7 +113,7 @@ const DigitMatchesScanner = () => {
    mounted = false; sub.unsubscribe(); window.clearInterval(refresh);
    if (subscriptionId) void api_base.api?.send({forget:subscriptionId});
   };
- }, [scanRequested, symbol, windowSize, isAuthorized, connectionStatus]);
+ }, [scanRequested, symbol, windowSize, connectionStatus]);
 
  const start = () => { setTicks([]); setFinding(null); setAnalysedAt(null); setError(''); setStatus('CONNECTING'); setScanRequested(true); };
  const pause = () => { setScanRequested(false); setStatus('PAUSED'); };
