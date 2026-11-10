@@ -1,289 +1,163 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import DanteAccountGate from '@/components/account-gate';
-import { observer } from 'mobx-react-lite';
 import { generateOAuthURL } from '@/components/shared';
+import { api_base } from '@/external/bot-skeleton';
+import { useApiBase } from '@/hooks/useApiBase';
 import { useStore } from '@/hooks/useStore';
-import EvenOddTerminal from './even-odd-terminal';
-import DigitMatchesScanner from './digit-matches-scanner';
-import OverTwoTerminal from './over-two-terminal';
+import { startStrategyRuntime, type RuntimeHandle, type RuntimeStatus } from '@/trading-engine/runtime';
+import type { DerivTradingApi, ExecutionRiskContext, VerifiedTradeResult } from '@/trading-engine/execution';
+import { getImplementedStrategyIds, type BotStrategyId, type StrategyDecisionResult } from '@/trading-engine/strategy-adapters';
 import './dante-landing.scss';
 
-type Workspace = 'home' | 'parity' | 'over2';
+type BotDefinition = { id: BotStrategyId; title: string; contract: string; description: string; group: string; icon: string };
+const BOT_LIBRARY: BotDefinition[] = [
+ { id:'RISE',title:'Rise Bot',contract:'CALL',description:'Trades upward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↗' },
+ { id:'FALL',title:'Fall Bot',contract:'PUT',description:'Trades downward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↘' },
+ { id:'ONLY_UP',title:'Only Up Bot',contract:'RUNHIGH',description:'Requires consecutive strictly rising ticks before entry.',group:'Consecutive movement',icon:'↑' },
+ { id:'ONLY_DOWN',title:'Only Down Bot',contract:'RUNLOW',description:'Requires consecutive strictly falling ticks before entry.',group:'Consecutive movement',icon:'↓' },
+ { id:'ASIAN_UP',title:'Asian Up AI Bot',contract:'ASIANU',description:'Combines directional momentum with current-price versus sample-average confirmation.',group:'Asian',icon:'⌃' },
+ { id:'ASIAN_DOWN',title:'Asian Down AI Bot',contract:'ASIAND',description:'Combines downward momentum with current-price versus sample-average confirmation.',group:'Asian',icon:'⌄' },
+ { id:'DIGIT_MATCH',title:'Digit Matches Bot',contract:'DIGITMATCH',description:'Ranks observed final-digit frequency and validates a prediction barrier.',group:'Digit',icon:'=' },
+ { id:'DIGIT_DIFFERS',title:'Digit Differs Bot',contract:'DIGITDIFF',description:'Selects a low-frequency digit candidate and validates its concentration.',group:'Digit',icon:'≠' },
+ { id:'DIGIT_OVER',title:'Digit Over Bot',contract:'DIGITOVER',description:'Evaluates final-digit observations against an over barrier.',group:'Digit',icon:'>' },
+ { id:'DIGIT_UNDER',title:'Digit Under Bot',contract:'DIGITUNDER',description:'Evaluates final-digit observations against an under barrier.',group:'Digit',icon:'<' },
+ { id:'EVEN',title:'Even Bot',contract:'DIGITEVEN',description:'Uses bounded parity frequency and split-window checks before entry.',group:'Parity',icon:'E' },
+ { id:'ODD',title:'Odd Bot',contract:'DIGITODD',description:'Uses bounded parity frequency and split-window checks before entry.',group:'Parity',icon:'O' },
+];
+const BOT_IDS = getImplementedStrategyIds();
+const BOT_BY_ID = new Map(BOT_LIBRARY.map(bot => [bot.id, bot]));
+type TradeRow = { id:string; contractId:number; contractType:string; symbol:string; status:'OPEN'|'WON'|'LOST'|'VOID'; profit?:number; time:number };
 
-const XML_ENTITIES: Record<string, string> = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' };
-const escapeXml = (value: string) => value.replace(/[<>&"']/g, char => XML_ENTITIES[char] || char);
+const DashboardComponent = () => {
+ const { client } = useStore();
+ const { isAuthorized, connectionStatus, authData } = useApiBase();
+ const [selectedBot,setSelectedBot] = useState<BotStrategyId>('RISE');
+ const [mode,setMode] = useState<'demo'|'live'>('demo');
+ const [stake,setStake] = useState('0.35');
+ const [stopLoss,setStopLoss] = useState('5');
+ const [takeProfit,setTakeProfit] = useState('5');
+ const [maxTrades,setMaxTrades] = useState('10');
+ const [duration,setDuration] = useState('5');
+ const [runLength,setRunLength] = useState('5');
+ const [barrier,setBarrier] = useState('4');
+ const [liveConfirmed,setLiveConfirmed] = useState(false);
+ const [runtimeStatus,setRuntimeStatus] = useState<RuntimeStatus>('STOPPED');
+ const [runtimeMessage,setRuntimeMessage] = useState('Connect your Deriv account, configure the bot and press Start.');
+ const [decision,setDecision] = useState<StrategyDecisionResult|null>(null);
+ const [trades,setTrades] = useState<TradeRow[]>([]);
+ const [sessionPnl,setSessionPnl] = useState(0);
+ const [wins,setWins] = useState(0);
+ const [losses,setLosses] = useState(0);
+ const [loginError,setLoginError] = useState('');
+ const runtimeRef = useRef<RuntimeHandle|null>(null);
+ const pnlRef = useRef(0);
+ const tradeCountRef = useRef(0);
+ const bot = BOT_BY_ID.get(selectedBot) || BOT_LIBRARY[0];
+ const isDerivConnected = isAuthorized && connectionStatus === 'opened';
+ const accountId = authData?.loginid || '';
+ const accountBalance = Number(authData?.balance || 0);
+ const currency = authData?.currency || '';
+ const accountType = authData?.is_virtual ? 'DEMO ACCOUNT' : authData ? 'REAL ACCOUNT' : 'NOT CONNECTED';
+ const winRate = wins + losses ? Math.round(wins/(wins+losses)*100) : 0;
 
-const makeDigitComparison = (digit: number) =>
-    '<block type="logic_compare" id="dante_compare_' + digit + '">' +
-    '<field name="OP">EQ</field>' +
-    '<value name="A"><block type="last_digit" id="dante_last_digit_' + digit + '"></block></value>' +
-    '<value name="B"><block type="math_number" id="dante_number_' + digit + '"><field name="NUM">' + digit + '</field></block></value>' +
-    '</block>';
+ useEffect(() => () => { runtimeRef.current?.stop(); runtimeRef.current=null; }, []);
+ useEffect(() => { if(mode!=='live') setLiveConfirmed(false); },[mode]);
 
-const makeParityCondition = (side: 'DIGITEVEN' | 'DIGITODD') => {
-    const digits = side === 'DIGITEVEN' ? [0, 2, 4, 6, 8] : [1, 3, 5, 7, 9];
-    return digits.slice(1).reduce((condition, digit, index) =>
-        '<block type="logic_operation" id="dante_parity_or_' + index + '">' +
-        '<field name="OP">OR</field><value name="A">' + condition + '</value>' +
-        '<value name="B">' + makeDigitComparison(digit) + '</value></block>',
-        makeDigitComparison(digits[0])
-    );
+ const connectDeriv = async () => {
+  setLoginError('');
+  try { const url=await generateOAuthURL(); if(!url) throw new Error('Deriv sign-in could not be started. Check the registered OAuth application settings.'); window.location.assign(url); }
+  catch(error){ setLoginError(error instanceof Error?error.message:'Unable to start Deriv sign-in.'); }
+ };
+ const buildRisk = (): Omit<ExecutionRiskContext,'strategyDecision'|'lastTickEpoch'> => ({
+  mode,authorized:isDerivConnected,isVirtual:Boolean(authData?.is_virtual),
+  liveTradingConfirmed:mode==='live'&&liveConfirmed,stake:Number(stake),balance:accountBalance,
+  maxStake:Number(stake),maxStakePercent:2,sessionPnl:pnlRef.current,
+  stopLoss:Number(stopLoss),takeProfit:Number(takeProfit),
+  tradesThisSession:tradeCountRef.current,maxTradesPerSession:Number(maxTrades),
+ });
+ const stopBot = () => { runtimeRef.current?.stop(); runtimeRef.current=null; setRuntimeStatus('STOPPED'); setRuntimeMessage('Bot stopped. No new purchases will be initiated.'); };
+ const startBot = async () => {
+  if(runtimeRef.current){setRuntimeMessage('This bot already has an active runtime. Stop it before starting another session.');return;}
+  if(!isDerivConnected||!api_base.api){setRuntimeMessage('Deriv is not authorised. Connect your Deriv account before starting.');return;}
+  if(mode==='live'){const accepted=window.confirm('You selected a REAL Deriv account. Trades will use real funds. Confirm live execution for this session.');if(!accepted)return;setLiveConfirmed(true);}
+  if(!currency){setRuntimeMessage('Deriv did not provide an account currency. Refresh the account connection.');return;}
+  const stakeValue=Number(stake),sl=Number(stopLoss),tp=Number(takeProfit),limit=Number(maxTrades),ticks=Number(duration);
+  if(![stakeValue,sl,tp,limit,ticks].every(Number.isFinite)||stakeValue<=0||sl<=0||tp<=0||!Number.isInteger(limit)||limit<1||!Number.isInteger(ticks)||ticks<1){setRuntimeMessage('Check stake, stop loss, take profit, trade limit and duration values.');return;}
+  const symbol='R_100';
+  const precision=Number(api_base.pip_sizes?.[symbol]??2);
+  setDecision(null);setRuntimeStatus('STARTING');setRuntimeMessage('Checking live contract availability and opening the Deriv tick stream…');
+  try{
+   const baseRisk=buildRisk();
+   const handle=await startStrategyRuntime({
+    api:api_base.api as unknown as DerivTradingApi,symbol,precision,
+    strategy:{id:selectedBot,minSample:12,maxSample:40,runLength:Number(runLength),barrier:Number(barrier),duration:ticks,durationUnit:'t'},
+    currency,risk:baseRisk,getRiskContext:buildRisk,
+    onStatus:(status,message)=>{setRuntimeStatus(status);setRuntimeMessage(message);},
+    onDecision:result=>setDecision(result),
+    onPurchased:purchase=>setTrades(previous=>[{id:String(purchase.contractId),contractId:purchase.contractId,contractType:purchase.contractType,symbol,status:'OPEN',time:Date.now()},...previous].slice(0,30)),
+    onSettled:result=>{
+     pnlRef.current+=result.profit;tradeCountRef.current+=1;setSessionPnl(pnlRef.current);
+     if(result.settlement==='WON')setWins(value=>value+1);
+     if(result.settlement==='LOST')setLosses(value=>value+1);
+     setTrades(previous=>previous.map(row=>row.contractId===result.contractId?{...row,status:result.settlement,profit:result.profit}:row));
+     if(pnlRef.current<=-sl||pnlRef.current>=tp||tradeCountRef.current>=limit){runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setRuntimeMessage('Session limit reached. The bot has stopped and settlement is recorded.');}
+    },
+    onError:error=>setRuntimeMessage(error.message),
+   });
+   runtimeRef.current=handle;
+  }catch(error){setRuntimeStatus('STOPPED');setRuntimeMessage(error instanceof Error?error.message:'The Deriv bot runtime could not start.');}
+ };
+ const selectBot=(id:BotStrategyId)=>{runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedBot(id);setDecision(null);setRuntimeMessage('Bot selected. Configure the controls below and press Start.');};
+ const currentRows=useMemo(()=>trades.slice(0,10),[trades]);
+
+ return <main className="dante-platform">
+  <header className="dante-topbar">
+   <button className="dante-brand" type="button" onClick={()=>selectBot('RISE')}><span className="dante-brand-mark">DB</span><span><strong>DANTE BUILDERS</strong><small>AI TRADING PLATFORM</small></span></button>
+   <nav aria-label="Platform navigation"><button className="active" type="button" onClick={()=>document.getElementById('bot-library')?.scrollIntoView({behavior:'smooth'})}>Bot library</button><button type="button" onClick={()=>document.getElementById('bot-terminal')?.scrollIntoView({behavior:'smooth'})}>Workspace</button><button type="button" onClick={()=>document.getElementById('trade-journal')?.scrollIntoView({behavior:'smooth'})}>Trade journal</button></nav>
+   <div className={isDerivConnected?'dante-connection is-connected':'dante-connection'}><span className="connection-dot"/>{isDerivConnected?'DERIV CONNECTED':'DERIV NOT CONNECTED'}</div>
+  </header>
+  <section className="dante-system-hero">
+   <div className="dante-system-copy"><span className="dante-eyebrow">DANTE AI CORE · MULTI-BOT RUNTIME</span><h1>One platform.<br/><em>Specialist trading engines.</em></h1><p>Connect your Deriv account once. Select a specialist bot, configure risk and let its contract-specific runtime handle live market data, validation, proposal, purchase and settlement.</p><div className="dante-system-tags"><span>DERIV OAUTH</span><span>LIVE MARKET DATA</span><span>RISK-GATED EXECUTION</span></div></div>
+   <div className="dante-system-portrait"><img src="/assets/images/dante-bot-portraits.webp" alt="Dante Builders robotic assistant"/><div className="portrait-glow"/><div className="portrait-caption"><span>AI CORE</span><strong>Specialist runtime</strong></div></div>
+   <div className="dante-system-status"><div><span>PLATFORM SESSION</span><strong>{client.is_logged_in?'SIGNED IN':'ACCOUNT REQUIRED'}</strong></div><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Awaiting OAuth'}</strong></div><div><span>BOT STATUS</span><strong>{runtimeStatus.replaceAll('_',' ')}</strong></div></div>
+  </section>
+  <section className="dante-library" id="bot-library">
+   <div className="dante-section-heading"><div><span className="dante-eyebrow">SPECIALIST BOT LIBRARY</span><h2>Select your trading engine</h2></div><p>{BOT_IDS.length} strategy adapters registered in this release</p></div>
+   <div className="dante-bot-grid">{BOT_LIBRARY.map(item=><button key={item.id} type="button" className={selectedBot===item.id?'dante-bot-card selected':'dante-bot-card'} onClick={()=>selectBot(item.id)}><span className="bot-card-icon">{item.icon}</span><span className="bot-card-group">{item.group} · {item.contract}</span><strong>{item.title}</strong><small>{item.description}</small><span className="bot-card-action">{selectedBot===item.id?'SELECTED':'OPEN WORKSPACE'} <b>↗</b></span></button>)}</div>
+  </section>
+  <section className="dante-terminal" id="bot-terminal">
+   <div className="dante-terminal-purple">
+    <div className="terminal-identity"><img src="/assets/images/dante-bot-portraits.webp" alt=""/><div><span className="dante-eyebrow">{bot.group.toUpperCase()} STRATEGY WORKSPACE</span><h2>{bot.title}</h2><p>Deriv contract: <strong>{bot.contract}</strong> · Market stream: <strong>R_100</strong></p></div></div>
+    <div className="terminal-account-strip"><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Not connected'}</strong></div><div><span>ACCOUNT TYPE</span><strong>{accountType}</strong></div><div><span>LIVE BALANCE</span><strong>{isDerivConnected?Number(authData?.balance||0).toFixed(2)+' '+currency:'—'}</strong></div><button type="button" className="terminal-connect" onClick={connectDeriv}>{isDerivConnected?'RECONNECT DERIV':'CONNECT DERIV'}</button></div>
+    {loginError&&<p className="dante-error" role="alert">{loginError}</p>}
+    <div className="terminal-state-row"><div><span>RUNTIME</span><strong>{runtimeStatus.replaceAll('_',' ')}</strong></div><div><span>STRATEGY DECISION</span><strong>{decision?.decision||'WAITING'}</strong></div><div><span>LAST EVIDENCE</span><strong>{decision?decision.evidenceScore+'%':'—'}</strong></div></div>
+    <div className="terminal-actions"><button type="button" className="terminal-start" onClick={startBot} disabled={runtimeStatus==='STARTING'||runtimeStatus==='RUNNING'||runtimeStatus==='EXECUTING'}>START BOT</button><button type="button" className="terminal-stop" onClick={stopBot} disabled={runtimeStatus==='STOPPED'}>STOP BOT</button><span className="terminal-mode">{mode.toUpperCase()} EXECUTION</span></div>
+   </div>
+   <div className="dante-white-dashboard">
+    <div className="dante-section-heading compact"><div><span className="dante-eyebrow">BOT CONTROL CENTRE</span><h3>Execution settings</h3></div><span className="dante-status-pill">{runtimeStatus.replaceAll('_',' ')}</span></div>
+    <p className="runtime-message">{runtimeMessage}</p>
+    <div className="dante-control-grid">
+     <label>Account mode<select value={mode} onChange={event=>setMode(event.target.value as 'demo'|'live')}><option value="demo">Demo account</option><option value="live">Real account</option></select></label>
+     <label>Stake ({currency||'account currency'})<input type="number" min="0.01" step="0.01" value={stake} onChange={event=>setStake(event.target.value)}/></label>
+     <label>Stop loss<input type="number" min="0.01" step="0.01" value={stopLoss} onChange={event=>setStopLoss(event.target.value)}/></label>
+     <label>Take profit<input type="number" min="0.01" step="0.01" value={takeProfit} onChange={event=>setTakeProfit(event.target.value)}/></label>
+     <label>Maximum trades<input type="number" min="1" step="1" value={maxTrades} onChange={event=>setMaxTrades(event.target.value)}/></label>
+     <label>Contract duration (ticks)<input type="number" min="1" max="100" step="1" value={duration} onChange={event=>setDuration(event.target.value)}/></label>
+     {(selectedBot==='ONLY_UP'||selectedBot==='ONLY_DOWN')&&<label>Consecutive ticks<input type="number" min="3" max="30" step="1" value={runLength} onChange={event=>setRunLength(event.target.value)}/></label>}
+     {(selectedBot==='DIGIT_OVER'||selectedBot==='DIGIT_UNDER')&&<label>Digit barrier<input type="number" min="0" max="8" step="1" value={barrier} onChange={event=>setBarrier(event.target.value)}/></label>}
+    </div>
+    <div className="dante-risk-note"><strong>Risk protection:</strong> fixed stake · 2% balance exposure cap · session stop loss · session take profit · trade-count limit · no martingale · no automatic purchase retries.</div>
+    <div className="dante-metric-grid"><div><span>SESSION P/L</span><strong className={sessionPnl>=0?'metric-positive':'metric-negative'}>{sessionPnl.toFixed(2)} {currency}</strong></div><div><span>SETTLED WINS</span><strong>{wins}</strong></div><div><span>SETTLED LOSSES</span><strong>{losses}</strong></div><div><span>WIN RATE</span><strong>{winRate}%</strong></div></div>
+    <div className="dante-decision-panel"><div><span>STRATEGY DECISION</span><strong>{decision?.decision||'WAIT'}</strong></div><p>{decision?.reason||'The strategy will report a decision after it receives a sufficient sample of fresh Deriv ticks.'}</p><small>{decision?decision.sampleSize+' source ticks · '+decision.contractType+' · '+decision.evidenceScore+'% evidence score':'No market data is fabricated or displayed before a real Deriv stream is connected.'}</small></div>
+   </div>
+  </section>
+  <section className="dante-journal" id="trade-journal">
+   <div className="dante-section-heading compact"><div><span className="dante-eyebrow">VERIFIED CONTRACT EVENTS</span><h3>Session trade journal</h3></div><span>{trades.length} events</span></div>
+   {currentRows.length?<div className="dante-table-wrap"><table><thead><tr><th>Contract</th><th>Market</th><th>Contract ID</th><th>Status</th><th>Profit / loss</th></tr></thead><tbody>{currentRows.map(row=><tr key={row.id}><td>{row.contractType}</td><td>{row.symbol}</td><td>{row.contractId}</td><td><span className={'trade-status '+row.status.toLowerCase()}>{row.status}</span></td><td>{row.profit===undefined?'Pending settlement':row.profit.toFixed(2)+' '+currency}</td></tr>)}</tbody></table></div>:<div className="dante-empty-journal">No Deriv contracts have been purchased in this session.</div>}
+  </section>
+  <footer className="dante-footer"><span>DANTE BUILDERS</span><span>Deriv OAuth · Contract-aware execution · User-controlled risk</span></footer>
+ </main>;
 };
 
-const makeParityXml = (symbol: string, stake: number, duration: number, side: 'DIGITEVEN' | 'DIGITODD') => {
-    const safeSymbol = escapeXml(symbol);
-    const condition = makeParityCondition(side);
-    return [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        '<xml xmlns="http://www.w3.org/1999/xhtml" is_dbot="true" collection="false">',
-        '  <variables><variable type="" id="dante_initialized" islocal="false" iscloud="false">DANTE:initialized</variable></variables>',
-        '  <block type="trade_definition" id="dante_trade_definition" deletable="false" x="0" y="0">',
-        '    <statement name="TRADE_OPTIONS">',
-        '      <block type="trade_definition_market" id="dante_market" deletable="false" movable="false">',
-        '        <field name="MARKET_LIST">volidx</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">' + safeSymbol + '</field>',
-        '        <next><block type="trade_definition_tradetype" id="dante_trade_type" deletable="false" movable="false">',
-        '          <field name="TRADETYPECAT_LIST">digits</field><field name="TRADETYPE_LIST">evenodd</field>',
-        '          <next><block type="trade_definition_contracttype" id="dante_contract_type" deletable="false" movable="false">',
-        '            <field name="TYPE_LIST">both</field>',
-        '            <next><block type="trade_definition_candleinterval" id="dante_candle_interval" deletable="false" movable="false">',
-        '              <field name="CANDLEINTERVAL_LIST">60</field>',
-        '              <next><block type="trade_definition_restartbuysell" id="dante_restart_buy_sell" deletable="false" movable="false">',
-        '                <field name="TIME_MACHINE_ENABLED">FALSE</field>',
-        '                <next><block type="trade_definition_restartonerror" id="dante_restart_error" deletable="false" movable="false"><field name="RESTARTONERROR">FALSE</field></block></next>',
-        '              </block></next>',
-        '            </block></next>',
-        '          </block></next>',
-        '        </block></next>',
-        '      </block>',
-        '    </statement>',
-        '    <statement name="INITIALIZATION"><block type="variables_set" id="dante_initialize">',
-        '      <field name="VAR" id="dante_initialized" variabletype="">DANTE:initialized</field>',
-        '      <value name="VALUE"><block type="logic_boolean" id="dante_initialized_true"><field name="BOOL">TRUE</field></block></value>',
-        '    </block></statement>',
-        '    <statement name="SUBMARKET"><block type="trade_definition_tradeoptions" id="dante_trade_options">',
-        '      <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>',
-        '      <field name="DURATIONTYPE_LIST">t</field><field name="CURRENCY_LIST">USD</field>',
-        '      <value name="DURATION"><shadow type="math_number_positive" id="dante_duration"><field name="NUM">' + duration + '</field></shadow></value>',
-        '      <value name="AMOUNT"><shadow type="math_number_positive" id="dante_stake"><field name="NUM">' + stake + '</field></shadow></value>',
-        '    </block></statement>',
-        '  </block>',
-        '  <block type="during_purchase" id="dante_during_purchase" x="720" y="0">',
-        '    <comment pinned="false" h="80" w="260">Hold to expiry by default. Early sale is disabled unless an explicit supported exit condition is requested.</comment>',
-        '    <statement name="DURING_PURCHASE_STACK"><block type="controls_if" id="dante_safe_hold">',
-        '      <value name="IF0"><block type="logic_boolean" id="dante_hold_until_expiry"><field name="BOOL">FALSE</field></block></value>',
-        '      <statement name="DO0"><block type="sell_at_market" id="dante_sell_at_market"></block></statement>',
-        '    </block></statement>',
-        '  </block>',
-        '  <block type="after_purchase" id="dante_after_purchase" x="720" y="248">',
-        '    <statement name="AFTERPURCHASE_STACK"><block type="trade_again" id="dante_trade_again"></block></statement>',
-        '  </block>',
-        '  <block type="before_purchase" id="dante_before_purchase" deletable="false" x="0" y="576">',
-        '    <statement name="BEFOREPURCHASE_STACK"><block type="controls_if" id="dante_purchase_gate">',
-        '      <value name="IF0">' + condition + '</value>',
-        '      <statement name="DO0"><block type="purchase" id="dante_purchase"><field name="PURCHASE_LIST">' + side + '</field></block></statement>',
-        '    </block></statement>',
-        '  </block>',
-        '</xml>',
-    ].join('\n');
-};
-
-const validateParityXml = (xml: string) => {
-    const parsed = new DOMParser().parseFromString(xml, 'application/xml');
-    if (parsed.getElementsByTagName('parsererror').length > 0) return { valid: false, errors: ['XML is not well-formed.'] };
-    const blocks = Array.from(parsed.getElementsByTagName('block'));
-    const hasBlock = (type: string) => blocks.some(block => block.getAttribute('type') === type);
-    const statementHasBlock = (rootType: string, statementName: string, childType: string) => {
-        const root = blocks.find(block => block.getAttribute('type') === rootType);
-        const statement = root && Array.from(root.getElementsByTagName('statement')).find(item => item.getAttribute('name') === statementName);
-        return Boolean(statement && Array.from(statement.getElementsByTagName('block')).some(block => block.getAttribute('type') === childType));
-    };
-    const countBlocks = (type: string) => blocks.filter(block => block.getAttribute('type') === type).length;
-    const errors: string[] = [];
-    if (!hasBlock('trade_definition') ||
-        !statementHasBlock('trade_definition', 'TRADE_OPTIONS', 'trade_definition_market') ||
-        !statementHasBlock('trade_definition', 'TRADE_OPTIONS', 'trade_definition_tradetype') ||
-        !statementHasBlock('trade_definition', 'TRADE_OPTIONS', 'trade_definition_contracttype') ||
-        !statementHasBlock('trade_definition', 'SUBMARKET', 'trade_definition_tradeoptions')) {
-        errors.push('Trade Parameters must contain the market, strategy, contract, stake and duration blocks.');
-    }
-    if (!statementHasBlock('trade_definition', 'INITIALIZATION', 'variables_set') ||
-        !statementHasBlock('trade_definition', 'INITIALIZATION', 'logic_boolean') ||
-        !xml.includes('<field name="BOOL">TRUE</field>')) {
-        errors.push('Run Once at Start must contain an active initialization action.');
-    }
-    if (!statementHasBlock('before_purchase', 'BEFOREPURCHASE_STACK', 'controls_if') ||
-        !statementHasBlock('before_purchase', 'BEFOREPURCHASE_STACK', 'purchase') ||
-        countBlocks('last_digit') !== 5 || countBlocks('logic_compare') !== 5 || countBlocks('logic_operation') !== 4) {
-        errors.push('Purchase Conditions must contain five digit comparisons, four OR gates and a purchase block.');
-    }
-    if (!statementHasBlock('during_purchase', 'DURING_PURCHASE_STACK', 'controls_if') ||
-        !statementHasBlock('during_purchase', 'DURING_PURCHASE_STACK', 'sell_at_market') ||
-        !xml.includes('<field name="BOOL">FALSE</field>') ||
-        !parsed.getElementsByTagName('comment').length) {
-        errors.push('Sell Conditions must explicitly define the safe hold-to-expiry rule.');
-    }
-    if (!statementHasBlock('after_purchase', 'AFTERPURCHASE_STACK', 'trade_again')) {
-        errors.push('Restart Trading Conditions must contain a restart decision.');
-    }
-    return { valid: errors.length === 0, errors };
-};
-
-const DashboardComponent = observer(() => {
-    const { client } = useStore();
-    const [workspace, setWorkspace] = useState<Workspace>('home');
-    const [loginError, setLoginError] = useState('');
-    const [request, setRequest] = useState('');
-    const [symbol, setSymbol] = useState('R_100');
-    const [stake, setStake] = useState('1');
-    const [duration, setDuration] = useState('5');
-    const [side, setSide] = useState<'DIGITEVEN' | 'DIGITODD'>('DIGITEVEN');
-    const [generatedXml, setGeneratedXml] = useState('');
-    const [validation, setValidation] = useState<{ valid: boolean; errors: string[] } | null>(null);
-    const [aiStatus, setAiStatus] = useState('AI service is optional; a local DBot template is available.');
-    const [generating, setGenerating] = useState(false);
-
-    const connectDeriv = async () => {
-        setLoginError('');
-        try {
-            const url = await generateOAuthURL();
-            if (!url) throw new Error('Deriv sign-in could not be started. Check the registered OAuth application settings.');
-            window.location.assign(url);
-        } catch (error) {
-            setLoginError(error instanceof Error ? error.message : 'Unable to start Deriv sign-in.');
-        }
-    };
-
-    const generateXml = async () => {
-        setGenerating(true);
-        setValidation(null);
-        let resolvedSide = side;
-        let resolvedSymbol = symbol;
-        let resolvedStake = Number(stake);
-        let resolvedDuration = Number(duration);
-        let usedAi = false;
-        if (request.trim()) {
-            try {
-                const response = await fetch('/.netlify/functions/generate-xml', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: request.slice(0, 2000), defaults: { side, symbol, stake: resolvedStake, duration: resolvedDuration } }),
-                });
-                const result = await response.json();
-                if (response.ok && result?.supported === false) {
-                    setValidation({ valid: false, errors: [result.reason || 'This request is outside the supported DBot generator scope.'] });
-                    setAiStatus('AI analysis rejected an unsupported contract request.');
-                    setGenerating(false);
-                    return;
-                }
-                if (response.ok && result?.supported === true) {
-                    resolvedSide = result.contract;
-                    resolvedSymbol = result.symbol;
-                    resolvedStake = Number(result.stake);
-                    resolvedDuration = Number(result.duration);
-                    usedAi = true;
-                } else {
-                    setAiStatus(result?.error === 'AI_PROVIDER_NOT_CONFIGURED'
-                        ? 'AI provider key is not configured in Netlify yet; local DBot template was used.'
-                        : 'AI service was unavailable; local DBot template was used.');
-                }
-            } catch {
-                setAiStatus('AI endpoint is not reachable yet; local DBot template was used.');
-            }
-            if (!usedAi) {
-                const normalized = request.toLowerCase();
-                if (/\b(matches?|differs?|over|under|rise|fall)\b/.test(normalized)) {
-                    setValidation({ valid: false, errors: ['This contract type is not yet supported by the current local XML template. Select an Even or Odd digit contract instead.'] });
-                    setAiStatus('Unsupported contract request rejected; no substitute strategy was generated.');
-                    setGenerating(false);
-                    return;
-                }
-                resolvedSide = /\bodd\b/.test(normalized) ? 'DIGITODD' : /\beven\b/.test(normalized) ? 'DIGITEVEN' : side;
-                resolvedSymbol = (request.match(/\b(?:R_(?:10|25|50|75|100)|1HZ(?:10|15|25|30|50|75|90|100)V)\b/i)?.[0] || symbol).toUpperCase();
-                resolvedStake = Number(request.match(/stake\s*(?:of|:|=)?\s*([0-9]+(?:\.[0-9]+)?)/i)?.[1] || stake);
-                resolvedDuration = Number(request.match(/(\d+)\s*ticks?/i)?.[1] || duration);
-            }
-        } else {
-            setAiStatus('Using local DBot template from the selected settings.');
-        }
-
-        if (!['DIGITEVEN', 'DIGITODD'].includes(resolvedSide)) {
-            setValidation({ valid: false, errors: ['Only Even and Odd digit contracts are currently supported by the local XML template.'] });
-            setGenerating(false);
-            return;
-        }
-        if (!Number.isFinite(resolvedStake) || resolvedStake <= 0 || resolvedStake > 100000) {
-            setValidation({ valid: false, errors: ['Enter a positive stake within the supported range.'] });
-            setGenerating(false);
-            return;
-        }
-        if (!Number.isInteger(resolvedDuration) || resolvedDuration < 1 || resolvedDuration > 10) {
-            setValidation({ valid: false, errors: ['Duration must be between 1 and 10 ticks for this generator template.'] });
-            setGenerating(false);
-            return;
-        }
-        const xml = makeParityXml(resolvedSymbol, resolvedStake, resolvedDuration, resolvedSide);
-        const result = validateParityXml(xml);
-        setGeneratedXml(xml);
-        setValidation(result);
-        setSide(resolvedSide);
-        setSymbol(resolvedSymbol);
-        setStake(String(resolvedStake));
-        setDuration(String(resolvedDuration));
-        if (usedAi) setAiStatus('AI interpreted your request; XML was assembled from repository DBot block types and passed structural validation. DBot import verification is still pending.');
-        setGenerating(false);
-    };
-
-    const downloadXml = () => {
-        if (!generatedXml || !validation?.valid) return;
-        const blob = new Blob([generatedXml], { type: 'application/xml;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = `dante-${side.toLowerCase()}-${symbol.toLowerCase()}.xml`;
-        anchor.click();
-        URL.revokeObjectURL(url);
-    };
-
-    return (
-        <main className="dante-app">
-            <header className="dante-header">
-                <button className="dante-brand" type="button" onClick={() => setWorkspace('home')}><span className="dante-brand-mark">DB</span><span>DANTE BUILDERS</span></button>
-                <nav aria-label="Product workspaces">
-                    <button className={workspace === 'home' ? 'active' : ''} onClick={() => setWorkspace('home')}>Home</button>
-                    <button className={workspace === 'parity' ? 'active' : ''} onClick={() => setWorkspace('parity')}>Parity Bot</button>
-                    <button className={workspace === 'over2' ? 'active' : ''} onClick={() => setWorkspace('over2')}>Over 2 Bot</button>
-                    
-                </nav>
-                <span className={client.is_logged_in ? 'connection connected' : 'connection'}>{client.is_logged_in ? 'TRADING SESSION CONNECTED' : 'TRADING SESSION REQUIRED'}</span>
-            </header>
-
-            {workspace === 'home' && <section className="dante-home">
-                <div className="dante-hero">
-                    <div><span className="dante-kicker">INDEPENDENT MARKET TECHNOLOGY</span><h1>Build with intelligence.<br/><em>Operate with control.</em></h1><p>Dante Builders connects specialist trading workspaces through a shared Deriv account. Choose a bot to configure its contract, risk limits and execution mode.</p><div className="dante-hero-actions"><button className="primary" onClick={() => setWorkspace('parity')}>Open Parity Bot</button><button className="secondary" onClick={() => setWorkspace('over2')}>Open Over 2 Bot</button></div></div>
-                    <div className="dante-hero-art" aria-hidden="true"><div className="orbit orbit-one"></div><div className="orbit orbit-two"></div><div className="core">D<span>B</span></div><div className="float-chip chip-b">ENGINE ACTIVE</div></div>
-                </div>
-                <div className="dante-products-heading"><span>BOT LIBRARY</span><h2>Choose a specialist bot</h2><p>Only currently implemented specialist workspaces are shown here.</p></div>
-                <div className="dante-product-grid">
-                    <button className="product-tile parity-tile" onClick={() => setWorkspace('parity')}><span className="tile-icon">±</span><strong>Even / Odd Parity Bot</strong><p>Independent parity contract workspace with its existing strategy and execution controls.</p><b>Open workspace <i>↗</i></b></button>
-                    <button className="product-tile over2-tile" onClick={() => setWorkspace('over2')}><span className="tile-icon">2+</span><strong>Over 2 Specialist Bot</strong><p>Digit Over 2 specialist workspace with its existing market discovery and execution safeguards.</p><b>Open bot dashboard <i>↗</i></b></button>
-                </div>
-            </section>}
-
-            {workspace === 'parity' && <section className="dante-workspace">
-                <div className="workspace-heading"><div><span>EXECUTION ENGINE</span><h1>Even / Odd Parity Bot</h1><p>Fresh tick validation, bounded analysis, contract checks and account-level risk controls.</p></div><button onClick={() => setWorkspace('home')}>← Bot library</button></div>
-                {client.is_logged_in ? <EvenOddTerminal /> : <div className="connect-panel"><h2>Connect your Deriv account</h2><p>Authentication is required for account balance, proposals, purchases and settlement monitoring.</p><button className="primary" onClick={connectDeriv}>Connect Deriv securely</button>{loginError && <p role="alert">{loginError}</p>}</div>}
-            </section>}
-
-            {workspace === 'over2' && <section className="dante-workspace">
-                <div className="workspace-heading"><div><span>18-LAYER STRATEGY ENGINE</span><h1>Over 2 Specialist Bot</h1><p>Independent Over 2 contract strategy with hidden Volatility market discovery, entry validation and risk controls.</p></div><button onClick={() => setWorkspace('home')}>← Bot library</button></div>
-                {client.is_logged_in ? <OverTwoTerminal /> : <div className="connect-panel"><h2>Connect your Deriv account</h2><p>Deriv authorisation is required for account balance, proposals, purchases and verified settlement.</p><button className="primary" onClick={connectDeriv}>Connect Deriv securely</button>{loginError && <p role="alert">{loginError}</p>}</div>}
-            </section>}
-
-            <footer className="dante-footer"><span>DANTE BUILDERS</span><span>Independent tools · Evidence before execution</span></footer>
-        </main>
-    );
-});
-
-const PlatformDashboard = () => <DanteAccountGate><DashboardComponent /></DanteAccountGate>;
-
+const PlatformDashboard = () => <DanteAccountGate><DashboardComponent/></DanteAccountGate>;
 export default PlatformDashboard;
