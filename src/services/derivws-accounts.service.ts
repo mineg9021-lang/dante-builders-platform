@@ -265,8 +265,21 @@ export class DerivWSAccountsService {
             // localStorage before triggering a WebSocket regeneration, so we honour
             // that selection here instead of always falling back to accounts[0].
             const activeLoginId = localStorage.getItem('active_loginid');
-            const targetAccount =
-                (activeLoginId && accounts.find(a => a.account_id === activeLoginId)) || accounts[0];
+            const targetAccount = activeLoginId
+                ? accounts.find(account => account.account_id === activeLoginId)
+                : accounts[0];
+
+            // Never silently fall back to another account when a previously selected
+            // account is missing. A fallback here could change Demo/Real context.
+            if (!targetAccount) {
+                throw new Error('SELECTED_DERIV_ACCOUNT_NOT_AVAILABLE');
+            }
+            if (targetAccount.account_type !== 'demo' && targetAccount.account_type !== 'real') {
+                throw new Error('DERIV_ACCOUNT_TYPE_UNVERIFIED');
+            }
+
+            // Keep the local account-mode hint aligned with Deriv's authoritative record.
+            localStorage.setItem('account_type', targetAccount.account_type);
 
             // Step 4: Fetch OTP and WebSocket URL for the resolved account (always fresh OTP)
             const websocketURL = await this.fetchOTPWebSocketURL(accessToken, targetAccount.account_id);
