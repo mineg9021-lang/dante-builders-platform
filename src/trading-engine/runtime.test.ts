@@ -100,7 +100,7 @@ describe('strategy runtime safety', () => {
             const epoch = Math.floor(Date.now() / 1000);
             for (let index = 0; index < 5; index += 1) {
                 listener?.({ msg_type: 'tick', tick: {
-                    symbol: 'R_100', quote: (100 + index / 100).toFixed(2), epoch: epoch + index,
+                    symbol: 'R_100', quote: (100 + index / 100).toFixed(2), pip_size: 2, epoch: epoch + index,
                 } });
             }
             expect(runtime.getStatus()).toBe('PAUSED_ERROR');
@@ -151,7 +151,7 @@ describe('strategy runtime safety', () => {
             const epoch = Math.floor(Date.now() / 1000);
             for (let index = 0; index < 5; index += 1) {
                 listener?.({ msg_type: 'tick', tick: {
-                    symbol: 'R_100', quote: (100 + index / 100).toFixed(2), epoch: epoch + index,
+                    symbol: 'R_100', quote: (100 + index / 100).toFixed(2), pip_size: 2, epoch: epoch + index,
                 } });
             }
             expect(runtime.getStatus()).toBe('RUNNING');
@@ -161,7 +161,7 @@ describe('strategy runtime safety', () => {
 
             for (let index = 0; index < 5; index += 1) {
                 listener?.({ msg_type: 'tick', tick: {
-                    symbol: 'R_50', quote: (200 + index / 100).toFixed(2), epoch: epoch + index,
+                    symbol: 'R_50', quote: (200 + index / 100).toFixed(2), pip_size: 2, epoch: epoch + index,
                 } });
             }
             expect(runtime.getStatus()).toBe('PAUSED_ERROR');
