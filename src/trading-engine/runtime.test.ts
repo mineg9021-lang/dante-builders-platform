@@ -54,6 +54,8 @@ describe('strategy runtime safety', () => {
                 onDecision,
             });
             jest.advanceTimersByTime(10000);
+            expect(runtime.getTicks()).toHaveLength(5);
+            expect(onDecision).toHaveBeenCalledTimes(5);
             expect(runtime.getStatus()).toBe('PAUSED_ERROR');
             expect(onDecision).toHaveBeenLastCalledWith(expect.objectContaining({
                 decision: 'REJECTED',
@@ -103,6 +105,8 @@ describe('strategy runtime safety', () => {
                     symbol: 'R_100', quote: (100 + index / 100).toFixed(2), pip_size: 2, epoch: epoch + index,
                 } });
             }
+            expect(runtime.getTicks()).toHaveLength(10);
+            expect(onDecision).toHaveBeenCalledTimes(10);
             expect(runtime.getStatus()).toBe('PAUSED_ERROR');
             expect(onDecision).toHaveBeenLastCalledWith(expect.objectContaining({
                 decision: 'REJECTED',
