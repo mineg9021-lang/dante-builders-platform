@@ -261,7 +261,7 @@ const DashboardComponent = observer(() => {
             {workspace === 'home' && <section className="dante-home">
                 <div className="dante-hero">
                     <div><span className="dante-kicker">INDEPENDENT MARKET TECHNOLOGY</span><h1>Build with intelligence.<br/><em>Operate with control.</em></h1><p>Dante Builders brings four independent workspaces into one clean platform. Each product has its own strategy, controls and validation.</p><div className="dante-hero-actions"><button className="primary" onClick={() => setWorkspace('parity')}>Open Parity Bot</button><button className="secondary" onClick={() => setWorkspace('matches')}>Explore Market Scanner</button></div></div>
-                    <div className="dante-hero-art" aria-hidden="true"><div className="orbit orbit-one"></div><div className="orbit orbit-two"></div><div className="core">D<span>B</span></div><div className="float-chip chip-a">LIVE DATA</div><div className="float-chip chip-b">ENGINE ACTIVE</div></div>
+                    <div className="dante-hero-art" aria-hidden="true"><div className="orbit orbit-one"></div><div className="orbit orbit-two"></div><div className="core">D<span>B</span></div><div className="float-chip chip-b">ENGINE ACTIVE</div></div>
                 </div>
                 <div className="dante-products-heading"><span>BOT LIBRARY</span><h2>Choose a specialist bot</h2><p>Each bot opens in its own workspace with independent settings and controls.</p></div>
                 <div className="dante-product-grid">
