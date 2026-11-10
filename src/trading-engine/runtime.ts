@@ -6,7 +6,7 @@ import {
 } from './execution';
 import { evaluateBotStrategy, type BotStrategyConfig, type StrategyDecisionResult, type StrategyTick } from './strategy-adapters';
 import { discoverContractsForSymbol, isContractAvailable } from './contracts';
-import { runRobot18LayerEngine } from './robot-18-layer-engine';
+import { runRobot18LayerEngine, type RobotEngineReport } from './robot-18-layer-engine';
 
 export type RuntimeStatus = 'STARTING' | 'RUNNING' | 'EXECUTING' | 'STOPPED' | 'PAUSED_ERROR';
 export type RuntimeHandle = {
@@ -29,6 +29,7 @@ export type StartStrategyRuntimeInput = {
     shouldContinue?: () => boolean;
     onStatus?: (status: RuntimeStatus, message: string) => void;
     onDecision?: (decision: StrategyDecisionResult) => void;
+    onEngineReport?: (report: RobotEngineReport) => void;
     onPurchased?: (purchase: { contractId: number; buyPrice: number; symbol: string; contractType: string }) => void;
     onSettled?: (result: VerifiedTradeResult) => void;
     onError?: (error: Error) => void;
@@ -183,6 +184,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
             contractAvailable: eligibleSymbols.includes(symbol),
             risk,
         });
+        input.onEngineReport?.(engineReport);
         if (!engineReport.passed) {
             input.onDecision?.({
                 ...decision,
