@@ -28,4 +28,11 @@ export async function appendDanteJournalEvent(event: DanteJournalWrite): Promise
         body: JSON.stringify(event),
     });
     if (!response.ok) throw new Error('JOURNAL_SAVE_FAILED');
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('dante:journal-event', { detail: {
+            id: Date.now(), bot_key: event.botKey, deriv_account_id: event.derivAccountId || null,
+            contract_id: event.contractId || null, event_type: event.eventType, event_data: event.eventData,
+            created_at: new Date().toISOString(),
+        } }));
+    }
 }
