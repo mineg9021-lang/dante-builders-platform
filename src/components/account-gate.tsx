@@ -54,7 +54,11 @@ const DanteAccountGate = ({ children }: Props) => {
                 setConfirmPassword('');
             } else {
                 setMessage(result.message || 'Check your email and sign in to continue.');
-                if (result.confirmationRequired) setMode('login');
+                if (result.confirmationRequired || result.registrationComplete) {
+                    setMode('login');
+                    setPassword('');
+                    setConfirmPassword('');
+                }
             }
         } catch {
             setMessage('Could not reach the account service. Please retry.');
