@@ -15,7 +15,7 @@ const readSession = request => {
     } catch { return null; }
 };
 const config = () => {
-    const url = String(process.env.SUPABASE_URL || '').replace(/\\/$/, '');
+    const url = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
     const key = process.env.SUPABASE_ANON_KEY || '';
     return url && key ? { url, key } : null;
 };
