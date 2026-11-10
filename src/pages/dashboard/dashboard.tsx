@@ -13,8 +13,8 @@ import './dante-landing.scss';
 
 type BotDefinition = { id: BotStrategyId; title: string; contract: string; description: string; group: string; icon: string };
 const BOT_LIBRARY: BotDefinition[] = [
- { id:'RISE',title:'Rise Bot',contract:'PUT',description:'Trades upward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↗' },
- { id:'FALL',title:'Fall Bot',contract:'CALL',description:'Trades downward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↘' },
+ { id:'RISE',title:'Rise Bot',contract:'CALL',description:'Trades upward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↗' },
+ { id:'FALL',title:'Fall Bot',contract:'PUT',description:'Trades downward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↘' },
  { id:'ONLY_UP',title:'Only Up Bot',contract:'RUNHIGH',description:'Requires consecutive strictly rising ticks before entry.',group:'Consecutive movement',icon:'↑' },
  { id:'ONLY_DOWN',title:'Only Down Bot',contract:'RUNLOW',description:'Requires consecutive strictly falling ticks before entry.',group:'Consecutive movement',icon:'↓' },
  { id:'ASIAN_UP',title:'Asian Up AI Bot',contract:'ASIANU',description:'Combines directional momentum with current-price versus sample-average confirmation.',group:'Asian',icon:'⌃' },
@@ -32,9 +32,9 @@ type TradeRow = { id:string; contractId:number; contractType:string; symbol:stri
 
 const DashboardComponent = () => {
  const { client } = useStore();
- const { isAuthorized, connectionStatus, authData } = useApiBase();
+ const { isAuthorized, connectionStatus, authData, accountList, activeLoginid } = useApiBase();
  const [selectedBot,setSelectedBot] = useState<BotStrategyId>('RISE');
- const [mode,setMode] = useState<'demo'|'live'>('demo');
+ const mode: 'demo'|'live' = authData?.is_virtual ? 'demo' : 'live';
  const [stake,setStake] = useState('0.35');
  const [stopLoss,setStopLoss] = useState('5');
  const [takeProfit,setTakeProfit] = useState('5');
@@ -110,7 +110,14 @@ const DashboardComponent = () => {
   }).catch(()=>{if(active)setJournalError('Persistent journal is temporarily unavailable; this session will still show local events.');});
   return ()=>{active=false;startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;};
  }, []);
- useEffect(() => { if(mode!=='live'){setLiveConfirmed(false);liveConfirmedRef.current=false;} },[mode]);
+ useEffect(() => { setLiveConfirmed(false); liveConfirmedRef.current=false; },[mode, activeLoginid]);
+ const switchDerivAccount = (loginid: string) => {
+  if (!loginid || loginid === activeLoginid) return;
+  stopBot();
+  setRuntimeMessage('Switching Deriv account. Waiting for the new authenticated connection…');
+  localStorage.setItem('active_loginid', loginid);
+  client.checkAndRegenerateWebSocket();
+ };
 
  const connectDeriv = async () => {
   setLoginError('');
@@ -211,7 +218,7 @@ const DashboardComponent = () => {
     <div className="dante-section-heading compact"><div><span className="dante-eyebrow">BOT CONTROL CENTRE</span><h3>Execution settings</h3></div><span className="dante-status-pill">{runtimeStatus.replace(/_/g,' ')}</span></div>
     <p className="runtime-message">{runtimeMessage}</p>
     <div className="dante-control-grid">
-     <label>Account mode<select value={mode} onChange={event=>setMode(event.target.value as 'demo'|'live')}><option value="demo">Demo account</option><option value="live">Real account</option></select></label>
+     <label>Deriv account<select value={activeLoginid} onChange={event=>switchDerivAccount(event.target.value)} disabled={!isDerivConnected || runtimeStatus!=='STOPPED'}>{accountList.map(account=><option key={account.loginid} value={account.loginid}>{account.is_virtual ? 'Demo' : 'Real'} · {account.loginid} · {account.currency}</option>)}</select></label>
      <label>Stake ({currency||'account currency'})<input type="number" min="0.01" step="0.01" value={stake} onChange={event=>setStake(event.target.value)}/></label>
      <label>Stop loss<input type="number" min="0.01" step="0.01" value={stopLoss} onChange={event=>setStopLoss(event.target.value)}/></label>
      <label>Take profit<input type="number" min="0.01" step="0.01" value={takeProfit} onChange={event=>setTakeProfit(event.target.value)}/></label>
