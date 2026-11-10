@@ -32,9 +32,9 @@ const cleanEventData = (type, data) => {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
     const symbol = typeof data.symbol === 'string' && /^[A-Za-z0-9_]{2,30}$/.test(data.symbol) ? data.symbol : undefined;
     if (type === 'DECISION') {
-        if (data.decision !== 'READY') return null;
+        if (!['READY', 'WAIT', 'REJECTED'].includes(data.decision)) return null;
         return {
-            decision: 'READY',
+            decision: data.decision,
             ...(symbol ? { symbol } : {}),
             ...(allowedContracts.has(data.contractType) ? { contractType: data.contractType } : {}),
             ...(finite(data.evidenceScore) && data.evidenceScore >= 0 && data.evidenceScore <= 100 ? { evidenceScore: data.evidenceScore } : {}),
