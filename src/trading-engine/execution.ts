@@ -158,7 +158,12 @@ export async function executeDerivContract(input: ExecuteDerivContractInput): Pr
     if (age > 15 || age < -5) throw new Error('ENTRY_CONFIRMATION_EXPIRED');
 
     // No retry on this call. A transport failure may have an uncertain purchase outcome.
-    const buyResponse = await input.api.send({ buy: proposalId, price: askPrice });
+    let buyResponse: any;
+    try {
+        buyResponse = await input.api.send({ buy: proposalId, price: askPrice });
+    } catch {
+        throw new Error('PURCHASE_OUTCOME_UNKNOWN');
+    }
     const buyError = apiError(buyResponse);
     if (buyError) throw new Error('PURCHASE_REJECTED: ' + buyError);
     const contractId = Number(buyResponse?.buy?.contract_id);
