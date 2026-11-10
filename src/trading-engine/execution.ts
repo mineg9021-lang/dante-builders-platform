@@ -16,7 +16,6 @@ export type ContractProposalFields = {
     date_start?: number;
     barrier?: string | number;
     barrier2?: string | number;
-    prediction?: number;
     multiplier?: number;
     cancellation?: string;
     growth_rate?: number;
@@ -68,7 +67,7 @@ export type VerifiedTradeResult = {
 const consumedExecutionKeys = new Set<string>();
 const ALLOWED_PROPOSAL_FIELDS = new Set([
     'duration', 'duration_unit', 'date_expiry', 'date_start', 'barrier',
-    'barrier2', 'prediction', 'multiplier', 'cancellation', 'growth_rate',
+    'barrier2', 'multiplier', 'cancellation', 'growth_rate',
 ]);
 
 export function validateExecutionRisk(
