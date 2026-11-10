@@ -9,6 +9,15 @@ const ACCOUNT_TYPE_KEY = 'account_type';
 
 const TOKEN_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
 
+function isFreshTransientValue(value: unknown): value is { value: string; createdAt: number } {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as { value?: unknown; createdAt?: unknown };
+  if (typeof candidate.value !== 'string' || !candidate.value) return false;
+  if (typeof candidate.createdAt !== 'number' || !Number.isFinite(candidate.createdAt)) return false;
+  const age = Date.now() - candidate.createdAt;
+  return age >= 0 && age <= TOKEN_MAX_AGE_MS;
+}
+
 // --- CSRF Token ---
 
 export function storeCSRFToken(token: string): void {
@@ -20,12 +29,17 @@ export function getCSRFToken(): string | null {
   const raw = sessionStorage.getItem(CSRF_TOKEN_KEY);
   if (!raw) return null;
 
-  const stored: StoredCSRFToken = JSON.parse(raw);
-  if (Date.now() - stored.createdAt > TOKEN_MAX_AGE_MS) {
+  try {
+    const stored: unknown = JSON.parse(raw);
+    if (!isFreshTransientValue(stored)) {
+      clearCSRFToken();
+      return null;
+    }
+    return stored.value;
+  } catch {
     clearCSRFToken();
     return null;
   }
-  return stored.value;
 }
 
 export function clearCSRFToken(): void {
@@ -43,12 +57,17 @@ export function getCodeVerifier(): string | null {
   const raw = sessionStorage.getItem(CODE_VERIFIER_KEY);
   if (!raw) return null;
 
-  const stored: StoredCodeVerifier = JSON.parse(raw);
-  if (Date.now() - stored.createdAt > TOKEN_MAX_AGE_MS) {
+  try {
+    const stored: unknown = JSON.parse(raw);
+    if (!isFreshTransientValue(stored)) {
+      clearCodeVerifier();
+      return null;
+    }
+    return stored.value;
+  } catch {
     clearCodeVerifier();
     return null;
   }
-  return stored.value;
 }
 
 export function clearCodeVerifier(): void {
@@ -65,11 +84,26 @@ export function getAuthInfo(): AuthInfo | null {
   const raw = localStorage.getItem(AUTH_INFO_KEY);
   if (!raw) return null;
 
-  const authInfo: AuthInfo = JSON.parse(raw);
-  if (authInfo.expires_at && Date.now() > authInfo.expires_at * 1000) {
-    return null; // Token expired
+  try {
+    const authInfo: unknown = JSON.parse(raw);
+    if (
+      !authInfo ||
+      typeof authInfo !== 'object' ||
+      typeof (authInfo as AuthInfo).access_token !== 'string' ||
+      !(authInfo as AuthInfo).access_token ||
+      typeof (authInfo as AuthInfo).expires_at !== 'number' ||
+      !Number.isFinite((authInfo as AuthInfo).expires_at) ||
+      (authInfo as AuthInfo).expires_at <= 0 ||
+      Date.now() >= (authInfo as AuthInfo).expires_at * 1000
+    ) {
+      clearAuthInfo();
+      return null;
+    }
+    return authInfo as AuthInfo;
+  } catch {
+    clearAuthInfo();
+    return null;
   }
-  return authInfo;
 }
 
 export function clearAuthInfo(): void {
@@ -85,7 +119,17 @@ export function storeDerivAccounts(accounts: DerivAccount[]): void {
 export function getDerivAccounts(): DerivAccount[] | null {
   const raw = localStorage.getItem(DERIV_ACCOUNTS_KEY);
   if (!raw) return null;
-  return JSON.parse(raw);
+  try {
+    const accounts: unknown = JSON.parse(raw);
+    if (!Array.isArray(accounts)) {
+      clearDerivAccounts();
+      return null;
+    }
+    return accounts as DerivAccount[];
+  } catch {
+    clearDerivAccounts();
+    return null;
+  }
 }
 
 export function clearDerivAccounts(): void {
