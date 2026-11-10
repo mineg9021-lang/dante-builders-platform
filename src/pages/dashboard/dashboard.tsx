@@ -167,6 +167,12 @@ const DashboardComponent = observer(() => {
             }
             if (!usedAi) {
                 const normalized = request.toLowerCase();
+                if (/\b(matches?|differs?|over|under|rise|fall)\b/.test(normalized)) {
+                    setValidation({ valid: false, errors: ['This contract type is not yet supported by the verified local XML template. Select an Even or Odd digit contract instead.'] });
+                    setAiStatus('Unsupported contract request rejected; no substitute strategy was generated.');
+                    setGenerating(false);
+                    return;
+                }
                 resolvedSide = /\bodd\b/.test(normalized) ? 'DIGITODD' : /\beven\b/.test(normalized) ? 'DIGITEVEN' : side;
                 resolvedSymbol = (request.match(/\bR_(?:10|25|50|75|100)(?:_1S)?\b/i)?.[0] || symbol).toUpperCase();
                 resolvedStake = Number(request.match(/stake\s*(?:of|:|=)?\s*([0-9]+(?:\.[0-9]+)?)/i)?.[1] || stake);
