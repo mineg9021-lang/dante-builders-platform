@@ -1,3 +1,6 @@
+import { calculateDigitMetrics } from './market-metrics-engine';
+import { scoreDigitBarrier } from './prediction-scoring-engine';
+
 export type OverTwoTick = { symbol: string; quote: string; epoch: number; digit: number };
 export type OverTwoMode = 'analysis' | 'demo' | 'live';
 export type OverTwoStatus = 'READY' | 'WAIT' | 'REJECTED';
@@ -59,21 +62,22 @@ export const runOverTwoPipeline = (input: {
     }
     const valid = unique.filter(t => t.digit > 2 || t.digit <= 2);
     const sample = valid.slice(-Math.max(1, c.maxTicks));
-    const over = sample.filter(t => t.digit > 2).length;
-    const under = sample.length - over;
-    const rate = sample.length ? over / sample.length : 0;
-    const first = sample.slice(0, Math.floor(sample.length / 2));
-    const second = sample.slice(Math.floor(sample.length / 2));
-    const firstRate = first.length ? first.filter(t => t.digit > 2).length / first.length : 0;
-    const secondRate = second.length ? second.filter(t => t.digit > 2).length / second.length : 0;
-    const digitCounts = Array.from({ length: 10 }, (_, d) => sample.filter(t => t.digit === d).length);
+    const digits = sample.map(t => t.digit);
+    const metrics = calculateDigitMetrics(digits);
+    const evidence = scoreDigitBarrier(digits, metrics, 2, c.minOverRate, c.minHalfRate);
+    const over = evidence.qualifyingCount;
+    const under = evidence.nonQualifyingCount;
+    const rate = evidence.observedRate;
+    const firstRate = evidence.firstHalfRate;
+    const secondRate = evidence.secondHalfRate;
+    const digitCounts = metrics.counts;
     const eligibleDigits = digitCounts.slice(3);
     const selectedDigit = sample.length && Math.max(...eligibleDigits) > 0 ? eligibleDigits.indexOf(Math.max(...eligibleDigits)) + 3 : null;
-    const evidenceScore = Math.round(rate * 100);
+    const evidenceScore = evidence.evidenceScore;
     const fresh = sample.length > 0 && now - sample[sample.length - 1].epoch <= 15 && sample[sample.length - 1].epoch - now <= 5;
-    const stability = first.length >= 5 && second.length >= 5 && firstRate >= c.minHalfRate && secondRate >= c.minHalfRate;
+    const stability = evidence.stable;
     const sampleReady = sample.length >= c.minSample;
-    const candidate = sampleReady && rate >= c.minOverRate && stability;
+    const candidate = sampleReady && evidence.qualifies;
     const stakeLimit = c.balance * 0.02;
     const risk = Number.isFinite(c.stake) && c.stake > 0 && c.stake <= c.balance && c.stake <= stakeLimit &&
         c.stopLoss > 0 && c.takeProfit > 0 && c.sessionLoss < c.stopLoss &&
@@ -90,7 +94,7 @@ export const runOverTwoPipeline = (input: {
         stage(7, 'Digit distribution', sample.length > 0, 'Observed counts across digits 0-9'),
         stage(8, 'Over 2 classification', sample.length > 0, over + ' digits above 2 · ' + under + ' digits at or below 2'),
         stage(9, 'Observed frequency', sample.length > 0, 'Over 2 observed frequency: ' + evidenceScore + '%'),
-        stage(10, 'Rolling-window confirmation', sample.length >= c.minSample && first.length > 0 && second.length > 0, 'First half ' + Math.round(firstRate * 100) + '% · second half ' + Math.round(secondRate * 100) + '%'),
+        stage(10, 'Rolling-window confirmation', sample.length >= c.minSample && metrics.firstHalfSize > 0 && metrics.secondHalfSize > 0, 'First half ' + Math.round(firstRate * 100) + '% · second half ' + Math.round(secondRate * 100) + '%'),
         stage(11, 'Repetition and streak analysis', sample.length >= c.minSample, 'Streak and repetition context measured from the same bounded sample'),
         stage(12, 'Market stability filter', stability, stability ? 'Both sample halves meet the stability threshold' : 'Split-sample stability threshold not met'),
         stage(13, 'Candidate ranking', selectedDigit !== null, selectedDigit === null ? 'No digit above 2 observed' : 'Most observed eligible digit: ' + selectedDigit),
