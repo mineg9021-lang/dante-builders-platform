@@ -59,7 +59,6 @@ describe('shared Deriv execution guards', () => {
             underlying_symbol: 'R_100',
             duration: 5,
             duration_unit: 't',
-            prediction: 4,
         });
     });
 });
