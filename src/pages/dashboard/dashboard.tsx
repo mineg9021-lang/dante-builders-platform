@@ -12,80 +12,77 @@ type Workspace = 'home' | 'parity' | 'matches' | 'over2' | 'xml';
 const XML_ENTITIES: Record<string, string> = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' };
 const escapeXml = (value: string) => value.replace(/[<>&"']/g, char => XML_ENTITIES[char] || char);
 
+const makeDigitComparison = (digit: number) =>
+    '<block type="logic_compare" id="dante_compare_' + digit + '">' +
+    '<field name="OP">EQ</field>' +
+    '<value name="A"><block type="last_digit" id="dante_last_digit_' + digit + '"></block></value>' +
+    '<value name="B"><block type="math_number" id="dante_number_' + digit + '"><field name="NUM">' + digit + '</field></block></value>' +
+    '</block>';
+
+const makeParityCondition = (side: 'DIGITEVEN' | 'DIGITODD') => {
+    const digits = side === 'DIGITEVEN' ? [0, 2, 4, 6, 8] : [1, 3, 5, 7, 9];
+    return digits.slice(1).reduce((condition, digit, index) =>
+        '<block type="logic_operation" id="dante_parity_or_' + index + '">' +
+        '<field name="OP">OR</field><value name="A">' + condition + '</value>' +
+        '<value name="B">' + makeDigitComparison(digit) + '</value></block>',
+        makeDigitComparison(digits[0])
+    );
+};
+
 const makeParityXml = (symbol: string, stake: number, duration: number, side: 'DIGITEVEN' | 'DIGITODD') => {
     const safeSymbol = escapeXml(symbol);
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<xml xmlns="http://www.w3.org/1999/xhtml" is_dbot="true" collection="false">
-  <variables>
-    <variable type="" id="dante_initialized" islocal="false" iscloud="false">DANTE:initialized</variable>
-  </variables>
-  <block type="trade_definition" id="dante_trade_definition" deletable="false" x="0" y="0">
-    <statement name="TRADE_OPTIONS">
-      <block type="trade_definition_market" id="dante_market" deletable="false" movable="false">
-        <field name="MARKET_LIST">volidx</field>
-        <field name="SUBMARKET_LIST">random_index</field>
-        <field name="SYMBOL_LIST">${safeSymbol}</field>
-        <next>
-          <block type="trade_definition_tradetype" id="dante_trade_type" deletable="false" movable="false">
-            <field name="TRADETYPECAT_LIST">digits</field>
-            <field name="TRADETYPE_LIST">evenodd</field>
-            <next>
-              <block type="trade_definition_contracttype" id="dante_contract_type" deletable="false" movable="false">
-                <field name="TYPE_LIST">both</field>
-                <next>
-                  <block type="trade_definition_candleinterval" id="dante_candle_interval" deletable="false" movable="false">
-                    <field name="CANDLEINTERVAL_LIST">60</field>
-                    <next>
-                      <block type="trade_definition_restartbuysell" id="dante_restart_buy_sell" deletable="false" movable="false">
-                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
-                        <next>
-                          <block type="trade_definition_restartonerror" id="dante_restart_error" deletable="false" movable="false">
-                            <field name="RESTARTONERROR">FALSE</field>
-                          </block>
-                        </next>
-                      </block>
-                    </next>
-                  </block>
-                </next>
-              </block>
-            </next>
-          </block>
-        </next>
-      </block>
-    </statement>
-    <statement name="INITIALIZATION">
-      <block type="variables_set" id="dante_initialize">
-        <field name="VAR" id="dante_initialized" variabletype="">DANTE:initialized</field>
-        <value name="VALUE"><block type="logic_boolean" id="dante_initialized_true"><field name="BOOL">TRUE</field></block></value>
-      </block>
-    </statement>
-    <statement name="SUBMARKET">
-      <block type="trade_definition_tradeoptions" id="dante_trade_options">
-        <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>
-        <field name="DURATIONTYPE_LIST">t</field>
-        <field name="CURRENCY_LIST">USD</field>
-        <value name="DURATION"><shadow type="math_number_positive" id="dante_duration"><field name="NUM">${duration}</field></shadow></value>
-        <value name="AMOUNT"><shadow type="math_number_positive" id="dante_stake"><field name="NUM">${stake}</field></shadow></value>
-      </block>
-    </statement>
-  </block>
-  <block type="during_purchase" id="dante_during_purchase" x="720" y="0">
-    <statement name="DURING_PURCHASE_STACK">
-      <block type="controls_if" id="dante_sell_check">
-        <value name="IF0"><block type="check_sell" id="dante_check_sell"></block></value>
-        <statement name="DO0"><block type="sell_at_market" id="dante_sell_at_market"></block></statement>
-      </block>
-    </statement>
-  </block>
-  <block type="after_purchase" id="dante_after_purchase" x="720" y="248">
-    <statement name="AFTERPURCHASE_STACK"><block type="trade_again" id="dante_trade_again"></block></statement>
-  </block>
-  <block type="before_purchase" id="dante_before_purchase" deletable="false" x="0" y="576">
-    <statement name="BEFOREPURCHASE_STACK">
-      <block type="purchase" id="dante_purchase"><field name="PURCHASE_LIST">${side}</field></block>
-    </statement>
-  </block>
-</xml>`;
+    const condition = makeParityCondition(side);
+    return [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<xml xmlns="http://www.w3.org/1999/xhtml" is_dbot="true" collection="false">',
+        '  <variables><variable type="" id="dante_initialized" islocal="false" iscloud="false">DANTE:initialized</variable></variables>',
+        '  <block type="trade_definition" id="dante_trade_definition" deletable="false" x="0" y="0">',
+        '    <statement name="TRADE_OPTIONS">',
+        '      <block type="trade_definition_market" id="dante_market" deletable="false" movable="false">',
+        '        <field name="MARKET_LIST">volidx</field><field name="SUBMARKET_LIST">random_index</field><field name="SYMBOL_LIST">' + safeSymbol + '</field>',
+        '        <next><block type="trade_definition_tradetype" id="dante_trade_type" deletable="false" movable="false">',
+        '          <field name="TRADETYPECAT_LIST">digits</field><field name="TRADETYPE_LIST">evenodd</field>',
+        '          <next><block type="trade_definition_contracttype" id="dante_contract_type" deletable="false" movable="false">',
+        '            <field name="TYPE_LIST">both</field>',
+        '            <next><block type="trade_definition_candleinterval" id="dante_candle_interval" deletable="false" movable="false">',
+        '              <field name="CANDLEINTERVAL_LIST">60</field>',
+        '              <next><block type="trade_definition_restartbuysell" id="dante_restart_buy_sell" deletable="false" movable="false">',
+        '                <field name="TIME_MACHINE_ENABLED">FALSE</field>',
+        '                <next><block type="trade_definition_restartonerror" id="dante_restart_error" deletable="false" movable="false"><field name="RESTARTONERROR">FALSE</field></block></next>',
+        '              </block></next>',
+        '            </block></next>',
+        '          </block></next>',
+        '        </block></next>',
+        '      </block>',
+        '    </statement>',
+        '    <statement name="INITIALIZATION"><block type="variables_set" id="dante_initialize">',
+        '      <field name="VAR" id="dante_initialized" variabletype="">DANTE:initialized</field>',
+        '      <value name="VALUE"><block type="logic_boolean" id="dante_initialized_true"><field name="BOOL">TRUE</field></block></value>',
+        '    </block></statement>',
+        '    <statement name="SUBMARKET"><block type="trade_definition_tradeoptions" id="dante_trade_options">',
+        '      <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>',
+        '      <field name="DURATIONTYPE_LIST">t</field><field name="CURRENCY_LIST">USD</field>',
+        '      <value name="DURATION"><shadow type="math_number_positive" id="dante_duration"><field name="NUM">' + duration + '</field></shadow></value>',
+        '      <value name="AMOUNT"><shadow type="math_number_positive" id="dante_stake"><field name="NUM">' + stake + '</field></shadow></value>',
+        '    </block></statement>',
+        '  </block>',
+        '  <block type="during_purchase" id="dante_during_purchase" x="720" y="0">',
+        '    <statement name="DURING_PURCHASE_STACK"><block type="controls_if" id="dante_safe_hold">',
+        '      <value name="IF0"><block type="logic_boolean" id="dante_hold_until_expiry"><field name="BOOL">FALSE</field></block></value>',
+        '      <statement name="DO0"><block type="sell_at_market" id="dante_sell_at_market"></block></statement>',
+        '    </block></statement>',
+        '  </block>',
+        '  <block type="after_purchase" id="dante_after_purchase" x="720" y="248">',
+        '    <statement name="AFTERPURCHASE_STACK"><block type="trade_again" id="dante_trade_again"></block></statement>',
+        '  </block>',
+        '  <block type="before_purchase" id="dante_before_purchase" deletable="false" x="0" y="576">',
+        '    <statement name="BEFOREPURCHASE_STACK"><block type="controls_if" id="dante_purchase_gate">',
+        '      <value name="IF0">' + condition + '</value>',
+        '      <statement name="DO0"><block type="purchase" id="dante_purchase"><field name="PURCHASE_LIST">' + side + '</field></block></statement>',
+        '    </block></statement>',
+        '  </block>',
+        '</xml>',
+    ].join('\n');
 };
 
 const validateParityXml = (xml: string) => {
@@ -93,16 +90,23 @@ const validateParityXml = (xml: string) => {
     if (parsed.getElementsByTagName('parsererror').length > 0) return { valid: false, errors: ['XML is not well-formed.'] };
     const blocks = Array.from(parsed.getElementsByTagName('block'));
     const hasBlock = (type: string) => blocks.some(block => block.getAttribute('type') === type);
-    const required = ['trade_definition', 'before_purchase', 'during_purchase', 'after_purchase'];
-    const missing = required.filter(type => !hasBlock(type));
-    const tradeDefinition = blocks.find(block => block.getAttribute('type') === 'trade_definition');
-    const initialized = tradeDefinition
-        ? Array.from(tradeDefinition.getElementsByTagName('statement')).some(statement =>
-              statement.getAttribute('name') === 'INITIALIZATION' && statement.getElementsByTagName('block').length > 0
-          )
-        : false;
-    if (!initialized) missing.push('Run Once at Start initialization');
-    return { valid: missing.length === 0, errors: missing.map(item => `Missing required section: ${item}`) };
+    const statementHasBlock = (rootType: string, statementName: string, childType: string) => {
+        const root = blocks.find(block => block.getAttribute('type') === rootType);
+        const statement = root && Array.from(root.getElementsByTagName('statement')).find(item => item.getAttribute('name') === statementName);
+        return Boolean(statement && Array.from(statement.getElementsByTagName('block')).some(block => block.getAttribute('type') === childType));
+    };
+    const errors: string[] = [];
+    if (!hasBlock('trade_definition') || !statementHasBlock('trade_definition', 'TRADE_OPTIONS', 'trade_definition_market') ||
+        !statementHasBlock('trade_definition', 'SUBMARKET', 'trade_definition_tradeoptions')) errors.push('Trade Parameters must contain market, contract and stake/duration blocks.');
+    if (!statementHasBlock('trade_definition', 'INITIALIZATION', 'variables_set') ||
+        !statementHasBlock('trade_definition', 'INITIALIZATION', 'logic_boolean')) errors.push('Run Once at Start must contain an initialization action.');
+    if (!statementHasBlock('before_purchase', 'BEFOREPURCHASE_STACK', 'controls_if') ||
+        !statementHasBlock('before_purchase', 'BEFOREPURCHASE_STACK', 'purchase') ||
+        !hasBlock('last_digit') || !hasBlock('logic_compare')) errors.push('Purchase Conditions must contain a digit-based condition and a purchase block.');
+    if (!statementHasBlock('during_purchase', 'DURING_PURCHASE_STACK', 'controls_if') ||
+        !statementHasBlock('during_purchase', 'DURING_PURCHASE_STACK', 'sell_at_market')) errors.push('Sell Conditions must contain a defined safe exit rule.');
+    if (!statementHasBlock('after_purchase', 'AFTERPURCHASE_STACK', 'trade_again')) errors.push('Restart Trading Conditions must contain a restart decision.');
+    return { valid: errors.length === 0, errors };
 };
 
 const DashboardComponent = observer(() => {
