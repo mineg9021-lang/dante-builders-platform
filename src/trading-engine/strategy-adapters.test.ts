@@ -33,6 +33,31 @@ describe('specialist strategy adapters', () => {
         expect(up.decision).toBe('READY');
     });
 
+    it('passes Matches and Differs digit candidates as Deriv barrier strings', () => {
+        const ticks = Array.from({ length: 40 }, (_, index) => ({
+            symbol: 'R_100',
+            quote: (100 + index / 100).toFixed(2),
+            epoch: 1_800_000_000 - 39 + index,
+            digit: index % 10,
+        }));
+        const matches = evaluateBotStrategy({
+            symbol: 'R_100', ticks,
+            config: { id: 'DIGIT_MATCH', minSample: 12, prediction: 7 },
+            nowSeconds: 1_800_000_000,
+        });
+        const differs = evaluateBotStrategy({
+            symbol: 'R_100', ticks,
+            config: { id: 'DIGIT_DIFFERS', minSample: 12, prediction: 7 },
+            nowSeconds: 1_800_000_000,
+        });
+        expect(matches.decision).toBe('READY');
+        expect(matches.proposalFields).toMatchObject({ barrier: '7' });
+        expect(differs.decision).toBe('READY');
+        expect(differs.proposalFields).toMatchObject({ barrier: '7' });
+        expect(matches.proposalFields).not.toHaveProperty('prediction');
+        expect(differs.proposalFields).not.toHaveProperty('prediction');
+    });
+
     it('does not authorise a trade from an incomplete sample', () => {
         const result = evaluateBotStrategy({ symbol: 'R_100', ticks: makeTicks([100, 101, 102]), config: { id: 'FALL' }, nowSeconds: 1_800_000_000 });
         expect(result.decision).toBe('WAIT');
