@@ -42,7 +42,9 @@ const toDecimalString = (value: string | number, precision: number): string | nu
     const source = String(value).trim();
     if (!/^[+-]?\d+(?:\.\d+)?$/.test(source)) return null;
     const [whole, fraction = ''] = source.split('.');
-    return precision === 0 ? whole : whole + '.' + fraction.padEnd(precision, '0').slice(0, precision);
+    // Never truncate excess digits: that would silently change the market's last digit.
+    if (fraction.length > precision) return null;
+    return precision === 0 ? whole : whole + '.' + fraction.padEnd(precision, '0');
 };
 
 const extractDigit = (quote: string, precision: number): number | null => {
@@ -141,7 +143,12 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         const symbolTicks = ticksBySymbol.get(symbol);
         if (!symbolTicks) return;
         const epoch = Number(raw.tick.epoch);
-        const precision = input.precisionBySymbol?.[symbol] ?? input.precision ?? 2;
+        // Deriv supplies pip_size on every tick. It is the authoritative precision
+        // for this quote; configured values are only consistency constraints.
+        const precision = raw.tick.pip_size;
+        const configuredPrecision = input.precisionBySymbol?.[symbol] ?? input.precision;
+        if (!Number.isInteger(precision) || precision < 0 || precision > 10) return;
+        if (configuredPrecision !== undefined && configuredPrecision !== precision) return;
         const quote = toDecimalString(raw.tick.quote, precision);
         if (!Number.isFinite(epoch) || !quote) return;
         const previous = symbolTicks[symbolTicks.length - 1];
