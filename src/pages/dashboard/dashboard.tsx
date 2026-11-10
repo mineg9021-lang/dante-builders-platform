@@ -68,6 +68,7 @@ const makeParityXml = (symbol: string, stake: number, duration: number, side: 'D
         '    </block></statement>',
         '  </block>',
         '  <block type="during_purchase" id="dante_during_purchase" x="720" y="0">',
+        '    <comment pinned="false" h="80" w="260">Hold to expiry by default. Early sale is disabled unless an explicit supported exit condition is requested.</comment>',
         '    <statement name="DURING_PURCHASE_STACK"><block type="controls_if" id="dante_safe_hold">',
         '      <value name="IF0"><block type="logic_boolean" id="dante_hold_until_expiry"><field name="BOOL">FALSE</field></block></value>',
         '      <statement name="DO0"><block type="sell_at_market" id="dante_sell_at_market"></block></statement>',
@@ -96,17 +97,34 @@ const validateParityXml = (xml: string) => {
         const statement = root && Array.from(root.getElementsByTagName('statement')).find(item => item.getAttribute('name') === statementName);
         return Boolean(statement && Array.from(statement.getElementsByTagName('block')).some(block => block.getAttribute('type') === childType));
     };
+    const countBlocks = (type: string) => blocks.filter(block => block.getAttribute('type') === type).length;
     const errors: string[] = [];
-    if (!hasBlock('trade_definition') || !statementHasBlock('trade_definition', 'TRADE_OPTIONS', 'trade_definition_market') ||
-        !statementHasBlock('trade_definition', 'SUBMARKET', 'trade_definition_tradeoptions')) errors.push('Trade Parameters must contain market, contract and stake/duration blocks.');
+    if (!hasBlock('trade_definition') ||
+        !statementHasBlock('trade_definition', 'TRADE_OPTIONS', 'trade_definition_market') ||
+        !statementHasBlock('trade_definition', 'TRADE_OPTIONS', 'trade_definition_tradetype') ||
+        !statementHasBlock('trade_definition', 'TRADE_OPTIONS', 'trade_definition_contracttype') ||
+        !statementHasBlock('trade_definition', 'SUBMARKET', 'trade_definition_tradeoptions')) {
+        errors.push('Trade Parameters must contain the market, strategy, contract, stake and duration blocks.');
+    }
     if (!statementHasBlock('trade_definition', 'INITIALIZATION', 'variables_set') ||
-        !statementHasBlock('trade_definition', 'INITIALIZATION', 'logic_boolean')) errors.push('Run Once at Start must contain an initialization action.');
+        !statementHasBlock('trade_definition', 'INITIALIZATION', 'logic_boolean') ||
+        !xml.includes('<field name="BOOL">TRUE</field>')) {
+        errors.push('Run Once at Start must contain an active initialization action.');
+    }
     if (!statementHasBlock('before_purchase', 'BEFOREPURCHASE_STACK', 'controls_if') ||
         !statementHasBlock('before_purchase', 'BEFOREPURCHASE_STACK', 'purchase') ||
-        !hasBlock('last_digit') || !hasBlock('logic_compare')) errors.push('Purchase Conditions must contain a digit-based condition and a purchase block.');
+        countBlocks('last_digit') !== 5 || countBlocks('logic_compare') !== 5 || countBlocks('logic_operation') !== 4) {
+        errors.push('Purchase Conditions must contain five digit comparisons, four OR gates and a purchase block.');
+    }
     if (!statementHasBlock('during_purchase', 'DURING_PURCHASE_STACK', 'controls_if') ||
-        !statementHasBlock('during_purchase', 'DURING_PURCHASE_STACK', 'sell_at_market')) errors.push('Sell Conditions must contain a defined safe exit rule.');
-    if (!statementHasBlock('after_purchase', 'AFTERPURCHASE_STACK', 'trade_again')) errors.push('Restart Trading Conditions must contain a restart decision.');
+        !statementHasBlock('during_purchase', 'DURING_PURCHASE_STACK', 'sell_at_market') ||
+        !xml.includes('<field name="BOOL">FALSE</field>') ||
+        !parsed.getElementsByTagName('comment').length) {
+        errors.push('Sell Conditions must explicitly define the safe hold-to-expiry rule.');
+    }
+    if (!statementHasBlock('after_purchase', 'AFTERPURCHASE_STACK', 'trade_again')) {
+        errors.push('Restart Trading Conditions must contain a restart decision.');
+    }
     return { valid: errors.length === 0, errors };
 };
 
