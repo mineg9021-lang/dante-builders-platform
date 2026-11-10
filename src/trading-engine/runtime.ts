@@ -98,9 +98,13 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
     let tickStream: { unsubscribe: () => void } | undefined;
     const ticksBySymbol = new Map<string, StrategyTick[]>(eligibleSymbols.map(symbol => [symbol, []]));
     const canContinue = () => !stopped && (!input.shouldContinue || input.shouldContinue());
+    // UI observers are non-authoritative: they must never interrupt market handling or execution.
+    const notify = (observer: (() => void) | undefined) => {
+        try { observer?.(); } catch { /* Keep the trading state machine independent of UI callbacks. */ }
+    };
     const setStatus = (next: RuntimeStatus, message: string) => {
         status = next;
-        input.onStatus?.(next, message);
+        notify(() => input.onStatus?.(next, message));
     };
     const clearAnalysisTimer = () => {
         if (analysisTimer) clearTimeout(analysisTimer);
@@ -126,7 +130,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
             ticks: ticksBySymbol.get(symbol) ?? [],
             config: input.strategy,
         });
-        input.onDecision?.({ ...finalDecision, decision: 'REJECTED', reason, opportunityKey: undefined });
+        notify(() => input.onDecision?.({ ...finalDecision, decision: 'REJECTED', reason, opportunityKey: undefined }));
         stop();
         setStatus('PAUSED_ERROR', reason + ' No purchase was made. Restart analysis to try again.');
     };
@@ -165,7 +169,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         analysisTicksBySymbol.set(symbol, marketAnalysisTicks + 1);
 
         const decision = evaluateBotStrategy({ symbol, ticks: symbolTicks, config: input.strategy });
-        input.onDecision?.(decision);
+        notify(() => input.onDecision?.(decision));
         if (decision.decision !== 'READY' || !decision.opportunityKey) {
             const allMarketsExhausted = subscriptionsReady && activeSymbols.size > 0 &&
                 Array.from(activeSymbols).every(activeSymbol => (analysisTicksBySymbol.get(activeSymbol) ?? 0) >= maxAnalysisTicks);
@@ -184,14 +188,14 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
             contractAvailable: eligibleSymbols.includes(symbol),
             risk,
         });
-        input.onEngineReport?.(engineReport);
+        notify(() => input.onEngineReport?.(engineReport));
         if (!engineReport.passed) {
-            input.onDecision?.({
+            notify(() => input.onDecision?.({
                 ...decision,
                 decision: 'REJECTED',
                 reason: '18-LAYER ENGINE BLOCKED AT ' + engineReport.blockedAt + ': ' + engineReport.reason,
                 opportunityKey: undefined,
-            });
+            }));
             stop();
             setStatus('PAUSED_ERROR', 'Shared 18-layer robot engine rejected this entry. ' + engineReport.reason);
             return;
@@ -210,9 +214,9 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
             risk,
             idempotencyKey: symbol + ':' + decision.opportunityKey,
             shouldContinue: canContinue,
-            onPurchased: purchase => input.onPurchased?.(purchase),
+            onPurchased: purchase => notify(() => input.onPurchased?.(purchase)),
         }).then(result => {
-            input.onSettled?.(result);
+            notify(() => input.onSettled?.(result));
             executing = false;
             if (!stopped) {
                 setStatus('RUNNING', 'Settlement verified. Starting a fresh bounded analysis cycle.');
@@ -221,7 +225,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         }).catch(error => {
             executing = false;
             const reason = error instanceof Error ? error : new Error('DERIV_EXECUTION_FAILED');
-            input.onError?.(reason);
+            notify(() => input.onError?.(reason));
             if (/PURCHASE_RESULT_UNCONFIRMED|PURCHASE_OUTCOME_UNKNOWN|SETTLEMENT_MONITOR_TIMEOUT|SETTLEMENT_MONITOR_FAILED/.test(reason.message)) {
                 stop();
                 setStatus('PAUSED_ERROR', reason.message + ' Reconcile the Deriv account before restarting.');
