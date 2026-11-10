@@ -34,6 +34,27 @@ NEXT_PUBLIC_DERIV_APP_NAME=Dante Builders
 
 Never place an account token, OAuth access token, or private credential in frontend source code.
 
+
+## Dante platform registration and login
+
+The website now places a separate Dante account registration/login gate in front of the bot library. This is distinct from Deriv OAuth: users first authenticate to Dante, then connect a Deriv account from a bot workspace when trading access is needed.
+
+The account service uses Supabase Auth through a Netlify Function and stores the access/refresh pair in a Secure, HttpOnly, SameSite cookie. No password or Deriv token is stored in browser local storage.
+
+Before enabling registration on the deployed site:
+
+1. Create a Supabase project.
+2. Apply `supabase/migrations/20261110_dante_platform_schema.sql` in the Supabase SQL editor.
+3. Add these Netlify environment variables:
+   - `SUPABASE_URL` — the project URL.
+   - `SUPABASE_ANON_KEY` — the project's public anon/publishable key.
+4. Configure the desired email confirmation policy in Supabase Auth.
+5. Trigger a new Netlify production deploy and test signup, email confirmation, login, refresh and logout.
+
+Until those environment variables are configured, the site intentionally blocks account access and reports that registration is not configured; it does not create fake local accounts.
+
+The migration creates user-owned profile, bot-configuration, bot-session, trade-event and audit-event tables with row-level security. The current frontend gate establishes the secure platform session; bot configuration and event persistence still need to be connected to these tables in a later backend phase.
+
 ## XML Generator AI configuration
 
 The XML generator can assemble and validate the local supported template without a cloud AI key. Natural-language AI interpretation is provided by the Netlify Function at `/.netlify/functions/generate-xml`.
