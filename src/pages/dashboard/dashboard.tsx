@@ -230,7 +230,7 @@ const DashboardComponent = observer(() => {
                     <button className={workspace === 'matches' ? 'active' : ''} onClick={() => setWorkspace('matches')}>Matches Scanner</button>
                     <button className={workspace === 'xml' ? 'active' : ''} onClick={() => setWorkspace('xml')}>XML Generator</button>
                 </nav>
-                <span className={client.is_logged_in ? 'connection connected' : 'connection'}>{client.is_logged_in ? 'DERIV SESSION CONNECTED' : 'DERIV SESSION REQUIRED FOR TRADING'}</span>
+                <span className={client.is_logged_in ? 'connection connected' : 'connection'}>{client.is_logged_in ? 'TRADING SESSION CONNECTED' : 'TRADING SESSION REQUIRED'}</span>
             </header>
 
             {workspace === 'home' && <section className="dante-home">
