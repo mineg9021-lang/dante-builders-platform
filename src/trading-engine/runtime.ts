@@ -84,7 +84,9 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
     let stopped = false;
     let executing = false;
     let analysisClosed = false;
-    let analysisTickCount = 0;
+    const analysisTicksBySymbol = new Map<string, number>(eligibleSymbols.map(symbol => [symbol, 0]));
+    const activeSymbols = new Set<string>();
+    let subscriptionsReady = false;
     let analysisTimer: ReturnType<typeof setTimeout> | undefined;
     const maxAnalysisTicks = Math.max(5, Math.min(500, Math.floor(input.analysisMaxTicks ?? 30)));
     const maxAnalysisDurationMs = Math.max(1000, Math.min(120000, Math.floor(input.analysisMaxDurationMs ?? 10000)));
@@ -127,7 +129,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
     const beginAnalysisWindow = () => {
         clearAnalysisTimer();
         analysisClosed = false;
-        analysisTickCount = 0;
+        analysisTicksBySymbol.forEach((_, symbol) => analysisTicksBySymbol.set(symbol, 0));
         ticksBySymbol.forEach(symbolTicks => { symbolTicks.length = 0; });
         analysisTimer = setTimeout(() => {
             expireAnalysis('ANALYSIS_TIME_LIMIT_REACHED');
@@ -149,12 +151,16 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         symbolTicks.push({ symbol, quote, epoch, digit });
         if (symbolTicks.length > 200) symbolTicks.splice(0, symbolTicks.length - 200);
         if (executing || analysisClosed) return;
-        analysisTickCount += 1;
+        const marketAnalysisTicks = analysisTicksBySymbol.get(symbol) ?? 0;
+        if (marketAnalysisTicks >= maxAnalysisTicks) return;
+        analysisTicksBySymbol.set(symbol, marketAnalysisTicks + 1);
 
         const decision = evaluateBotStrategy({ symbol, ticks: symbolTicks, config: input.strategy });
         input.onDecision?.(decision);
         if (decision.decision !== 'READY' || !decision.opportunityKey) {
-            if (analysisTickCount >= maxAnalysisTicks) expireAnalysis('ANALYSIS_TICK_LIMIT_REACHED');
+            const allMarketsExhausted = subscriptionsReady && activeSymbols.size > 0 &&
+                Array.from(activeSymbols).every(activeSymbol => (analysisTicksBySymbol.get(activeSymbol) ?? 0) >= maxAnalysisTicks);
+            if (allMarketsExhausted) expireAnalysis('ANALYSIS_TICK_LIMIT_REACHED');
             return;
         }
         analysisClosed = true;
@@ -208,6 +214,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
                 return null;
             }
             if (typeof id === 'string') subscriptionIds.push(id);
+            activeSymbols.add(symbol);
             handleTick(response);
             return symbol;
         } catch {
@@ -223,10 +230,14 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         }
         return { stop, getStatus: () => status, getTicks: () => Array.from(ticksBySymbol.values()).flat() };
     }
+    subscriptionsReady = true;
     if (!subscriptionResults.some(Boolean)) {
         clearAnalysisTimer();
         tickStream.unsubscribe();
         throw new Error('NO_MARKET_TICK_SUBSCRIPTIONS_AVAILABLE');
+    }
+    if (!stopped && Array.from(activeSymbols).every(activeSymbol => (analysisTicksBySymbol.get(activeSymbol) ?? 0) >= maxAnalysisTicks)) {
+        expireAnalysis('ANALYSIS_TICK_LIMIT_REACHED');
     }
     if (stopped) {
         subscriptionIds.splice(0).forEach(id => void Promise.resolve(input.api.send({ forget: id })).catch(() => undefined));
