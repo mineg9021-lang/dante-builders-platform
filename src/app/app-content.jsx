@@ -19,7 +19,7 @@ const AppContent = observer(() => {
     useEffect(() => {
         let cancelled = false;
         let attempts = 0;
-        let interval: ReturnType<typeof setInterval> | undefined;
+        let interval;
         try {
             ServerTime.init(common);
             app.setDBotEngineStores();
