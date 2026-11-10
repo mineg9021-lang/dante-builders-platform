@@ -171,7 +171,7 @@ export function evaluateBotStrategy(input: {
             ? Number(input.config.prediction)
             : id === 'DIGIT_MATCH' ? mostFrequent : leastFrequent;
         if (prediction < 0 || prediction > 9) return { ...wait(id, sample.length, 'Digit prediction must be from 0 to 9.'), decision: 'REJECTED' };
-        proposalFields.prediction = prediction;
+        proposalFields.barrier = String(prediction);
         const support = counts[prediction] / digits.length;
         if (support < 0.08 || support > 0.35) return {
             ...wait(id, sample.length, 'The selected digit has insufficient or excessive sample concentration for the configured rule.'),
