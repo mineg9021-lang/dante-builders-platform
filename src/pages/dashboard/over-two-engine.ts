@@ -52,7 +52,7 @@ export const runOverTwoPipeline = (input: {
     const unique: OverTwoTick[] = [];
     let lastEpoch = 0;
     for (const tick of raw) {
-        if (!Number.isFinite(tick.epoch) || tick.epoch <= lastEpoch || !tick.quote || !/^[-+]?\\d+(?:\\.\\d+)?$/.test(tick.quote)) continue;
+        if (!Number.isFinite(tick.epoch) || tick.epoch <= lastEpoch || !tick.quote || !/^[-+]?\d+(?:\.\d+)?$/.test(tick.quote)) continue;
         if (!Number.isInteger(tick.digit) || tick.digit < 0 || tick.digit > 9 || tick.epoch - now > 5) continue;
         unique.push(tick);
         lastEpoch = tick.epoch;
@@ -83,7 +83,7 @@ export const runOverTwoPipeline = (input: {
     const stages = [
         stage(1, 'Market suitability', Boolean(input.symbol), input.symbol ? 'Selected active Volatility market' : 'No eligible market'),
         stage(2, 'Live stream integrity', raw.length > 0 && valid.length === raw.length, valid.length + '/' + raw.length + ' ordered source ticks accepted'),
-        stage(3, 'Quote precision', valid.every(t => /^[-+]?\\d+(?:\\.\\d+)?$/.test(t.quote)), 'Original quote strings retained for precision-safe digit extraction'),
+        stage(3, 'Quote precision', valid.every(t => /^[-+]?\d+(?:\.\d+)?$/.test(t.quote)), 'Original quote strings retained for precision-safe digit extraction'),
         stage(4, 'Final-digit processing', valid.length === sample.length, sample.length + ' digits attached to source ticks'),
         stage(5, 'Data quality', sample.length > 0, 'Malformed, duplicate and out-of-order records rejected'),
         stage(6, 'Historical sample window', sample.length >= c.minSample, sample.length + '/' + c.minSample + ' required observations'),
