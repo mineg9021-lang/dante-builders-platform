@@ -13,8 +13,8 @@ import PlatformActivity from './platform-activity';
 import SarahMarketChart from './sarah-market-chart';
 import './dante-landing.scss';
 
-type BotDefinition = { id: BotStrategyId; title: string; contract: string; description: string; group: string; icon: string };
-const BOT_LIBRARY: BotDefinition[] = [
+type RobotDefinition = { id: BotStrategyId; title: string; contract: string; description: string; group: string; icon: string };
+const ROBOT_LIBRARY: RobotDefinition[] = [
  { id:'RISE',title:'Rise Robot',contract:'CALL',description:'Trades upward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↗' },
  { id:'FALL',title:'Fall Robot',contract:'PUT',description:'Trades downward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↘' },
  { id:'ONLY_UP',title:'Only Up Robot',contract:'RUNHIGH',description:'Requires consecutive strictly rising ticks before entry.',group:'Consecutive movement',icon:'↑' },
@@ -28,20 +28,8 @@ const BOT_LIBRARY: BotDefinition[] = [
  { id:'EVEN',title:'Even Robot',contract:'DIGITEVEN',description:'Uses bounded parity frequency and split-window checks before entry.',group:'Parity',icon:'E' },
  { id:'ODD',title:'Odd Robot',contract:'DIGITODD',description:'Uses bounded parity frequency and split-window checks before entry.',group:'Parity',icon:'O' },
 ];
-const BOT_IDS = getImplementedStrategyIds();
-const BOT_BY_ID = new Map(BOT_LIBRARY.map(bot => [bot.id, bot]));
-type BotWorkspace = { id: string; title: string; description: string; strategies: BotStrategyId[]; icon: string; availability: 'READY' | 'IN DEVELOPMENT' };
-const BOT_WORKSPACES: BotWorkspace[] = [
- { id:'parity',title:'Parity AI',description:'One workspace for even and odd digit strategies.',strategies:['EVEN','ODD'],icon:'◐',availability:'READY' },
- { id:'flash',title:'Flash AI',description:'One workspace for digit matches and differs.',strategies:['DIGIT_MATCH','DIGIT_DIFFERS'],icon:'⚡',availability:'READY' },
- { id:'over-under',title:'Over / Under AI',description:'Barrier-based digit over and under strategies.',strategies:['DIGIT_OVER','DIGIT_UNDER'],icon:'⇅',availability:'READY' },
- { id:'rise-fall',title:'Rise / Fall AI',description:'Directional CALL and PUT strategies.',strategies:['RISE','FALL'],icon:'↗',availability:'READY' },
- { id:'only-direction',title:'Only Up / Only Down AI',description:'Consecutive strictly rising or falling tick strategies.',strategies:['ONLY_UP','ONLY_DOWN'],icon:'⇧',availability:'READY' },
- { id:'asian',title:'Asian Up / Asian Down AI',description:'Directional strategies with sample-average confirmation.',strategies:['ASIAN_UP','ASIAN_DOWN'],icon:'⌃',availability:'READY' },
- { id:'touch',title:'Touch / No Touch AI',description:'Workspace reserved for validated Touch and No Touch contract execution.',strategies:[],icon:'◎',availability:'IN DEVELOPMENT' },
- { id:'in-out',title:'In / Out AI',description:'Workspace reserved for validated boundary and range contract execution.',strategies:[],icon:'↔',availability:'IN DEVELOPMENT' },
-];
-
+const ROBOT_IDS = getImplementedStrategyIds();
+const ROBOT_BY_ID = new Map(ROBOT_LIBRARY.map(bot => [bot.id, bot]));
 type TradeRow = { id:string; contractId:number; contractType:string; symbol:string; status:'OPEN'|'WON'|'LOST'|'VOID'; profit?:number; time:number };
 
 const DashboardComponent = () => {
@@ -75,7 +63,7 @@ const DashboardComponent = () => {
  const pnlRef = useRef(0);
  const lastDecisionLogKeyRef = useRef('');
  const tradeCountRef = useRef(0);
- const bot = BOT_BY_ID.get(selectedBot) || BOT_LIBRARY[0];
+ const bot = ROBOT_BY_ID.get(selectedBot) || ROBOT_LIBRARY[0];
  const isDerivConnected = isAuthorized && connectionStatus === 'opened';
  const accountId = authData?.loginid || '';
  const accountBalance = liveBalance ?? 0;
@@ -221,8 +209,8 @@ const DashboardComponent = () => {
   </section>
   <SarahMarketChart connected={isDerivConnected}/>
   <section className="dante-library dante-robot-library" id="bot-library">
-   <div className="dante-section-heading"><div><span className="dante-eyebrow">SPECIALIST ROBOT FLEET · SHARED 18-LAYER ENGINE</span><h2>Choose your robot</h2></div><p>{BOT_IDS.length} robot strategies · one protected engine</p></div>
-   <div className="dante-bot-grid dante-robot-grid">{BOT_LIBRARY.map(robot=>{
+   <div className="dante-section-heading"><div><span className="dante-eyebrow">SPECIALIST ROBOT FLEET · SHARED 18-LAYER ENGINE</span><h2>Choose your robot</h2></div><p>{ROBOT_IDS.length} robot strategies · one protected engine</p></div>
+   <div className="dante-bot-grid dante-robot-grid">{ROBOT_LIBRARY.map(robot=>{
     const active=selectedBot===robot.id;
     return <button key={robot.id} type="button" className={active?'dante-bot-card dante-robot-card selected':'dante-bot-card dante-robot-card'} onClick={()=>selectBot(robot.id)} aria-pressed={active}>
      <span className={'robot-logo-frame robot-logo-'+robot.id.toLowerCase()}><img src="/assets/images/dante-bot-portraits.webp" alt={robot.title+' robot logo'}/></span>
