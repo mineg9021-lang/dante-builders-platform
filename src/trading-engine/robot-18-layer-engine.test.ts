@@ -110,6 +110,36 @@ describe('shared 18-layer Robot engine', () => {
         expect(report.layers.find(layer => layer.name === 'CONTRACT_MAPPING')?.passed).toBe(true);
     });
 
+    it('blocks an abrupt single-tick price shock at MARKET_STABILITY', () => {
+        const shocked = sample.map((tick, index) => index === 11 ? { ...tick, quote: '101.02' } : tick);
+        const report = run({ sample: shocked, tick: shocked[11] });
+        expect(report.passed).toBe(false);
+        expect(report.blockedAt).toBe('MARKET_STABILITY');
+    });
+
+    it('blocks an excessive five-tick price range even without one large jump', () => {
+        const prices = ['100.00', '100.30', '100.60', '100.90', '101.20'];
+        const ranged = sample.map((tick, index) => index < 7 ? tick : {
+            ...tick,
+            quote: prices[index - 7],
+            digit: Number(prices[index - 7].slice(-1)),
+        });
+        const report = run({ sample: ranged, tick: ranged[11] });
+        expect(report.passed).toBe(false);
+        expect(report.blockedAt).toBe('MARKET_STABILITY');
+    });
+
+    it('allows a calm five-tick price range', () => {
+        const calm = sample.map((tick, index) => index < 7 ? tick : {
+            ...tick,
+            quote: ['100.02', '100.03', '100.01', '100.02', '100.02'][index - 7],
+            digit: 2,
+        });
+        const report = run({ sample: calm, tick: calm[11] });
+        expect(report.passed).toBe(true);
+        expect(report.layers.find(layer => layer.name === 'MARKET_STABILITY')?.passed).toBe(true);
+    });
+
     it('rejects a malformed quote without throwing', () => {
         const report = run({ tick: { ...sample[11], quote: undefined as any } });
         expect(report.passed).toBe(false);
