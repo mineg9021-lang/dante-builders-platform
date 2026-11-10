@@ -19,7 +19,7 @@ describe('strategy runtime safety', () => {
                 sessionPnl: 0, stopLoss: 10, takeProfit: 10,
                 tradesThisSession: 0, maxTradesPerSession: 10,
             },
-        })).rejects.toThrow('CONTRACT_NOT_AVAILABLE_FOR_SELECTED_MARKET');
+        })).rejects.toThrow('CONTRACT_NOT_AVAILABLE_FOR_CONFIGURED_MARKETS');
         expect(api.send).toHaveBeenCalledTimes(1);
     });
 });
