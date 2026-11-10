@@ -37,7 +37,7 @@ const executionInput = (
 });
 
 const successfulApi = (settlement: 'won' | 'lost' | 'void' | 'sold' = 'won') => {
-    const send = jest.fn(async (request: Record<string, unknown>) => {
+    const send: jest.MockedFunction<DerivTradingApi['send']> = jest.fn(async (request: Record<string, unknown>): Promise<any> => {
         if (request.contracts_for) {
             return { contracts_for: { available: [{ contract_type: 'DIGITEVEN', underlying_symbol: 'R_100' }] } };
         }
