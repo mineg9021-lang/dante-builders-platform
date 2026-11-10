@@ -3,6 +3,7 @@ import { api_base } from '@/external/bot-skeleton';
 import { useApiBase } from '@/hooks/useApiBase';
 import { analyzeDigitTicks, extractLastDigit, quoteWithPrecision, type DigitTick } from './digit-matches-engine';
 import './digit-matches-scanner.scss';
+import { isDanteVolatilitySymbol } from './market-universe';
 
 const WINDOWS = [20, 50, 100, 200, 500, 1000];
 const FALLBACK_CONTRACTS = [
@@ -29,13 +30,11 @@ const DigitMatchesScanner = () => {
  const [barrier, setBarrier] = useState(4);
  const [finding, setFinding] = useState<AiFinding | null>(null);
  const [analysedAt, setAnalysedAt] = useState<number | null>(null);
- const activeSymbols = useMemo(() => (Array.isArray(api_base.active_symbols) ? api_base.active_symbols : []).filter((item: any) => /volatility/i.test(String(item.display_name || item.symbol_display_name || ''))), [revision, connectionStatus]);
+ const activeSymbols = useMemo(() => (Array.isArray(api_base.active_symbols) ? api_base.active_symbols : []).filter((item: any) => isDanteVolatilitySymbol(String(item.symbol || item.underlying_symbol || ''))), [revision, connectionStatus]);
  const marketOptions = activeSymbols.length ? activeSymbols : [
-  {symbol:'R_10',display_name:'Volatility 10'},{symbol:'1HZ10V',display_name:'Volatility 10 (1s)'},
-  {symbol:'R_25',display_name:'Volatility 25'},{symbol:'1HZ25V',display_name:'Volatility 25 (1s)'},
-  {symbol:'R_50',display_name:'Volatility 50'},{symbol:'1HZ50V',display_name:'Volatility 50 (1s)'},
-  {symbol:'R_75',display_name:'Volatility 75'},{symbol:'1HZ75V',display_name:'Volatility 75 (1s)'},
-  {symbol:'R_100',display_name:'Volatility 100'},{symbol:'1HZ100V',display_name:'Volatility 100 (1s)'}
+  {symbol:'R_10',display_name:'Volatility 10'},{symbol:'R_25',display_name:'Volatility 25'},{symbol:'R_50',display_name:'Volatility 50'},{symbol:'R_75',display_name:'Volatility 75'},{symbol:'R_100',display_name:'Volatility 100'},
+  {symbol:'1HZ10V',display_name:'Volatility 10 (1s)'},{symbol:'1HZ15V',display_name:'Volatility 15 (1s)'},{symbol:'1HZ25V',display_name:'Volatility 25 (1s)'},{symbol:'1HZ30V',display_name:'Volatility 30 (1s)'},
+  {symbol:'1HZ50V',display_name:'Volatility 50 (1s)'},{symbol:'1HZ75V',display_name:'Volatility 75 (1s)'},{symbol:'1HZ90V',display_name:'Volatility 90 (1s)'},{symbol:'1HZ100V',display_name:'Volatility 100 (1s)'}
  ];
  const report = useMemo(() => analyzeDigitTicks({ticks, windowSize, minSample: Math.min(100, windowSize)}), [ticks, windowSize]);
 
