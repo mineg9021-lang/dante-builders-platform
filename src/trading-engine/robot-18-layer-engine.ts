@@ -15,6 +15,7 @@ export const ROBOT_STABILITY_LIMITS = { maxSingleTickMovePercent: 0.5, maxFiveTi
 const hasStableRecentPrices = (ticks: StrategyTick[]): boolean => {
  const recent = ticks.slice(-5);
  if (recent.length < 5) return false;
+ if (recent.some(item => typeof item.quote !== 'string' || !/^\\d+(?:\\.\\d+)?$/.test(item.quote) || item.quote.length > 24)) return false;
  const prices = recent.map(item => Number(item.quote));
  if (prices.some(price => !Number.isFinite(price) || price <= 0)) return false;
  for (let index = 1; index < prices.length; index += 1) {
