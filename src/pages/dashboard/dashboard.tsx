@@ -52,6 +52,8 @@ const DashboardComponent = () => {
  const [losses,setLosses] = useState(0);
  const [loginError,setLoginError] = useState('');
  const [journalError,setJournalError] = useState('');
+ const [liveBalance,setLiveBalance] = useState<number|null>(null);
+ const [liveCurrency,setLiveCurrency] = useState('');
  const runtimeStatusRef = useRef<RuntimeStatus>('STOPPED');
  const runtimeRef = useRef<RuntimeHandle|null>(null);
  const startAttemptRef = useRef(0);
@@ -61,10 +63,28 @@ const DashboardComponent = () => {
  const bot = BOT_BY_ID.get(selectedBot) || BOT_LIBRARY[0];
  const isDerivConnected = isAuthorized && connectionStatus === 'opened';
  const accountId = authData?.loginid || '';
- const accountBalance = Number(authData?.balance || 0);
- const currency = authData?.currency || '';
+ const accountBalance = liveBalance ?? 0;
+ const currency = authData?.currency || liveCurrency || '';
  const accountType = authData?.is_virtual ? 'DEMO ACCOUNT' : authData ? 'REAL ACCOUNT' : 'NOT CONNECTED';
  const winRate = wins + losses ? Math.round(wins/(wins+losses)*100) : 0;
+
+ useEffect(() => {
+  if (!isDerivConnected || !accountId) { setLiveBalance(null); setLiveCurrency(''); return; }
+  const initialBalance = Number(authData?.balance);
+  setLiveBalance(Number.isFinite(initialBalance) ? initialBalance : null);
+  setLiveCurrency(authData?.currency || '');
+  const api = api_base.api;
+  if (!api?.onMessage) return;
+  const subscription = api.onMessage().subscribe((message:any) => {
+   if (message?.msg_type !== 'balance' || !message?.balance) return;
+   const update = message.balance;
+   if (update.loginid && update.loginid !== accountId) return;
+   const nextBalance = Number(update.balance);
+   if (Number.isFinite(nextBalance)) setLiveBalance(nextBalance);
+   if (typeof update.currency === 'string' && update.currency) setLiveCurrency(update.currency);
+  });
+  return () => subscription.unsubscribe();
+ }, [isDerivConnected, accountId, authData?.balance, authData?.currency, connectionStatus]);
 
  useEffect(() => {
   let active=true;
@@ -182,7 +202,7 @@ const DashboardComponent = () => {
   <section className="dante-terminal" id="bot-terminal">
    <div className="dante-terminal-purple">
     <div className="terminal-identity"><img src="/assets/images/dante-bot-portraits.webp" alt=""/><div><span className="dante-eyebrow">{bot.group.toUpperCase()} STRATEGY WORKSPACE</span><h2>{bot.title}</h2><p>Deriv contract: <strong>{bot.contract}</strong> · Market stream: <strong>AUTO · 13 VOLATILITY MARKETS</strong></p></div></div>
-    <div className="terminal-account-strip"><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Not connected'}</strong></div><div><span>ACCOUNT TYPE</span><strong>{accountType}</strong></div><div><span>LIVE BALANCE</span><strong>{isDerivConnected?Number(authData?.balance||0).toFixed(2)+' '+currency:'—'}</strong></div><button type="button" className="terminal-connect" onClick={connectDeriv}>{isDerivConnected?'RECONNECT DERIV':'CONNECT DERIV'}</button></div>
+    <div className="terminal-account-strip"><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Not connected'}</strong></div><div><span>ACCOUNT TYPE</span><strong>{accountType}</strong></div><div><span>LIVE BALANCE</span><strong>{isDerivConnected?(liveBalance===null?'Loading balance…':liveBalance.toFixed(2)+' '+currency):'—'}</strong></div><button type="button" className="terminal-connect" onClick={connectDeriv}>{isDerivConnected?'RECONNECT DERIV':'CONNECT DERIV'}</button></div>
     {loginError&&<p className="dante-error" role="alert">{loginError}</p>}
     <div className="terminal-state-row"><div><span>RUNTIME</span><strong>{runtimeStatus.replace(/_/g,' ')}</strong></div><div><span>STRATEGY DECISION</span><strong>{decision?.decision||'WAITING'}</strong></div><div><span>LAST EVIDENCE</span><strong>{decision?decision.evidenceScore+'%':'—'}</strong></div></div>
     <div className="terminal-actions"><button type="button" className="terminal-start" onClick={startBot} disabled={runtimeStatus==='STARTING'||runtimeStatus==='RUNNING'||runtimeStatus==='EXECUTING'}>START BOT</button><button type="button" className="terminal-stop" onClick={stopBot} disabled={runtimeStatus==='STOPPED'}>STOP BOT</button><span className="terminal-mode">{mode.toUpperCase()} EXECUTION</span></div>
