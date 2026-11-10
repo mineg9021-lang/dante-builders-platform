@@ -36,7 +36,7 @@ export type StartStrategyRuntimeInput = {
 const toDecimalString = (value: string | number, precision: number): string | null => {
     if (!Number.isInteger(precision) || precision < 0 || precision > 10) return null;
     const source = String(value).trim();
-    if (!/^[+-]?\\d+(?:\\.\\d+)?$/.test(source)) return null;
+    if (!/^[+-]?\d+(?:\.\d+)?$/.test(source)) return null;
     const [whole, fraction = ''] = source.split('.');
     return precision === 0 ? whole : whole + '.' + fraction.padEnd(precision, '0').slice(0, precision);
 };
