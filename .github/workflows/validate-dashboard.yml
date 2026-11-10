@@ -31,6 +31,9 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      - name: Check Netlify function syntax
+        run: node --check netlify/functions/trade-journal.mjs
+
       - name: Run unit tests
         run: npm test -- --runInBand --runTestsByPath src/pages/dashboard/even-odd-analysis-engine.test.ts src/pages/dashboard/even-odd-parity-engine.test.ts src/pages/dashboard/even-odd-parity-execution.test.ts src/pages/dashboard/digit-matches-engine.test.ts src/pages/dashboard/over-two-engine.test.ts src/pages/dashboard/over-two-execution.test.ts src/pages/dashboard/market-metrics-engine.test.ts src/trading-engine/execution.test.ts src/trading-engine/strategy-adapters.test.ts src/trading-engine/runtime.test.ts
 
