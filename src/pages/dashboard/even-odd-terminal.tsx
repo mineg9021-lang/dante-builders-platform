@@ -291,6 +291,8 @@ const EvenOddTerminal = () => {
     const prediction = candidateReady ? `${pipeline.selectedParity} LEADING` : 'WAIT';
     const latest = selected?.ticks[selected.ticks.length - 1];
     const accountJournal = tradeJournal.filter(row => row.accountId === activeLoginid);
+    const sessionWins = accountJournal.filter(row => row.status === 'WON').length;
+    const sessionLosses = accountJournal.filter(row => row.status === 'LOST').length;
 
     useEffect(() => {
         try {
@@ -547,6 +549,10 @@ const EvenOddTerminal = () => {
                             <div><span>Even observations</span><strong>{counts.even}</strong></div>
                             <div><span>Odd observations</span><strong>{counts.odd}</strong></div>
                             <div><span>Analysis sample</span><strong>{total}/30</strong></div>
+                        </div>
+                        <div className='eo-terminal__outcomes'>
+                            <div><span>WIN 🏆</span><strong>{sessionWins}</strong></div>
+                            <div><span>LOSS</span><strong>{sessionLosses}</strong></div>
                         </div>
                         <div className='eo-terminal__signal'>
                             <span>{selected?.name || 'Scanning markets'} · observed parity lead · evidence {pipeline.evidenceScore}%</span>
