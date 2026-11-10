@@ -14,6 +14,7 @@ export {
 
 export {
   fetchAccounts,
+  selectDerivAccount,
   getWebSocketOTP,
   logout,
 } from './accounts';
