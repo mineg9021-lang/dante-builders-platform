@@ -12,8 +12,8 @@ import './dante-landing.scss';
 
 type BotDefinition = { id: BotStrategyId; title: string; contract: string; description: string; group: string; icon: string };
 const BOT_LIBRARY: BotDefinition[] = [
- { id:'RISE',title:'Rise Bot',contract:'CALL',description:'Trades upward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↗' },
- { id:'FALL',title:'Fall Bot',contract:'PUT',description:'Trades downward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↘' },
+ { id:'RISE',title:'Rise Bot',contract:'PUT',description:'Trades upward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↗' },
+ { id:'FALL',title:'Fall Bot',contract:'CALL',description:'Trades downward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↘' },
  { id:'ONLY_UP',title:'Only Up Bot',contract:'RUNHIGH',description:'Requires consecutive strictly rising ticks before entry.',group:'Consecutive movement',icon:'↑' },
  { id:'ONLY_DOWN',title:'Only Down Bot',contract:'RUNLOW',description:'Requires consecutive strictly falling ticks before entry.',group:'Consecutive movement',icon:'↓' },
  { id:'ASIAN_UP',title:'Asian Up AI Bot',contract:'ASIANU',description:'Combines directional momentum with current-price versus sample-average confirmation.',group:'Asian',icon:'⌃' },
