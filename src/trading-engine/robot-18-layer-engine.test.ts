@@ -97,6 +97,19 @@ describe('shared 18-layer Robot engine', () => {
         expect(invalidOverBarrier.blockedAt).toBe('CONTRACT_MAPPING');
     });
 
+
+    it('accepts a valid digit barrier contract mapping', () => {
+        const report = run({
+            decision: {
+                ...decision,
+                contractType: 'DIGITOVER',
+                proposalFields: { duration: 5, duration_unit: 't', barrier: '4' },
+            },
+        });
+        expect(report.passed).toBe(true);
+        expect(report.layers.find(layer => layer.name === 'CONTRACT_MAPPING')?.passed).toBe(true);
+    });
+
     it('rejects a malformed quote without throwing', () => {
         const report = run({ tick: { ...sample[11], quote: undefined as any } });
         expect(report.passed).toBe(false);
