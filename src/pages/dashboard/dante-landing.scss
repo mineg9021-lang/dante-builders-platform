@@ -148,3 +148,16 @@ html,body,#root{background:#f4faf5;color:#193b29}
 .over2-portrait span{display:none}
 .xml-workspace .workspace-heading{position:relative;padding-left:84px;min-height:70px}
 .xml-workspace .workspace-heading:before{content:'';position:absolute;left:0;top:0;width:66px;height:66px;border:2px solid #d4ead9;border-radius:50%;background-image:url('/assets/images/dante-bot-portraits.webp');background-size:200% 200%;background-position:100% 100%;box-shadow:0 4px 14px rgba(32,92,49,.12)}
+
+
+.eo-terminal__robot svg{display:none!important}
+.eo-terminal__recovery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:12px 0}
+.eo-terminal__recovery>div{display:grid;gap:6px;padding:9px;border:1px solid #deebe1;border-radius:8px;background:#f8fcf9}
+.eo-terminal__recovery small{font-size:8px;font-weight:900;letter-spacing:.5px;color:#78907e}
+.eo-terminal__recovery b{font-size:9px;color:#718276}
+.eo-terminal__recovery .is-active{border-color:#a8d9b5;background:#eff9f1}
+.eo-terminal__recovery .is-active b{color:#1d7a41}
+.eo-terminal__recovery .is-cooldown{border-color:#eac6c8;background:#fff5f5}
+.eo-terminal__recovery .is-cooldown b{color:#bd3038}
+.eo-terminal__reset{border:1px solid #d5e8da!important;background:#f0f8f2!important;color:#237343!important}
+@media(max-width:600px){.eo-terminal__recovery{grid-template-columns:repeat(2,minmax(0,1fr))}}
