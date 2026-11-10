@@ -36,3 +36,19 @@ html,body,#root{min-height:100%;margin:0;background:#f5f3fb;color:#241b3d}body{f
 .dante-activity-list p{margin:4px 0 0;color:#81778f;font-size:10px;line-height:1.5;overflow-wrap:anywhere}
 .dante-activity-list time{color:#9a91a5;font-size:9px;text-align:right;white-space:nowrap}
 @media(max-width:600px){.dante-activity-list li{grid-template-columns:9px minmax(0,1fr)}.dante-activity-list time{grid-column:2;text-align:left}}
+
+
+/* Individual robot identity cards powered by the same shared 18-layer runtime */
+.dante-robot-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+.dante-robot-card{display:flex;align-items:flex-start;text-align:left;gap:9px;min-height:250px;cursor:pointer;color:inherit;width:100%;font:inherit}
+.robot-logo-frame{width:76px;height:76px;flex:0 0 76px;overflow:hidden;border-radius:18px;border:1px solid #d9c8f6;background:radial-gradient(circle at 50% 35%,#e8ddff,#f9f7ff 68%);box-shadow:0 7px 22px rgba(92,56,151,.13)}
+.robot-logo-frame img{width:100%;height:100%;object-fit:cover;object-position:50% 40%;filter:saturate(1.15) hue-rotate(var(--robot-hue,0deg))}
+.robot-logo-rise{--robot-hue:330deg}.robot-logo-fall{--robot-hue:190deg}.robot-logo-only_up{--robot-hue:45deg}.robot-logo-only_down{--robot-hue:215deg}.robot-logo-asian_up{--robot-hue:85deg}.robot-logo-asian_down{--robot-hue:155deg}.robot-logo-digit_match{--robot-hue:275deg}.robot-logo-digit_differs{--robot-hue:310deg}.robot-logo-digit_over{--robot-hue:25deg}.robot-logo-digit_under{--robot-hue:235deg}.robot-logo-even{--robot-hue:175deg}.robot-logo-odd{--robot-hue:5deg}
+.dante-robot-card .bot-card-group{margin-left:auto;align-self:center;white-space:nowrap;font-size:7px}
+.dante-robot-card strong{width:100%;font-size:14px}
+.dante-robot-card small{width:100%;line-height:1.5;min-height:45px}
+.robot-contract-tag{display:inline-flex;padding:5px 8px;border-radius:7px;background:#f0eafd;color:#6945a6;font-size:8px;font-weight:900;letter-spacing:.6px}
+.dante-robot-card .bot-card-action{width:100%;margin-top:auto}
+@media(max-width:1000px){.dante-robot-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){.dante-robot-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dante-robot-card{min-height:235px}.robot-logo-frame{width:64px;height:64px;flex-basis:64px}}
+@media(max-width:420px){.dante-robot-grid{grid-template-columns:1fr}}
