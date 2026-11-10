@@ -76,3 +76,60 @@ body{font-family:Inter,Arial,sans-serif}
 .db-analysis-columns article{padding:15px;border:1px solid #e5def2;border-radius:12px}
 @media(max-width:900px){.dante-header{flex-wrap:wrap;padding:10px 0}.dante-header nav{order:3;width:100%;justify-content:flex-start}.dante-hero{grid-template-columns:1fr;gap:22px;padding:38px 2px 30px}.dante-product-grid{grid-template-columns:1fr 1fr}.generator-fields{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.dante-app{padding:0 12px}.dante-header{gap:8px}.dante-brand{font-size:10px}.connection{display:none}.dante-header nav{gap:0;overflow-x:auto}.dante-header nav button{padding:9px 8px;font-size:10px;white-space:nowrap}.dante-hero h1{font-size:37px;letter-spacing:-1px}.dante-hero p{font-size:12px}.dante-hero-art{min-height:220px}.orbit-one{width:170px;height:170px}.orbit-two{width:220px;height:220px}.core{width:108px;height:108px;font-size:38px}.chip-a{top:13px;left:10px}.chip-b{right:9px;bottom:12px}.dante-product-grid{grid-template-columns:1fr}.product-tile{min-height:160px;padding:16px}.workspace-heading{align-items:flex-start;flex-direction:column}.connect-panel,.generator-panel{padding:16px}.generator-fields{grid-template-columns:1fr 1fr;gap:9px}.dante-footer{flex-direction:column}.db-analysis-columns{grid-template-columns:1fr}.db-digit-grid{gap:6px}.db-digit-grid div{padding:12px 4px}}
+
+
+/* Dante Builders green-and-white product identity */
+html,body,#root{background:#f4faf5;color:#193b29}
+.dante-app{background:linear-gradient(180deg,#fff 0%,#f2faf4 100%);color:#193b29}
+.dante-header{border-color:#deebe1}
+.dante-brand{color:#17452c}.dante-brand-mark{background:linear-gradient(135deg,#19864a,#55b875)}
+.dante-header nav button{color:#607969}.dante-header nav button.active,.dante-header nav button:hover{background:#e7f5eb;color:#18723d}
+.connection.connected{color:#168044}
+.dante-kicker,.dante-products-heading>span,.workspace-heading>div>span{color:#21854a}
+.dante-hero h1{color:#173e29}.dante-hero h1 em{color:#2b9957}
+.dante-hero p,.dante-products-heading p,.workspace-heading p{color:#6d8474}
+.dante-hero-art{border-color:#d8eadd;background:radial-gradient(circle at 50% 45%,#fff 0,#e9f7ed 48%,#d8efdf 100%)}
+.orbit{border-color:rgba(32,132,72,.22)}
+.core{border-color:#7fbd91;background:linear-gradient(145deg,#39a65f,#176b3b);box-shadow:0 20px 55px rgba(35,117,63,.2)}
+.core span{color:#c7f4d2}
+.float-chip{border-color:#dcebe0;color:#2b7845;background:#fff}
+.primary{border-color:#188347;background:linear-gradient(110deg,#188347,#43ad68)}
+.secondary{border-color:#d7e8dc;color:#247445;background:#fff}
+.dante-products-heading h2,.workspace-heading h1{color:#183d29}
+.dante-product-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.product-tile{border-color:#dcebe0;background:linear-gradient(145deg,#fff,#f6fbf7);box-shadow:0 10px 28px rgba(32,92,49,.05)}
+.product-tile:hover{border-color:#91cba0}
+.tile-icon{color:#1c7c43;background:linear-gradient(135deg,#e6f6ea,#d9f0e0)}
+.product-tile strong{color:#214a30}.product-tile p{color:#6f8575}.product-tile b{color:#1d8247}
+.workspace-heading>button{border:1px solid #dcebe0;background:#fff;color:#287648}
+.connect-panel,.generator-panel{border-color:#dcebe0;box-shadow:0 10px 28px rgba(32,92,49,.05)}
+.connect-panel h2{color:#1c4a2d}.connect-panel p{color:#6f8575}
+.generator-panel>label,.generator-fields label{color:#345b40}
+.generator-panel textarea,.generator-fields input,.generator-fields select{border-color:#d7e8dc;color:#24452e;background:#fbfefc}
+.validation-result.valid{border-color:#a7dcb7;color:#176d3b;background:#effaf2}
+.xml-output{border-color:#deebe1}.xml-output>div{color:#24482f;background:#f2faf4}
+.xml-output button{background:#218348}.xml-output pre{background:#142c1d}
+.dante-footer{border-color:#deebe1;color:#748a79}
+.eo-terminal{border:1px solid #dcebe0!important;background:#fff!important;color:#23442e!important;box-shadow:0 10px 28px rgba(32,92,49,.05)!important}
+.eo-terminal__card{border:1px solid #e0ece3!important;background:#f9fdf9!important;color:#23442e!important}
+.eo-terminal h1,.eo-terminal h2,.eo-terminal h3,.eo-terminal strong{color:#214a30}
+.eo-terminal input,.eo-terminal select{border-color:#d7e8dc!important;background:#fff!important;color:#23442e!important}
+.eo-terminal button{border-color:#188347!important;background:linear-gradient(110deg,#188347,#43ad68)!important;color:#fff!important}
+.eo-terminal .eo-terminal__stop{background:linear-gradient(110deg,#bd3740,#922c36)!important}
+.eo-terminal__portrait{background:linear-gradient(115deg,#edf8f0,#f5fbf6)}
+.eo-terminal__robot{background:radial-gradient(circle at 40% 30%,#9ce4b1,#23854a 70%);box-shadow:0 0 0 6px #e4f5e8}
+.eo-terminal__notice{background:#eff9f1;color:#54735c}.eo-terminal__notice strong{color:#19723d}
+.dmi-scanner{border-color:#dcebe0!important;background:#fff!important;color:#24452e!important}
+.dmi-controls select{border-color:#d7e8dc!important;background:#fbfefc!important;color:#24452e!important}
+.dmi-actions button,.dmi-ai-action button{background:linear-gradient(110deg,#188347,#43ad68)!important}
+.dmi-kpis>div{border-color:#e0ece3;background:linear-gradient(145deg,#fff,#f3faf5)}
+.dmi-kpis b,.dmi-digits b{color:#217a42}
+.dmi-digits>div{border-color:#e0ece3;background:#fbfefc}
+.dmi-digits em{background:linear-gradient(90deg,#23874b,#7ac88e)}
+.dmi-candidate-grid section{border-color:#e0ece3}
+.dmi-candidate strong{color:#275b37}
+.dmi-ai-result{border-color:#cbe5d1;background:linear-gradient(130deg,#f5fcf6,#edf8f0)}
+.dmi-ai-result small{color:#247a43}.dmi-ai-result h3{color:#234a30}
+.dmi-layers{display:none!important}
+@media(max-width:1050px){.dante-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.dante-product-grid{grid-template-columns:1fr}.dante-hero{grid-template-columns:1fr}.dante-header{align-items:flex-start;flex-wrap:wrap;padding:12px 0}.dante-header nav{justify-content:flex-start}.generator-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
