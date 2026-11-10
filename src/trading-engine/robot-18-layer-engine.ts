@@ -1,5 +1,5 @@
 import type { BotStrategyConfig, StrategyDecisionResult, StrategyTick } from './strategy-adapters';
-import type { ExecutionRiskContext } from './execution';
+import { validateExecutionRisk, type ExecutionRiskContext } from './execution';
 
 export const ROBOT_ENGINE_LAYERS = [
  'MARKET_SCOPE','TICK_SCHEMA','QUOTE_PRECISION','DECIMAL_INTEGRITY','TIMESTAMP_FRESHNESS','SEQUENCE_ORDER',
@@ -31,6 +31,23 @@ export function runRobot18LayerEngine(input:{symbol:string;tick:StrategyTick;pre
  {name:'ACCOUNT_AUTHORIZATION',passed:risk.authorized&&(risk.mode!=='live'||(!risk.isVirtual&&risk.liveTradingConfirmed))&&(risk.mode!=='demo'||risk.isVirtual),detail:'Account authorization and live confirmation are valid'},
  {name:'RISK_PERMISSION',passed:Number.isFinite(risk.stake)&&risk.stake>0&&risk.stake<=risk.maxStake&&risk.balance>0&&risk.stake<=risk.balance*risk.maxStakePercent/100&&risk.sessionPnl>-risk.stopLoss&&risk.sessionPnl<risk.takeProfit&&risk.tradesThisSession<risk.maxTradesPerSession,detail:'Stake, exposure, session limits and trade cap pass'},
  ];
+ const supportedContracts = new Set(['CALL','PUT','RUNHIGH','RUNLOW','ASIANU','ASIAND','DIGITMATCH','DIGITDIFF','DIGITOVER','DIGITUNDER','DIGITEVEN','DIGITODD']);
+ const digitBarrierContracts = new Set(['DIGITMATCH','DIGITDIFF','DIGITOVER','DIGITUNDER']);
+ const barrier = decision.proposalFields?.barrier;
+ const barrierValid = !digitBarrierContracts.has(decision.contractType) ? barrier === undefined :
+  typeof barrier === 'string' && /^\\d$/.test(barrier) &&
+  (decision.contractType === 'DIGITOVER' || decision.contractType === 'DIGITUNDER' ? Number(barrier) <= 8 : true);
+ const mappingValid = supportedContracts.has(decision.contractType) &&
+  Number.isInteger(decision.proposalFields?.duration) && decision.proposalFields.duration >= 1 &&
+  decision.proposalFields.duration <= 100 &&
+  ['t','s','m'].includes(decision.proposalFields?.duration_unit) && barrierValid;
+ checks.find(c=>c.name==='CONTRACT_MAPPING')!.passed = mappingValid;
+ checks.find(c=>c.name==='CONTRACT_MAPPING')!.detail = 'Contract identifier and contract-specific proposal fields are supported';
+ checks.find(c=>c.name==='OPPORTUNITY_IDENTITY')!.passed =
+  typeof decision.opportunityKey === 'string' && decision.opportunityKey.trim().length > 0;
+ checks.find(c=>c.name==='OPPORTUNITY_IDENTITY')!.detail = 'Signal has a non-empty opportunity identity';
+ checks.find(c=>c.name==='RISK_PERMISSION')!.passed = validateExecutionRisk(risk) === null;
+ checks.find(c=>c.name==='RISK_PERMISSION')!.detail = 'Execution risk validator approved account, freshness, stake, exposure and session limits';
  const blocked=checks.find(c=>!c.passed);
  return {passed:!blocked,passedLayers:checks.filter(c=>c.passed).length,totalLayers:18,blockedAt:blocked?.name,reason:blocked?.detail||'All 18 shared engine layers passed.',layers:checks};
 }
