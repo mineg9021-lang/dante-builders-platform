@@ -190,6 +190,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
                 setStatus('PAUSED_ERROR', reason.message + ' Reconcile the Deriv account before restarting.');
             } else if (!stopped) {
                 setStatus('RUNNING', reason.message);
+                beginAnalysisWindow();
             }
         });
     };
@@ -216,8 +217,10 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
     if (!canContinue()) {
         tickStream.unsubscribe();
         subscriptionIds.splice(0).forEach(id => void input.api.send({ forget: id }).catch(() => undefined));
-        stopped = true;
-        status = 'STOPPED';
+        if (!stopped) {
+            stopped = true;
+            status = 'STOPPED';
+        }
         return { stop, getStatus: () => status, getTicks: () => Array.from(ticksBySymbol.values()).flat() };
     }
     if (!subscriptionResults.some(Boolean)) {
