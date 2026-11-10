@@ -28,6 +28,18 @@ const BOT_LIBRARY: BotDefinition[] = [
 ];
 const BOT_IDS = getImplementedStrategyIds();
 const BOT_BY_ID = new Map(BOT_LIBRARY.map(bot => [bot.id, bot]));
+type BotWorkspace = { id: string; title: string; description: string; strategies: BotStrategyId[]; icon: string; availability: 'READY' | 'IN DEVELOPMENT' };
+const BOT_WORKSPACES: BotWorkspace[] = [
+ { id:'parity',title:'Parity AI',description:'One workspace for even and odd digit strategies.',strategies:['EVEN','ODD'],icon:'◐',availability:'READY' },
+ { id:'flash',title:'Flash AI',description:'One workspace for digit matches and differs.',strategies:['DIGIT_MATCH','DIGIT_DIFFERS'],icon:'⚡',availability:'READY' },
+ { id:'over-under',title:'Over / Under AI',description:'Barrier-based digit over and under strategies.',strategies:['DIGIT_OVER','DIGIT_UNDER'],icon:'⇅',availability:'READY' },
+ { id:'rise-fall',title:'Rise / Fall AI',description:'Directional CALL and PUT strategies.',strategies:['RISE','FALL'],icon:'↗',availability:'READY' },
+ { id:'only-direction',title:'Only Up / Only Down AI',description:'Consecutive strictly rising or falling tick strategies.',strategies:['ONLY_UP','ONLY_DOWN'],icon:'⇧',availability:'READY' },
+ { id:'asian',title:'Asian Up / Asian Down AI',description:'Directional strategies with sample-average confirmation.',strategies:['ASIAN_UP','ASIAN_DOWN'],icon:'⌃',availability:'READY' },
+ { id:'touch',title:'Touch / No Touch AI',description:'Workspace reserved for validated Touch and No Touch contract execution.',strategies:[],icon:'◎',availability:'IN DEVELOPMENT' },
+ { id:'in-out',title:'In / Out AI',description:'Workspace reserved for validated boundary and range contract execution.',strategies:[],icon:'↔',availability:'IN DEVELOPMENT' },
+];
+
 type TradeRow = { id:string; contractId:number; contractType:string; symbol:string; status:'OPEN'|'WON'|'LOST'|'VOID'; profit?:number; time:number };
 
 const DashboardComponent = () => {
@@ -203,8 +215,18 @@ const DashboardComponent = () => {
    <div className="dante-system-status"><div><span>PLATFORM SESSION</span><strong>{client.is_logged_in?'SIGNED IN':'ACCOUNT REQUIRED'}</strong></div><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Awaiting OAuth'}</strong></div><div><span>BOT STATUS</span><strong>{runtimeStatus.replace(/_/g,' ')}</strong></div></div>
   </section>
   <section className="dante-library" id="bot-library">
-   <div className="dante-section-heading"><div><span className="dante-eyebrow">SPECIALIST BOT LIBRARY</span><h2>Select your trading engine</h2></div><p>{BOT_IDS.length} strategy adapters registered in this release</p></div>
-   <div className="dante-bot-grid">{BOT_LIBRARY.map(item=><button key={item.id} type="button" className={selectedBot===item.id?'dante-bot-card selected':'dante-bot-card'} onClick={()=>selectBot(item.id)}><span className="bot-card-icon">{item.icon}</span><span className="bot-card-group">{item.group} · {item.contract}</span><strong>{item.title}</strong><small>{item.description}</small><span className="bot-card-action">{selectedBot===item.id?'SELECTED':'OPEN WORKSPACE'} <b>↗</b></span></button>)}</div>
+   <div className="dante-section-heading"><div><span className="dante-eyebrow">UNIFIED AI BOT WORKSPACES</span><h2>One platform · Eight specialist workspaces</h2></div><p>{BOT_IDS.length} registered strategy adapters</p></div>
+   <div className="dante-bot-grid">{BOT_WORKSPACES.map(workspace=>{
+    const active=workspace.strategies.includes(selectedBot);
+    return <section key={workspace.id} className={active?'dante-bot-card selected':'dante-bot-card'} aria-label={workspace.title}>
+     <span className="bot-card-icon">{workspace.icon}</span><span className="bot-card-group">{workspace.availability}</span><strong>{workspace.title}</strong><small>{workspace.description}</small>
+     {workspace.strategies.length>0?<div className="workspace-strategy-options" aria-label={workspace.title+' strategies'}>{workspace.strategies.map(strategyId=>{
+      const strategy=BOT_BY_ID.get(strategyId)!;
+      return <button key={strategyId} type="button" className={selectedBot===strategyId?'workspace-strategy active':'workspace-strategy'} onClick={()=>selectBot(strategyId)}>{strategy.title.replace(' Bot','').replace(' AI','')}</button>;
+     })}</div>:<small className="workspace-unavailable">Execution is disabled until its contract adapter, proposal validation and settlement tests are complete.</small>}
+     <span className="bot-card-action">{active?'WORKSPACE OPEN':workspace.strategies.length?'CHOOSE STRATEGY':'NOT YET ENABLED'} <b>↗</b></span>
+    </section>;
+   })}</div>
   </section>
   <section className="dante-terminal" id="bot-terminal">
    <div className="dante-terminal-purple">
