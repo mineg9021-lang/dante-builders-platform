@@ -197,7 +197,7 @@ const OverTwoTerminal = () => {
             lastTickEpoch: latest.epoch,
             shouldContinue: () => executionAllowed.current,
             onPurchased: purchase => {
-                setTrades(previous => [{ id: String(purchase.contractId), contractId: purchase.contractId, symbol: purchase.symbol, status: 'EXECUTED', time: purchase.createdAt }, ...previous].slice(0, 30));
+                setTrades(previous => [{ id: String(purchase.contractId), contractId: purchase.contractId, symbol: purchase.symbol, status: 'EXECUTED' as const, time: purchase.createdAt }, ...previous].slice(0, 30));
                 setExecutionStatus('PURCHASE ACCEPTED · monitoring contract #' + purchase.contractId);
             },
         }).then(result => {
