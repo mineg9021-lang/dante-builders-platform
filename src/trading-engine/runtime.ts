@@ -16,8 +16,11 @@ export type RuntimeHandle = {
 
 export type StartStrategyRuntimeInput = {
     api: DerivTradingApi;
-    symbol: string;
-    precision: number;
+    /** Use symbols for the hidden market universe; symbol remains for one-market compatibility. */
+    symbol?: string;
+    symbols?: string[];
+    precision?: number;
+    precisionBySymbol?: Record<string, number>;
     strategy: BotStrategyConfig;
     currency: string;
     risk: Omit<ExecutionRiskContext, 'strategyDecision' | 'lastTickEpoch'> & { liveTradingConfirmed: boolean };
@@ -31,7 +34,7 @@ export type StartStrategyRuntimeInput = {
 
 const toDecimalString = (value: string | number, precision: number): string | null => {
     if (!Number.isInteger(precision) || precision < 0 || precision > 10) return null;
-    let source = String(value).trim();
+    const source = String(value).trim();
     if (!/^[+-]?\\d+(?:\\.\\d+)?$/.test(source)) return null;
     const [whole, fraction = ''] = source.split('.');
     return precision === 0 ? whole : whole + '.' + fraction.padEnd(precision, '0').slice(0, precision);
@@ -45,29 +48,39 @@ const extractDigit = (quote: string, precision: number): number | null => {
 };
 
 /**
- * Runs one specialist strategy against a real Deriv tick stream. A READY
- * decision enters the shared proposal -> buy -> settlement executor; WAIT
- * and REJECTED can never reach purchase.
+ * Runs a specialist against one or more real Deriv tick streams. Only markets
+ * that return the required contract from contracts_for are subscribed.
+ * READY enters the shared executor; WAIT and REJECTED can never purchase.
  */
 export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Promise<RuntimeHandle> {
-    if (!input.symbol || !input.currency) throw new Error('SYMBOL_AND_CURRENCY_REQUIRED');
-    const contracts = await discoverContractsForSymbol(input.api, input.symbol);
+    if (!input.currency) throw new Error('CURRENCY_REQUIRED');
+    const requestedSymbols = [...new Set((input.symbols?.length ? input.symbols : input.symbol ? [input.symbol] : [])
+        .filter(symbol => /^[A-Za-z0-9_]{2,30}$/.test(symbol)))];
+    if (!requestedSymbols.length) throw new Error('NO_VALID_MARKETS_CONFIGURED');
+
     const { contractType } = evaluateBotStrategy({
-        symbol: input.symbol,
+        symbol: requestedSymbols[0],
         ticks: [],
         config: input.strategy,
         nowSeconds: Date.now() / 1000,
     });
-    if (!isContractAvailable(contracts, contractType)) {
-        throw new Error('CONTRACT_NOT_AVAILABLE_FOR_SELECTED_MARKET');
-    }
+    const discovery = await Promise.all(requestedSymbols.map(async symbol => {
+        try {
+            const contracts = await discoverContractsForSymbol(input.api, symbol);
+            return isContractAvailable(contracts, contractType) ? symbol : null;
+        } catch {
+            return null;
+        }
+    }));
+    const eligibleSymbols = requestedSymbols.filter((_, index) => discovery[index] !== null);
+    if (!eligibleSymbols.length) throw new Error('CONTRACT_NOT_AVAILABLE_FOR_CONFIGURED_MARKETS');
 
     let status: RuntimeStatus = 'STARTING';
     let stopped = false;
     let executing = false;
-    let subscriptionId: string | undefined;
+    const subscriptionIds: string[] = [];
     let tickStream: { unsubscribe: () => void } | undefined;
-    const ticks: StrategyTick[] = [];
+    const ticksBySymbol = new Map<string, StrategyTick[]>(eligibleSymbols.map(symbol => [symbol, []]));
     const setStatus = (next: RuntimeStatus, message: string) => {
         status = next;
         input.onStatus?.(next, message);
@@ -75,60 +88,56 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
     const stop = () => {
         if (stopped) return;
         stopped = true;
-        if (tickStream) tickStream.unsubscribe();
-        if (subscriptionId) void input.api.send({ forget: subscriptionId }).catch(() => undefined);
+        tickStream?.unsubscribe();
+        subscriptionIds.splice(0).forEach(id => {
+            void input.api.send({ forget: id }).catch(() => undefined);
+        });
         setStatus('STOPPED', 'Bot stopped. No new purchases will be initiated.');
     };
     const handleTick = (raw: any) => {
-        if (stopped || raw?.msg_type !== 'tick' || raw?.tick?.symbol !== input.symbol) return;
+        if (stopped || raw?.msg_type !== 'tick' || typeof raw?.tick?.symbol !== 'string') return;
+        const symbol = raw.tick.symbol as string;
+        const symbolTicks = ticksBySymbol.get(symbol);
+        if (!symbolTicks) return;
         const epoch = Number(raw.tick.epoch);
-        const quote = toDecimalString(raw.tick.quote, input.precision);
+        const precision = input.precisionBySymbol?.[symbol] ?? input.precision ?? 2;
+        const quote = toDecimalString(raw.tick.quote, precision);
         if (!Number.isFinite(epoch) || !quote) return;
-        const previous = ticks[ticks.length - 1];
+        const previous = symbolTicks[symbolTicks.length - 1];
         if (previous && epoch <= previous.epoch) return;
-        const digit = extractDigit(quote, input.precision);
+        const digit = extractDigit(quote, precision);
         if (digit === null) return;
-        ticks.push({ symbol: input.symbol, quote, epoch, digit });
-        if (ticks.length > 200) ticks.splice(0, ticks.length - 200);
+        symbolTicks.push({ symbol, quote, epoch, digit });
+        if (symbolTicks.length > 200) symbolTicks.splice(0, symbolTicks.length - 200);
         if (executing) return;
 
-        const decision = evaluateBotStrategy({
-            symbol: input.symbol,
-            ticks,
-            config: input.strategy,
-        });
+        const decision = evaluateBotStrategy({ symbol, ticks: symbolTicks, config: input.strategy });
         input.onDecision?.(decision);
         if (decision.decision !== 'READY' || !decision.opportunityKey) return;
 
         const baseRisk = input.getRiskContext ? input.getRiskContext() : input.risk;
-        const risk: ExecutionRiskContext = {
-            ...baseRisk,
-            strategyDecision: decision.decision,
-            lastTickEpoch: epoch,
-        };
+        const risk: ExecutionRiskContext = { ...baseRisk, strategyDecision: decision.decision, lastTickEpoch: epoch };
         executing = true;
         setStatus('EXECUTING', 'READY · validating contract, risk and Deriv proposal.');
         void executeDerivContract({
             api: input.api,
-            symbol: input.symbol,
+            symbol,
             contractType: decision.contractType,
             currency: input.currency,
             proposalFields: decision.proposalFields,
             risk,
-            idempotencyKey: input.symbol + ':' + decision.opportunityKey,
+            idempotencyKey: symbol + ':' + decision.opportunityKey,
             shouldContinue: () => !stopped,
             onPurchased: purchase => input.onPurchased?.(purchase),
         }).then(result => {
             input.onSettled?.(result);
             executing = false;
-            if (!stopped) setStatus('RUNNING', 'Settlement verified. Waiting for the next independent opportunity.');
+            if (!stopped) setStatus('RUNNING', 'Settlement verified. Monitoring eligible markets for the next opportunity.');
         }).catch(error => {
             executing = false;
             const reason = error instanceof Error ? error : new Error('DERIV_EXECUTION_FAILED');
             input.onError?.(reason);
-            // A rejected proposal is safe to wait on. Unknown purchase or
-            // settlement state is not: stop and require reconciliation.
-            if (/PURCHASE_RESULT_UNCONFIRMED|SETTLEMENT_MONITOR_TIMEOUT|SETTLEMENT_MONITOR_FAILED/.test(reason.message)) {
+            if (/PURCHASE_RESULT_UNCONFIRMED|PURCHASE_OUTCOME_UNKNOWN|SETTLEMENT_MONITOR_TIMEOUT|SETTLEMENT_MONITOR_FAILED/.test(reason.message)) {
                 stop();
                 setStatus('PAUSED_ERROR', reason.message + ' Reconcile the Deriv account before restarting.');
             } else if (!stopped) {
@@ -138,14 +147,30 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
     };
 
     tickStream = input.api.onMessage().subscribe(handleTick);
-    const response = await input.api.send({ ticks: input.symbol, subscribe: 1 });
-    if (response?.error) {
+    const subscriptionResults = await Promise.all(eligibleSymbols.map(async symbol => {
+        try {
+            const response = await input.api.send({ ticks: symbol, subscribe: 1 });
+            if (response?.error) return null;
+            const id = response?.subscription?.id;
+            if (typeof id === 'string') subscriptionIds.push(id);
+            handleTick(response);
+            return symbol;
+        } catch {
+            return null;
+        }
+    }));
+    if (!subscriptionResults.some(Boolean)) {
         tickStream.unsubscribe();
-        throw new Error(String(response.error.message || 'TICK_SUBSCRIPTION_FAILED'));
+        throw new Error('NO_MARKET_TICK_SUBSCRIPTIONS_AVAILABLE');
     }
-    subscriptionId = response?.subscription?.id;
-    handleTick(response);
-    if (stopped && subscriptionId) void input.api.send({ forget: subscriptionId }).catch(() => undefined);
-    if (!stopped) setStatus('RUNNING', 'Connected to live Deriv ticks. Waiting for a validated strategy opportunity.');
-    return { stop, getStatus: () => status, getTicks: () => [...ticks] };
+    if (stopped) {
+        subscriptionIds.splice(0).forEach(id => void input.api.send({ forget: id }).catch(() => undefined));
+    } else {
+        setStatus('RUNNING', 'Connected to live Deriv ticks across eligible Volatility markets. Waiting for a validated opportunity.');
+    }
+    return {
+        stop,
+        getStatus: () => status,
+        getTicks: () => Array.from(ticksBySymbol.values()).flat(),
+    };
 }
