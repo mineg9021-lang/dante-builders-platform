@@ -8,7 +8,7 @@ import DigitMatchesScanner from './digit-matches-scanner';
 import OverTwoTerminal from './over-two-terminal';
 import './dante-landing.scss';
 
-type Workspace = 'home' | 'parity' | 'matches' | 'over2' | 'xml';
+type Workspace = 'home' | 'parity' | 'over2';
 
 const XML_ENTITIES: Record<string, string> = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' };
 const escapeXml = (value: string) => value.replace(/[<>&"']/g, char => XML_ENTITIES[char] || char);
@@ -251,24 +251,21 @@ const DashboardComponent = observer(() => {
                 <nav aria-label="Product workspaces">
                     <button className={workspace === 'home' ? 'active' : ''} onClick={() => setWorkspace('home')}>Home</button>
                     <button className={workspace === 'parity' ? 'active' : ''} onClick={() => setWorkspace('parity')}>Parity Bot</button>
-                    <button className={workspace === 'matches' ? 'active' : ''} onClick={() => setWorkspace('matches')}>Matches Scanner</button>
                     <button className={workspace === 'over2' ? 'active' : ''} onClick={() => setWorkspace('over2')}>Over 2 Bot</button>
-                    <button className={workspace === 'xml' ? 'active' : ''} onClick={() => setWorkspace('xml')}>XML Generator</button>
+                    
                 </nav>
                 <span className={client.is_logged_in ? 'connection connected' : 'connection'}>{client.is_logged_in ? 'TRADING SESSION CONNECTED' : 'TRADING SESSION REQUIRED'}</span>
             </header>
 
             {workspace === 'home' && <section className="dante-home">
                 <div className="dante-hero">
-                    <div><span className="dante-kicker">INDEPENDENT MARKET TECHNOLOGY</span><h1>Build with intelligence.<br/><em>Operate with control.</em></h1><p>Dante Builders brings four independent workspaces into one clean platform. Each product has its own strategy, controls and validation.</p><div className="dante-hero-actions"><button className="primary" onClick={() => setWorkspace('parity')}>Open Parity Bot</button><button className="secondary" onClick={() => setWorkspace('matches')}>Explore Market Scanner</button></div></div>
+                    <div><span className="dante-kicker">INDEPENDENT MARKET TECHNOLOGY</span><h1>Build with intelligence.<br/><em>Operate with control.</em></h1><p>Dante Builders connects specialist trading workspaces through a shared Deriv account. Choose a bot to configure its contract, risk limits and execution mode.</p><div className="dante-hero-actions"><button className="primary" onClick={() => setWorkspace('parity')}>Open Parity Bot</button><button className="secondary" onClick={() => setWorkspace('over2')}>Open Over 2 Bot</button></div></div>
                     <div className="dante-hero-art" aria-hidden="true"><div className="orbit orbit-one"></div><div className="orbit orbit-two"></div><div className="core">D<span>B</span></div><div className="float-chip chip-b">ENGINE ACTIVE</div></div>
                 </div>
-                <div className="dante-products-heading"><span>BOT LIBRARY</span><h2>Choose a specialist bot</h2><p>Each bot opens in its own workspace with independent settings and controls.</p></div>
+                <div className="dante-products-heading"><span>BOT LIBRARY</span><h2>Choose a specialist bot</h2><p>Only currently implemented specialist workspaces are shown here.</p></div>
                 <div className="dante-product-grid">
-                    <button className="product-tile parity-tile" onClick={() => setWorkspace('parity')}><span className="tile-icon">±</span><strong>Even / Odd Parity Bot</strong><p>Market sampling, parity analysis, risk gates and guarded execution.</p><b>Open workspace <i>↗</i></b></button>
-                    <button className="product-tile scanner-tile" onClick={() => setWorkspace('matches')}><span className="tile-icon">◎</span><strong>Digit Intelligence Matches Scanner</strong><p>Live tick collection, precision-aware digit analysis and Matches/Differs evidence.</p><b>Open scanner <i>↗</i></b></button>
-                    <button className="product-tile over2-tile" onClick={() => setWorkspace('over2')}><span className="tile-icon">2+</span><strong>Over 2 Specialist Bot</strong><p>18-stage Over 2 analysis, hidden 13-market scan, barrier validation and guarded execution.</p><b>Open bot dashboard <i>↗</i></b></button>
-                    <button className="product-tile xml-tile" onClick={() => setWorkspace('xml')}><span className="tile-icon">&lt;/&gt;</span><strong>AI Deriv XML Bots Generator</strong><p>Generate a supported DBot strategy, validate required sections and download XML.</p><b>Open generator <i>↗</i></b></button>
+                    <button className="product-tile parity-tile" onClick={() => setWorkspace('parity')}><span className="tile-icon">±</span><strong>Even / Odd Parity Bot</strong><p>Independent parity contract workspace with its existing strategy and execution controls.</p><b>Open workspace <i>↗</i></b></button>
+                    <button className="product-tile over2-tile" onClick={() => setWorkspace('over2')}><span className="tile-icon">2+</span><strong>Over 2 Specialist Bot</strong><p>Digit Over 2 specialist workspace with its existing market discovery and execution safeguards.</p><b>Open bot dashboard <i>↗</i></b></button>
                 </div>
             </section>}
 
