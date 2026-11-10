@@ -274,32 +274,11 @@ const DashboardComponent = observer(() => {
                 {client.is_logged_in ? <EvenOddTerminal /> : <div className="connect-panel"><h2>Connect your Deriv account</h2><p>Authentication is required for account balance, proposals, purchases and settlement monitoring.</p><button className="primary" onClick={connectDeriv}>Connect Deriv securely</button>{loginError && <p role="alert">{loginError}</p>}</div>}
             </section>}
 
-            {workspace === 'matches' && <section className="dante-workspace">
-                <div className="workspace-heading"><div><span>MARKET INTELLIGENCE ENGINE</span><h1>Digit Intelligence Matches Scanner AI</h1><p>Live market feed, 0–9 distribution, rolling sample analysis and evidence-led Matches/Differs candidates.</p></div><button onClick={() => setWorkspace('home')}>← All products</button></div>
-                <DigitMatchesScanner />
-            </section>}
-
             {workspace === 'over2' && <section className="dante-workspace">
                 <div className="workspace-heading"><div><span>18-LAYER STRATEGY ENGINE</span><h1>Over 2 Specialist Bot</h1><p>Independent Over 2 contract strategy with hidden Volatility market discovery, entry validation and risk controls.</p></div><button onClick={() => setWorkspace('home')}>← Bot library</button></div>
                 {client.is_logged_in ? <OverTwoTerminal /> : <div className="connect-panel"><h2>Connect your Deriv account</h2><p>Deriv authorisation is required for account balance, proposals, purchases and verified settlement.</p><button className="primary" onClick={connectDeriv}>Connect Deriv securely</button>{loginError && <p role="alert">{loginError}</p>}</div>}
             </section>}
 
-            {workspace === 'xml' && <section className="dante-workspace xml-workspace">
-                <div className="workspace-heading"><div><span>DBOT XML ENGINE</span><h1>AI Deriv XML Bots Generator</h1><p>Describe a supported Even/Odd strategy. The local generator builds real DBot blocks, checks the required sections and exports an XML file.</p></div><button onClick={() => setWorkspace('home')}>← All products</button></div>
-                <div className="generator-panel">
-                    <label>Describe the bot strategy<textarea value={request} onChange={event => setRequest(event.target.value)} placeholder="Describe the market, contract, stake, duration, entry logic and exit rules you want…"></textarea></label>
-                    <div className="generator-fields">
-                        <label>Market<select value={symbol} onChange={event => setSymbol(event.target.value)}>{['R_10','R_25','R_50','R_75','R_100','1HZ10V','1HZ15V','1HZ25V','1HZ30V','1HZ50V','1HZ75V','1HZ90V','1HZ100V'].map(value => <option key={value}>{value}</option>)}</select></label>
-                        <label>Contract<select value={side} onChange={event => setSide(event.target.value as 'DIGITEVEN' | 'DIGITODD')}><option value="DIGITEVEN">Even</option><option value="DIGITODD">Odd</option></select></label>
-                        <label>Stake<input type="number" min="0.35" step="0.01" value={stake} onChange={event => setStake(event.target.value)}/></label>
-                        <label>Duration (ticks)<input type="number" min="1" max="10" step="1" value={duration} onChange={event => setDuration(event.target.value)}/></label>
-                    </div>
-                    <button className="primary generate-button" onClick={generateXml} disabled={generating}>{generating ? 'Generating…' : 'Generate and validate XML'}</button>
-                    <p className="generator-note">{aiStatus} Current local template supports Even/Odd digit contracts; unsupported contract requests are rejected rather than converted. Sell logic safely holds to expiry unless a custom exit rule is requested.</p>
-                    {validation && <div className={validation.valid ? 'validation-result valid' : 'validation-result invalid'}><strong>{validation.valid ? 'XML STRUCTURAL VALIDATION PASSED' : 'VALIDATION NEEDS ATTENTION'}</strong>{validation.errors.map(error => <p key={error}>{error}</p>)}{validation.valid && <p>Trade Parameters · Run Once at Start · Purchase Conditions · Sell Conditions (hold to expiry by default) · Restart Trading Conditions. Import into DBot to complete compatibility verification.</p>}</div>}
-                    {generatedXml && <div className="xml-output"><div><strong>Generated DBot XML</strong><button onClick={downloadXml} disabled={!validation?.valid}>Download XML</button></div><pre>{generatedXml}</pre></div>}
-                </div>
-            </section>}
             <footer className="dante-footer"><span>DANTE BUILDERS</span><span>Independent tools · Evidence before execution</span></footer>
         </main>
     );
