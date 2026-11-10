@@ -8,6 +8,7 @@ import { startStrategyRuntime, type RuntimeHandle, type RuntimeStatus } from '@/
 import type { DerivTradingApi, ExecutionRiskContext } from '@/trading-engine/execution';
 import { getImplementedStrategyIds, type BotStrategyId, type StrategyDecisionResult } from '@/trading-engine/strategy-adapters';
 import { DANTE_VOLATILITY_SYMBOLS } from './market-universe';
+import { appendDanteJournalEvent, loadDanteJournal } from '@/services/dante-journal.service';
 import './dante-landing.scss';
 
 type BotDefinition = { id: BotStrategyId; title: string; contract: string; description: string; group: string; icon: string };
@@ -50,6 +51,8 @@ const DashboardComponent = () => {
  const [wins,setWins] = useState(0);
  const [losses,setLosses] = useState(0);
  const [loginError,setLoginError] = useState('');
+ const [journalError,setJournalError] = useState('');
+ const runtimeStatusRef = useRef<RuntimeStatus>('STOPPED');
  const runtimeRef = useRef<RuntimeHandle|null>(null);
  const startAttemptRef = useRef(0);
  const liveConfirmedRef = useRef(false);
@@ -63,7 +66,30 @@ const DashboardComponent = () => {
  const accountType = authData?.is_virtual ? 'DEMO ACCOUNT' : authData ? 'REAL ACCOUNT' : 'NOT CONNECTED';
  const winRate = wins + losses ? Math.round(wins/(wins+losses)*100) : 0;
 
- useEffect(() => () => { startAttemptRef.current += 1; runtimeRef.current?.stop(); runtimeRef.current=null; }, []);
+ useEffect(() => {
+  let active=true;
+  void loadDanteJournal().then(events=>{
+   if(!active)return;
+   const rows=new Map<number,TradeRow>();
+   for(const event of [...events].reverse()){
+    if(!event.contract_id)continue;
+    const data=event.event_data||{};
+    const contractId=Number(event.contract_id);
+    if(!Number.isSafeInteger(contractId)||contractId<=0)continue;
+    if(event.event_type==='PURCHASED'){
+     rows.set(contractId,{id:String(contractId),contractId,contractType:String(data.contractType||'UNKNOWN'),symbol:String(data.symbol||'—'),status:'OPEN',time:new Date(event.created_at).getTime()});
+    }else if(event.event_type==='SETTLED'){
+     const previous=rows.get(contractId);
+     const settlement=data.settlement;
+     if(previous&&['WON','LOST','VOID'].includes(String(settlement))){
+      rows.set(contractId,{...previous,status:settlement as TradeRow['status'],profit:Number(data.profit),time:new Date(event.created_at).getTime()});
+     }
+    }
+   }
+   setTrades([...rows.values()].sort((a,b)=>b.time-a.time).slice(0,50));
+  }).catch(()=>{if(active)setJournalError('Persistent journal is temporarily unavailable; this session will still show local events.');});
+  return ()=>{active=false;startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;};
+ }, []);
  useEffect(() => { if(mode!=='live'){setLiveConfirmed(false);liveConfirmedRef.current=false;} },[mode]);
 
  const connectDeriv = async () => {
@@ -96,17 +122,40 @@ const DashboardComponent = () => {
     api:api_base.api as unknown as DerivTradingApi,symbols,precisionBySymbol,
     strategy:{id:selectedBot,minSample:12,maxSample:40,runLength:Number(runLength),barrier:Number(barrier),duration:ticks,durationUnit:'t'},
     currency,risk:baseRisk,getRiskContext:buildRisk,shouldContinue:()=>startAttemptRef.current===attempt,
-    onStatus:(status,message)=>{setRuntimeStatus(status);setRuntimeMessage(message);},
-    onDecision:result=>setDecision(result),
-    onPurchased:purchase=>setTrades(previous=>[{id:String(purchase.contractId),contractId:purchase.contractId,contractType:purchase.contractType,symbol:purchase.symbol,status:'OPEN' as const,time:Date.now()},...previous].slice(0,30)),
+    onStatus:(status,message)=>{
+     setRuntimeStatus(status);setRuntimeMessage(message);
+     if(runtimeStatusRef.current!==status){
+      runtimeStatusRef.current=status;
+      void appendDanteJournalEvent({botKey:selectedBot,derivAccountId:accountId,eventType:'RUNTIME_STATUS',eventData:{status,message}})
+       .catch(()=>setJournalError('A runtime status could not be saved to the persistent journal.'));
+     }
+    },
+    onDecision:result=>{
+     setDecision(result);
+     if(result.decision==='READY'){
+      void appendDanteJournalEvent({botKey:selectedBot,derivAccountId:accountId,eventType:'DECISION',eventData:{decision:'READY',contractType:result.contractType,evidenceScore:result.evidenceScore,sampleSize:result.sampleSize,reason:result.reason}})
+       .catch(()=>setJournalError('A strategy decision could not be saved to the persistent journal.'));
+     }
+    },
+    onPurchased:purchase=>{
+     setTrades(previous=>[{id:String(purchase.contractId),contractId:purchase.contractId,contractType:purchase.contractType,symbol:purchase.symbol,status:'OPEN' as const,time:Date.now()},...previous].slice(0,50));
+     void appendDanteJournalEvent({botKey:selectedBot,derivAccountId:accountId,contractId:purchase.contractId,eventType:'PURCHASED',eventData:{contractType:purchase.contractType,symbol:purchase.symbol,buyPrice:purchase.buyPrice}})
+      .catch(()=>setJournalError('A purchased contract could not be saved to the persistent journal.'));
+    },
     onSettled:result=>{
      pnlRef.current+=result.profit;tradeCountRef.current+=1;setSessionPnl(pnlRef.current);
      if(result.settlement==='WON')setWins(value=>value+1);
      if(result.settlement==='LOST')setLosses(value=>value+1);
      setTrades(previous=>previous.map(row=>row.contractId===result.contractId?{...row,status:result.settlement,profit:result.profit}:row));
+     void appendDanteJournalEvent({botKey:selectedBot,derivAccountId:accountId,contractId:result.contractId,eventType:'SETTLED',eventData:{settlement:result.settlement,profit:result.profit,buyPrice:result.buyPrice,settledAt:result.settledAt}})
+      .catch(()=>setJournalError('A contract settlement could not be saved to the persistent journal.'));
      if(pnlRef.current<=-sl||pnlRef.current>=tp||tradeCountRef.current>=limit){runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setRuntimeMessage('Session limit reached. The bot has stopped and settlement is recorded.');}
     },
-    onError:error=>setRuntimeMessage(error.message),
+    onError:error=>{
+    setRuntimeMessage(error.message);
+    void appendDanteJournalEvent({botKey:selectedBot,derivAccountId:accountId,eventType:'RUNTIME_STATUS',eventData:{status:'PAUSED_ERROR',message:error.message}})
+     .catch(()=>setJournalError('The runtime error could not be saved to the persistent journal.'));
+   },
    });
    if(startAttemptRef.current!==attempt){handle.stop();return;}
    runtimeRef.current=handle;
@@ -157,7 +206,8 @@ const DashboardComponent = () => {
    </div>
   </section>
   <section className="dante-journal" id="trade-journal">
-   <div className="dante-section-heading compact"><div><span className="dante-eyebrow">VERIFIED CONTRACT EVENTS</span><h3>Session trade journal</h3></div><span>{trades.length} events</span></div>
+   <div className="dante-section-heading compact"><div><span className="dante-eyebrow">VERIFIED CONTRACT EVENTS</span><h3>Trade journal</h3></div><span>{trades.length} contracts · persistent</span></div>
+   {journalError&&<p className="runtime-message" role="status">{journalError}</p>}
    {currentRows.length?<div className="dante-table-wrap"><table><thead><tr><th>Contract</th><th>Market</th><th>Contract ID</th><th>Status</th><th>Profit / loss</th></tr></thead><tbody>{currentRows.map(row=><tr key={row.id}><td>{row.contractType}</td><td>{row.symbol}</td><td>{row.contractId}</td><td><span className={'trade-status '+row.status.toLowerCase()}>{row.status}</span></td><td>{row.profit===undefined?'Pending settlement':row.profit.toFixed(2)+' '+currency}</td></tr>)}</tbody></table></div>:<div className="dante-empty-journal">No Deriv contracts have been purchased in this session.</div>}
   </section>
   <footer className="dante-footer"><span>DANTE BUILDERS</span><span>Deriv OAuth · Contract-aware execution · User-controlled risk</span></footer>
