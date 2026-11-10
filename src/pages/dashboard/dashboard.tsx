@@ -253,7 +253,7 @@ const DashboardComponent = observer(() => {
 
             {workspace === 'matches' && <section className="dante-workspace">
                 <div className="workspace-heading"><div><span>MARKET INTELLIGENCE ENGINE</span><h1>Digit Intelligence Matches Scanner AI</h1><p>Live market feed, 0–9 distribution, rolling sample analysis and evidence-led Matches/Differs candidates.</p></div><button onClick={() => setWorkspace('home')}>← All products</button></div>
-                {client.is_logged_in ? <DigitMatchesScanner /> : <div className="connect-panel"><h2>Connect to Deriv market data</h2><p>Connect a Deriv session to start the scanner and retrieve market ticks.</p><button className="primary" onClick={connectDeriv}>Connect Deriv securely</button>{loginError && <p role="alert">{loginError}</p>}</div>}
+                <DigitMatchesScanner />
             </section>}
 
             {workspace === 'xml' && <section className="dante-workspace xml-workspace">
