@@ -130,7 +130,7 @@ const EvenOddTerminal = () => {
         return active.filter((item: any) => {
             const name = String(item.display_name || item.symbol_display_name || item.underlying_symbol_name || '');
             const symbol = String(item.symbol || item.underlying_symbol || '');
-            return /volatility/i.test(name) && isDanteVolatilitySymbol(symbol);
+            return isDanteVolatilitySymbol(symbol);
         });
     }, [connectionStatus, isAuthorized, lastUpdated]);
 
