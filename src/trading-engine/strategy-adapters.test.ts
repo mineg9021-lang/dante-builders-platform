@@ -63,3 +63,71 @@ describe('specialist strategy adapters', () => {
         expect(result.decision).toBe('WAIT');
     });
 });
+
+    it('keeps Even and Odd as separate contract-aware parity robots', () => {
+        const parityTicks = (targetEven: boolean): StrategyTick[] =>
+            Array.from({ length: 40 }, (_, index) => {
+                const withinHalf = index % 20;
+                const matchesParity = withinHalf < 12;
+                const isEven = matchesParity ? targetEven : !targetEven;
+                const digit = isEven ? 2 : 1;
+                return {
+                    symbol: 'R_100',
+                    quote: `100.0${digit}`,
+                    epoch: 1_800_000_000 - 39 + index,
+                    digit,
+                };
+            });
+
+        const even = evaluateBotStrategy({
+            symbol: 'R_100',
+            ticks: parityTicks(true),
+            config: { id: 'EVEN', minSample: 40, maxSample: 40 },
+            nowSeconds: 1_800_000_000,
+        });
+        const odd = evaluateBotStrategy({
+            symbol: 'R_100',
+            ticks: parityTicks(false),
+            config: { id: 'ODD', minSample: 40, maxSample: 40 },
+            nowSeconds: 1_800_000_000,
+        });
+
+        expect(even.decision).toBe('READY');
+        expect(even.contractType).toBe('DIGITEVEN');
+        expect(even.proposalFields).not.toHaveProperty('barrier');
+        expect(odd.decision).toBe('READY');
+        expect(odd.contractType).toBe('DIGITODD');
+        expect(odd.proposalFields).not.toHaveProperty('barrier');
+    });
+
+    it('keeps parity robots in WAIT when the full-window or split-window evidence is weak', () => {
+        const weakParityTicks: StrategyTick[] = Array.from({ length: 40 }, (_, index) => {
+            const isEven = index < 20 ? index < 11 : index < 31;
+            const digit = isEven ? 2 : 1;
+            return {
+                symbol: 'R_100',
+                quote: `100.0${digit}`,
+                epoch: 1_800_000_000 - 39 + index,
+                digit,
+            };
+        });
+
+        const even = evaluateBotStrategy({
+            symbol: 'R_100',
+            ticks: weakParityTicks,
+            config: { id: 'EVEN', minSample: 40, maxSample: 40 },
+            nowSeconds: 1_800_000_000,
+        });
+        const odd = evaluateBotStrategy({
+            symbol: 'R_100',
+            ticks: weakParityTicks,
+            config: { id: 'ODD', minSample: 40, maxSample: 40 },
+            nowSeconds: 1_800_000_000,
+        });
+
+        expect(even.decision).toBe('WAIT');
+        expect(odd.decision).toBe('WAIT');
+        expect(even.contractType).toBe('DIGITEVEN');
+        expect(odd.contractType).toBe('DIGITODD');
+    });
+
