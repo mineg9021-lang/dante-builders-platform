@@ -241,7 +241,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
     }
     if (stopped) {
         subscriptionIds.splice(0).forEach(id => void Promise.resolve(input.api.send({ forget: id })).catch(() => undefined));
-    } else {
+    } else if (!executing) {
         setStatus('RUNNING', 'Connected to live Deriv ticks across eligible Volatility markets. Waiting for a validated opportunity.');
     }
     return {
