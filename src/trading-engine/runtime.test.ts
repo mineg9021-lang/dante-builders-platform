@@ -167,7 +167,8 @@ describe('strategy runtime safety', () => {
                 } });
             }
             expect(runtime.getTicks()).toHaveLength(10);
-            expect(onDecision).toHaveBeenCalledTimes(10);
+            // Ten tick decisions plus the final REJECTED decision emitted when the budget expires.
+            expect(onDecision).toHaveBeenCalledTimes(11);
             expect(runtime.getStatus()).toBe('PAUSED_ERROR');
             expect(onDecision).toHaveBeenLastCalledWith(expect.objectContaining({
                 decision: 'REJECTED',
