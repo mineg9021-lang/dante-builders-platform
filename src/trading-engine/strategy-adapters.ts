@@ -40,8 +40,8 @@ export type StrategyDecisionResult = {
 };
 
 const CONTRACT_BY_STRATEGY: Record<BotStrategyId, DerivContractType> = {
-    RISE: 'PUT',
-    FALL: 'CALL',
+    RISE: 'CALL',
+    FALL: 'PUT',
     ONLY_UP: 'RUNHIGH',
     ONLY_DOWN: 'RUNLOW',
     ASIAN_UP: 'ASIANU',
