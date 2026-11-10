@@ -88,12 +88,18 @@ const makeParityXml = (symbol: string, stake: number, duration: number, side: 'D
 
 const validateParityXml = (xml: string) => {
     const parsed = new DOMParser().parseFromString(xml, 'application/xml');
-    if (parsed.querySelector('parsererror')) return { valid: false, errors: ['XML is not well-formed.'] };
+    if (parsed.getElementsByTagName('parsererror').length > 0) return { valid: false, errors: ['XML is not well-formed.'] };
+    const blocks = Array.from(parsed.getElementsByTagName('block'));
+    const hasBlock = (type: string) => blocks.some(block => block.getAttribute('type') === type);
     const required = ['trade_definition', 'before_purchase', 'during_purchase', 'after_purchase'];
-    const missing = required.filter(type => !parsed.querySelector(`block[type="${type}"]`));
-    if (!parsed.querySelector('block[type="trade_definition"] statement[name="INITIALIZATION"] block')) {
-        missing.push('Run Once at Start initialization');
-    }
+    const missing = required.filter(type => !hasBlock(type));
+    const tradeDefinition = blocks.find(block => block.getAttribute('type') === 'trade_definition');
+    const initialized = tradeDefinition
+        ? Array.from(tradeDefinition.getElementsByTagName('statement')).some(statement =>
+              statement.getAttribute('name') === 'INITIALIZATION' && statement.getElementsByTagName('block').length > 0
+          )
+        : false;
+    if (!initialized) missing.push('Run Once at Start initialization');
     return { valid: missing.length === 0, errors: missing.map(item => `Missing required section: ${item}`) };
 };
 
