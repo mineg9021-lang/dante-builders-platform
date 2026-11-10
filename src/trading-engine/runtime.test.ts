@@ -114,4 +114,65 @@ describe('strategy runtime safety', () => {
         }
     });
 
+
+    it('applies the tick budget independently to each subscribed market', async () => {
+        jest.useFakeTimers();
+        try {
+            let listener: ((message: any) => void) | undefined;
+            const send = jest.fn()
+                .mockResolvedValueOnce({ contracts_for: { available: [{ contract_type: 'DIGITEVEN' }] } })
+                .mockResolvedValueOnce({ contracts_for: { available: [{ contract_type: 'DIGITEVEN' }] } })
+                .mockResolvedValueOnce({ subscription: { id: 'r100-sub' } })
+                .mockResolvedValueOnce({ subscription: { id: 'r50-sub' } });
+            const onDecision = jest.fn();
+            const api: DerivTradingApi = {
+                send,
+                onMessage: () => ({ subscribe: callback => {
+                    listener = callback;
+                    return { unsubscribe: jest.fn() };
+                } }),
+            };
+            const runtime = await startStrategyRuntime({
+                api,
+                symbols: ['R_100', 'R_50'],
+                precision: 2,
+                strategy: { id: 'EVEN' },
+                currency: 'USD',
+                analysisMaxTicks: 5,
+                analysisMaxDurationMs: 60000,
+                risk: {
+                    mode: 'demo', authorized: true, isVirtual: true, liveTradingConfirmed: false,
+                    stake: 1, balance: 100, maxStake: 5, maxStakePercent: 2,
+                    sessionPnl: 0, stopLoss: 10, takeProfit: 10,
+                    tradesThisSession: 0, maxTradesPerSession: 10,
+                },
+                onDecision,
+            });
+            const epoch = Math.floor(Date.now() / 1000);
+            for (let index = 0; index < 5; index += 1) {
+                listener?.({ msg_type: 'tick', tick: {
+                    symbol: 'R_100', quote: (100 + index / 100).toFixed(2), epoch: epoch + index,
+                } });
+            }
+            expect(runtime.getStatus()).toBe('RUNNING');
+            expect(onDecision).not.toHaveBeenLastCalledWith(expect.objectContaining({
+                reason: 'ANALYSIS_TICK_LIMIT_REACHED',
+            }));
+
+            for (let index = 0; index < 5; index += 1) {
+                listener?.({ msg_type: 'tick', tick: {
+                    symbol: 'R_50', quote: (200 + index / 100).toFixed(2), epoch: epoch + index,
+                } });
+            }
+            expect(runtime.getStatus()).toBe('PAUSED_ERROR');
+            expect(onDecision).toHaveBeenLastCalledWith(expect.objectContaining({
+                decision: 'REJECTED',
+                reason: 'ANALYSIS_TICK_LIMIT_REACHED',
+            }));
+            expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ proposal: 1 }));
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
 });
