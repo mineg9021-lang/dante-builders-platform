@@ -1,12 +1,12 @@
 # Dante Builders
 
-Dante Builders is an independent multi-workspace market-technology platform. It has its own identity, navigation, Dante account layer, bot workspaces, activity timeline and journal. Deriv is an external market-data and execution provider connected through its API; Dante Builders is not a Deriv-branded interface.
+Dante Builders is an independent market-technology platform with its own identity, navigation, Dante account layer, individual specialist Robots, activity timeline and journal. Deriv is an external market-data and execution provider connected through its API; Dante Builders is not a Deriv-branded interface.
 
-## Unified bot workspaces
+## Specialist Robot fleet
 
-The dashboard presents one bot library backed by shared platform infrastructure, rather than three separate legacy products.
+The dashboard presents individual selectable Robots. Each Robot has its own strategy identity and analysis adapter, while all executable Robots use the same shared 18-layer engine as a mandatory pre-execution gate. Robot labels and artwork are presentation; eligibility, contract validation, authorization and risk decisions are enforced by the runtime.
 
-| Workspace | Strategy families | Status |
+| Robot strategy | Contract family | Runtime status |
 |---|---|---|
 | Parity AI | Even, Odd | Available in shared strategy runtime |
 | Flash AI | Digit Matches, Digit Differs | Available in shared strategy runtime |
@@ -17,11 +17,13 @@ The dashboard presents one bot library backed by shared platform infrastructure,
 | Touch / No Touch AI | Touch, No Touch | In development; execution disabled |
 | In / Out AI | In, Out | In development; execution disabled |
 
-The old independent parity/scanner/XML product descriptions are not the current dashboard architecture. Legacy source modules may remain in the repository without being separate top-level products.
+Even and Odd parity are individual selectable Robots and pass through the same 18-layer engine as every other executable Robot. The previous independent parity/scanner/XML product descriptions are not the current dashboard architecture. Legacy source modules may remain in the repository without being separate top-level products.
 
-## Shared market and trading infrastructure
+## Shared 18-layer market and trading infrastructure
 
-The implemented strategy runtime includes:
+Every executable Robot is gated by the same ordered validation engine before a purchase can proceed. The 18 checks cover market scope, tick schema, quote precision, decimal integrity, timestamp freshness, sequence order, duplicate detection, digit extraction, sample window, minimum sample, market stability, pattern analysis, strategy evidence, contract mapping, contract availability, opportunity identity, account authorization and risk permission.
+
+The shared strategy runtime includes:
 
 - Deriv-authorized account connection and account selection, including Demo and Real account types supplied by Deriv.
 - A configured Volatility market universe, dynamic contract availability discovery through `contracts_for`, and live tick subscriptions.
@@ -35,7 +37,7 @@ The dashboard prevents a second active runtime from being started from the same 
 
 ### Strategy limitations
 
-Current strategy adapters use deterministic rules and observed market data. They are not trained machine-learning models; evidence scores are not calibrated probabilities or guarantees about future ticks. Each strategy must pass its own signal, contract and risk gates before a purchase.
+Current strategy adapters use deterministic rules and observed market data. They are not trained machine-learning models; evidence scores are not calibrated probabilities or guarantees about future ticks. Each strategy must pass its own signal checks and the shared 18-layer market, contract, authorization and risk gates before a purchase. The shared engine is a safety and validation pipeline, not a promise of predictive accuracy or profitable outcomes.
 
 Touch / No Touch and In / Out are planned workspaces only. Do not describe them as executable until their adapters, proposal mapping, risk checks and settlement tests are complete.
 
