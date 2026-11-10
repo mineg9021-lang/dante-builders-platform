@@ -72,6 +72,7 @@ const DashboardComponent = () => {
  const startAttemptRef = useRef(0);
  const liveConfirmedRef = useRef(false);
  const pnlRef = useRef(0);
+ const lastDecisionLogKeyRef = useRef('');
  const tradeCountRef = useRef(0);
  const bot = BOT_BY_ID.get(selectedBot) || BOT_LIBRARY[0];
  const isDerivConnected = isAuthorized && connectionStatus === 'opened';
@@ -172,9 +173,11 @@ const DashboardComponent = () => {
     },
     onDecision:result=>{
      setDecision(result);
-     if(result.decision==='READY'){
-      void appendDanteJournalEvent({botKey:selectedBot,derivAccountId:accountId,eventType:'DECISION',eventData:{decision:'READY',contractType:result.contractType,evidenceScore:result.evidenceScore,sampleSize:result.sampleSize,reason:result.reason}})
-       .catch(()=>setJournalError('A strategy decision could not be saved to the persistent journal.'));
+     const decisionKey=[result.decision,result.reason,result.contractType].join(':');
+     if(lastDecisionLogKeyRef.current!==decisionKey){
+      lastDecisionLogKeyRef.current=decisionKey;
+      void appendDanteJournalEvent({botKey:selectedBot,derivAccountId:accountId,eventType:'DECISION',eventData:{decision:result.decision,contractType:result.contractType,evidenceScore:result.evidenceScore,sampleSize:result.sampleSize,reason:result.reason}})
+       .catch(()=>setJournalError('An analysis activity could not be saved to the platform journal.'));
      }
     },
     onPurchased:purchase=>{
