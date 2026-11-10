@@ -36,6 +36,7 @@ export type StrategyDecisionResult = {
     evidenceScore: number;
     reason: string;
     opportunityKey?: string;
+    strategyMetrics?: { evenCount: number; oddCount: number; fullRate: number; firstRate: number; secondRate: number };
 };
 
 const CONTRACT_BY_STRATEGY: Record<BotStrategyId, DerivContractType> = {
@@ -203,14 +204,26 @@ export function evaluateBotStrategy(input: {
     const fullRate = parityRate(digits, even);
     const firstRate = parityRate(first, even);
     const secondRate = parityRate(second, even);
+    const strategyMetrics = {
+        evenCount: digits.filter(digit => digit % 2 === 0).length,
+        oddCount: digits.filter(digit => digit % 2 !== 0).length,
+        fullRate,
+        firstRate,
+        secondRate,
+    };
     if (fullRate < 0.58 || firstRate < 0.52 || secondRate < 0.52) {
-        return { ...wait(id, sample.length, 'Parity frequency and split-window stability thresholds have not passed.'), evidenceScore: Math.round(fullRate * 100) };
+        return {
+            ...wait(id, sample.length, 'Parity frequency and split-window stability thresholds have not passed.'),
+            evidenceScore: Math.round(fullRate * 100),
+            strategyMetrics,
+        };
     }
     return {
         decision: 'READY', contractType: CONTRACT_BY_STRATEGY[id], proposalFields,
         sampleSize: sample.length, evidenceScore: Math.round(fullRate * 100),
         reason: 'Observed parity frequency and both sample-half checks passed; historical frequency does not predict the next tick with certainty.',
         opportunityKey,
+        strategyMetrics,
     };
 }
 
