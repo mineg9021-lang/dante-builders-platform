@@ -184,15 +184,15 @@ const DashboardComponent = observer(() => {
                 } else {
                     setAiStatus(result?.error === 'AI_PROVIDER_NOT_CONFIGURED'
                         ? 'AI provider key is not configured in Netlify yet; local DBot template was used.'
-                        : 'AI service was unavailable; verified local generation was used.');
+                        : 'AI service was unavailable; local DBot template was used.');
                 }
             } catch {
-                setAiStatus('AI endpoint is not reachable yet; verified local generation was used.');
+                setAiStatus('AI endpoint is not reachable yet; local DBot template was used.');
             }
             if (!usedAi) {
                 const normalized = request.toLowerCase();
                 if (/\b(matches?|differs?|over|under|rise|fall)\b/.test(normalized)) {
-                    setValidation({ valid: false, errors: ['This contract type is not yet supported by the verified local XML template. Select an Even or Odd digit contract instead.'] });
+                    setValidation({ valid: false, errors: ['This contract type is not yet supported by the current local XML template. Select an Even or Odd digit contract instead.'] });
                     setAiStatus('Unsupported contract request rejected; no substitute strategy was generated.');
                     setGenerating(false);
                     return;
@@ -207,7 +207,7 @@ const DashboardComponent = observer(() => {
         }
 
         if (!['DIGITEVEN', 'DIGITODD'].includes(resolvedSide)) {
-            setValidation({ valid: false, errors: ['Only Even and Odd digit contracts are currently supported by this verified XML template.'] });
+            setValidation({ valid: false, errors: ['Only Even and Odd digit contracts are currently supported by the local XML template.'] });
             setGenerating(false);
             return;
         }
@@ -260,7 +260,7 @@ const DashboardComponent = observer(() => {
 
             {workspace === 'home' && <section className="dante-home">
                 <div className="dante-hero">
-                    <div><span className="dante-kicker">INDEPENDENT MARKET TECHNOLOGY</span><h1>Build with intelligence.<br/><em>Operate with control.</em></h1><p>Dante Builders brings three focused tools into one clean workspace. Each product has its own engine, controls and validation.</p><div className="dante-hero-actions"><button className="primary" onClick={() => setWorkspace('parity')}>Open Parity Bot</button><button className="secondary" onClick={() => setWorkspace('matches')}>Explore Market Scanner</button></div></div>
+                    <div><span className="dante-kicker">INDEPENDENT MARKET TECHNOLOGY</span><h1>Build with intelligence.<br/><em>Operate with control.</em></h1><p>Dante Builders brings four independent workspaces into one clean platform. Each product has its own strategy, controls and validation.</p><div className="dante-hero-actions"><button className="primary" onClick={() => setWorkspace('parity')}>Open Parity Bot</button><button className="secondary" onClick={() => setWorkspace('matches')}>Explore Market Scanner</button></div></div>
                     <div className="dante-hero-art" aria-hidden="true"><div className="orbit orbit-one"></div><div className="orbit orbit-two"></div><div className="core">D<span>B</span></div><div className="float-chip chip-a">LIVE DATA</div><div className="float-chip chip-b">ENGINE ACTIVE</div></div>
                 </div>
                 <div className="dante-products-heading"><span>BOT LIBRARY</span><h2>Choose a specialist bot</h2><p>Each bot opens in its own workspace with independent settings and controls.</p></div>
@@ -273,7 +273,7 @@ const DashboardComponent = observer(() => {
             </section>}
 
             {workspace === 'parity' && <section className="dante-workspace">
-                <div className="workspace-heading"><div><span>EXECUTION ENGINE</span><h1>Even / Odd Parity Bot</h1><p>Fresh tick validation, bounded analysis, contract checks and account-level risk controls.</p></div><button onClick={() => setWorkspace('home')}>← All products</button></div>
+                <div className="workspace-heading"><div><span>EXECUTION ENGINE</span><h1>Even / Odd Parity Bot</h1><p>Fresh tick validation, bounded analysis, contract checks and account-level risk controls.</p></div><button onClick={() => setWorkspace('home')}>← Bot library</button></div>
                 {client.is_logged_in ? <EvenOddTerminal /> : <div className="connect-panel"><h2>Connect your Deriv account</h2><p>Authentication is required for account balance, proposals, purchases and settlement monitoring.</p><button className="primary" onClick={connectDeriv}>Connect Deriv securely</button>{loginError && <p role="alert">{loginError}</p>}</div>}
             </section>}
 
