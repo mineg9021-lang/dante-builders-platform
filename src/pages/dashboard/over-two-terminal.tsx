@@ -363,9 +363,6 @@ const OverTwoTerminal = () => {
                     <div><small>STAKE IN USE</small><b>{effectiveStake.toFixed(2)} {currency}</b></div>
                 </div>
                 <p className='over2-notice'>{notice}</p>
-                <div className='over2-layer-grid'>
-                    {(current?.result.stages || []).map(layer => <div key={layer.id} className={layer.status === 'PASS' ? 'is-pass' : layer.status === 'BLOCKED' ? 'is-blocked' : ''}><span>{String(layer.id).padStart(2, '0')} · {layer.name}</span><b>{layer.status}</b><small>{layer.detail}</small></div>)}
-                </div>
             </div>
 
             <div className='over2-results'>
