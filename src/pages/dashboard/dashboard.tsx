@@ -51,6 +51,7 @@ const DashboardComponent = () => {
  const [losses,setLosses] = useState(0);
  const [loginError,setLoginError] = useState('');
  const runtimeRef = useRef<RuntimeHandle|null>(null);
+ const startAttemptRef = useRef(0);
  const liveConfirmedRef = useRef(false);
  const pnlRef = useRef(0);
  const tradeCountRef = useRef(0);
@@ -62,7 +63,7 @@ const DashboardComponent = () => {
  const accountType = authData?.is_virtual ? 'DEMO ACCOUNT' : authData ? 'REAL ACCOUNT' : 'NOT CONNECTED';
  const winRate = wins + losses ? Math.round(wins/(wins+losses)*100) : 0;
 
- useEffect(() => () => { runtimeRef.current?.stop(); runtimeRef.current=null; }, []);
+ useEffect(() => () => { startAttemptRef.current += 1; runtimeRef.current?.stop(); runtimeRef.current=null; }, []);
  useEffect(() => { if(mode!=='live'){setLiveConfirmed(false);liveConfirmedRef.current=false;} },[mode]);
 
  const connectDeriv = async () => {
@@ -77,8 +78,9 @@ const DashboardComponent = () => {
   stopLoss:Number(stopLoss),takeProfit:Number(takeProfit),
   tradesThisSession:tradeCountRef.current,maxTradesPerSession:Number(maxTrades),
  });
- const stopBot = () => { runtimeRef.current?.stop(); runtimeRef.current=null; setRuntimeStatus('STOPPED'); setRuntimeMessage('Bot stopped. No new purchases will be initiated.'); };
+ const stopBot = () => { startAttemptRef.current += 1; runtimeRef.current?.stop(); runtimeRef.current=null; setRuntimeStatus('STOPPED'); setRuntimeMessage('Bot stopped. No new purchases will be initiated.'); };
  const startBot = async () => {
+  const attempt = ++startAttemptRef.current;
   if(runtimeRef.current){setRuntimeMessage('This bot already has an active runtime. Stop it before starting another session.');return;}
   if(!isDerivConnected||!api_base.api){setRuntimeMessage('Deriv is not authorised. Connect your Deriv account before starting.');return;}
   if(mode==='live'){const accepted=window.confirm('You selected a REAL Deriv account. Trades will use real funds. Confirm live execution for this session.');if(!accepted)return;liveConfirmedRef.current=true;setLiveConfirmed(true);}
@@ -93,7 +95,7 @@ const DashboardComponent = () => {
    const handle=await startStrategyRuntime({
     api:api_base.api as unknown as DerivTradingApi,symbols,precisionBySymbol,
     strategy:{id:selectedBot,minSample:12,maxSample:40,runLength:Number(runLength),barrier:Number(barrier),duration:ticks,durationUnit:'t'},
-    currency,risk:baseRisk,getRiskContext:buildRisk,
+    currency,risk:baseRisk,getRiskContext:buildRisk,shouldContinue:()=>startAttemptRef.current===attempt,
     onStatus:(status,message)=>{setRuntimeStatus(status);setRuntimeMessage(message);},
     onDecision:result=>setDecision(result),
     onPurchased:purchase=>setTrades(previous=>[{id:String(purchase.contractId),contractId:purchase.contractId,contractType:purchase.contractType,symbol:purchase.symbol,status:'OPEN' as const,time:Date.now()},...previous].slice(0,30)),
@@ -106,10 +108,11 @@ const DashboardComponent = () => {
     },
     onError:error=>setRuntimeMessage(error.message),
    });
+   if(startAttemptRef.current!==attempt){handle.stop();return;}
    runtimeRef.current=handle;
   }catch(error){setRuntimeStatus('STOPPED');setRuntimeMessage(error instanceof Error?error.message:'The Deriv bot runtime could not start.');}
  };
- const selectBot=(id:BotStrategyId)=>{runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedBot(id);setDecision(null);setRuntimeMessage('Bot selected. Configure the controls below and press Start.');};
+ const selectBot=(id:BotStrategyId)=>{startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedBot(id);setDecision(null);setRuntimeMessage('Bot selected. Configure the controls below and press Start.');};
  const currentRows=useMemo(()=>trades.slice(0,10),[trades]);
 
  return <main className="dante-platform">
