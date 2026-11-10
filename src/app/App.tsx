@@ -5,7 +5,6 @@ import { cleanupUrl, handleOAuthCallback } from '@/external/deriv-core';
 import { getOAuthRedirectUri } from '@/external/deriv-core/config/urls';
 import ChunkLoader from '@/components/loader/chunk-loader';
 import LocalStorageSyncWrapper from '@/components/localStorage-sync-wrapper';
-import RoutePromptDialog from '@/components/route-prompt-dialog';
 import { useAccountSwitching } from '@/hooks/useAccountSwitching';
 import { useLanguageFromURL } from '@/hooks/useLanguageFromURL';
 import { StoreProvider } from '@/hooks/useStore';
@@ -32,7 +31,6 @@ const router = createBrowserRouter(
                     <LanguageHandler>
                         <StoreProvider>
                             <LocalStorageSyncWrapper>
-                                <RoutePromptDialog />
                                 <CoreStoreProvider>
                                     <Outlet />
                                 </CoreStoreProvider>
