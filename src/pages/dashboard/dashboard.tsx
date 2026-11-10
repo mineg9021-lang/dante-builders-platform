@@ -210,10 +210,10 @@ const DashboardComponent = () => {
   <SarahMarketChart connected={isDerivConnected}/>
   <section className="dante-library dante-robot-library" id="bot-library">
    <div className="dante-section-heading"><div><span className="dante-eyebrow">SPECIALIST ROBOT FLEET · SHARED 18-LAYER ENGINE</span><h2>Choose your robot</h2></div><p>{ROBOT_IDS.length} robot strategies · one protected engine</p></div>
-   <div className="dante-bot-grid dante-robot-grid">{ROBOT_LIBRARY.map(robot=>{
+   <div className="dante-bot-grid dante-robot-grid">{ROBOT_LIBRARY.map((robot,index)=>{
     const active=selectedBot===robot.id;
     return <button key={robot.id} type="button" className={active?'dante-bot-card dante-robot-card selected':'dante-bot-card dante-robot-card'} onClick={()=>selectBot(robot.id)} aria-pressed={active}>
-     <span className={'robot-logo-frame robot-logo-'+robot.id.toLowerCase()}><img src="/assets/images/dante-bot-portraits.webp" alt={robot.title+' robot logo'}/></span>
+     <span role="img" aria-label={robot.title+' logo'} className={'robot-logo-frame robot-logo-'+robot.id.toLowerCase()} style={{backgroundImage:'url(/assets/images/robot-fleet.svg)',backgroundSize:'400% 300%',backgroundPosition:(index%4)*100/3+'% '+Math.floor(index/4)*100+'%'}}/>
      <span className="bot-card-group">18-LAYER ENGINE</span><strong>{robot.title}</strong><small>{robot.description}</small>
      <span className="robot-contract-tag">{robot.contract}</span>
      <span className="bot-card-action">{active?'ACTIVE ROBOT':'SELECT ROBOT'} <b>↗</b></span>
