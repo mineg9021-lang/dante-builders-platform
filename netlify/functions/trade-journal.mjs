@@ -98,7 +98,7 @@ export default async request => {
     if (!auth) return json({ error: 'SESSION_EXPIRED' }, 401);
     const user = auth.user;
     const refreshHeaders = auth.refreshed ? { 'Set-Cookie': sessionCookie(auth.session) } : {};
-    const authHeaders = { apikey: cfg.key, Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json' };
+    const authHeaders = { apikey: cfg.key, Authorization: 'Bearer ' + auth.session.access_token, 'Content-Type': 'application/json' };
     if (request.method === 'GET') {
         const url = cfg.url + '/rest/v1/dante_trade_events?select=id,bot_key,deriv_account_id,contract_id,event_type,event_data,created_at&order=created_at.desc&limit=50';
         const response = await fetch(url, { headers: authHeaders });
