@@ -121,7 +121,7 @@ const DashboardComponent = observer(() => {
     const [side, setSide] = useState<'DIGITEVEN' | 'DIGITODD'>('DIGITEVEN');
     const [generatedXml, setGeneratedXml] = useState('');
     const [validation, setValidation] = useState<{ valid: boolean; errors: string[] } | null>(null);
-    const [aiStatus, setAiStatus] = useState('AI service is optional; verified local generation is available.');
+    const [aiStatus, setAiStatus] = useState('AI service is optional; a local DBot template is available.');
     const [generating, setGenerating] = useState(false);
 
     const connectDeriv = async () => {
@@ -165,7 +165,7 @@ const DashboardComponent = observer(() => {
                     usedAi = true;
                 } else {
                     setAiStatus(result?.error === 'AI_PROVIDER_NOT_CONFIGURED'
-                        ? 'AI provider key is not configured in Netlify yet; verified local generation was used.'
+                        ? 'AI provider key is not configured in Netlify yet; local DBot template was used.'
                         : 'AI service was unavailable; verified local generation was used.');
                 }
             } catch {
@@ -185,7 +185,7 @@ const DashboardComponent = observer(() => {
                 resolvedDuration = Number(request.match(/(\d+)\s*ticks?/i)?.[1] || duration);
             }
         } else {
-            setAiStatus('Using verified local DBot template from the selected settings.');
+            setAiStatus('Using local DBot template from the selected settings.');
         }
 
         if (!['DIGITEVEN', 'DIGITODD'].includes(resolvedSide)) {
@@ -211,7 +211,7 @@ const DashboardComponent = observer(() => {
         setSymbol(resolvedSymbol);
         setStake(String(resolvedStake));
         setDuration(String(resolvedDuration));
-        if (usedAi) setAiStatus('AI interpreted your request; XML was assembled from verified DBot blocks and passed structural validation.');
+        if (usedAi) setAiStatus('AI interpreted your request; XML was assembled from repository DBot block types and passed structural validation. DBot import verification is still pending.');
         setGenerating(false);
     };
 
@@ -279,8 +279,8 @@ const DashboardComponent = observer(() => {
                         <label>Duration (ticks)<input type="number" min="1" max="10" step="1" value={duration} onChange={event => setDuration(event.target.value)}/></label>
                     </div>
                     <button className="primary generate-button" onClick={generateXml} disabled={generating}>{generating ? 'Generating…' : 'Generate and validate XML'}</button>
-                    <p className="generator-note">{aiStatus} Current verified XML template supports Even/Odd digit contracts; unsupported contract requests are rejected rather than converted.</p>
-                    {validation && <div className={validation.valid ? 'validation-result valid' : 'validation-result invalid'}><strong>{validation.valid ? 'XML VALIDATION PASSED' : 'VALIDATION NEEDS ATTENTION'}</strong>{validation.errors.map(error => <p key={error}>{error}</p>)}{validation.valid && <p>Trade Parameters · Run Once at Start · Purchase Conditions · Sell Conditions · Restart Trading Conditions</p>}</div>}
+                    <p className="generator-note">{aiStatus} Current local template supports Even/Odd digit contracts; unsupported contract requests are rejected rather than converted. Sell logic safely holds to expiry unless a custom exit rule is requested.</p>
+                    {validation && <div className={validation.valid ? 'validation-result valid' : 'validation-result invalid'}><strong>{validation.valid ? 'XML STRUCTURAL VALIDATION PASSED' : 'VALIDATION NEEDS ATTENTION'}</strong>{validation.errors.map(error => <p key={error}>{error}</p>)}{validation.valid && <p>Trade Parameters · Run Once at Start · Purchase Conditions · Sell Conditions (hold to expiry by default) · Restart Trading Conditions. Import into DBot to complete compatibility verification.</p>}</div>}
                     {generatedXml && <div className="xml-output"><div><strong>Generated DBot XML</strong><button onClick={downloadXml} disabled={!validation?.valid}>Download XML</button></div><pre>{generatedXml}</pre></div>}
                 </div>
             </section>}
