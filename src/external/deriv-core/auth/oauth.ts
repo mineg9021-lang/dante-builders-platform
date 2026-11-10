@@ -8,6 +8,7 @@ import {
   getCodeVerifier,
   clearCodeVerifier,
   storeAuthInfo,
+  getAuthInfo,
   clearAllAuthData,
 } from './storage';
 import { getAuthBaseUrl } from '../config/urls';
@@ -149,6 +150,76 @@ export function validateCallback(params: CallbackParams, redirectUri: string): s
 }
 
 /**
+ * Parse the provider response without exposing response bodies, which can
+ * contain sensitive OAuth details, in application errors.
+ */
+async function readTokenResponse(
+  response: Response,
+  operation: string
+): Promise<Record<string, unknown>> {
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new OAuthError(`${operation} returned invalid JSON`);
+  }
+
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new OAuthError(`${operation} returned an invalid token response`);
+  }
+  return payload as Record<string, unknown>;
+}
+
+/**
+ * Validate all security-critical token fields before credentials are persisted.
+ * Refresh responses may omit refresh_token or scope; in that case retain the
+ * supplied refresh token and previously granted scope.
+ */
+function validateTokenResponse(
+  tokenData: Record<string, unknown>,
+  fallbacks: { refreshTokenFallback?: string; scopeFallback?: string } = {}
+): AuthInfo {
+  const accessToken = tokenData.access_token;
+  const tokenType = tokenData.token_type;
+  const expiresIn = tokenData.expires_in;
+  const suppliedExpiresAt = tokenData.expires_at;
+  const refreshToken = tokenData.refresh_token ?? fallbacks.refreshTokenFallback;
+  const scope = tokenData.scope ?? fallbacks.scopeFallback ?? '';
+
+  if (typeof accessToken !== 'string' || !accessToken.trim()) {
+    throw new OAuthError('OAuth token response is missing a valid access token');
+  }
+  if (typeof tokenType !== 'string' || tokenType.toLowerCase() !== 'bearer') {
+    throw new OAuthError('OAuth token response has an unsupported token type');
+  }
+  if (typeof expiresIn !== 'number' || !Number.isFinite(expiresIn) || expiresIn <= 0) {
+    throw new OAuthError('OAuth token response has an invalid expiry duration');
+  }
+  const expiresAt = suppliedExpiresAt === undefined
+    ? Math.floor(Date.now() / 1000) + expiresIn
+    : suppliedExpiresAt;
+  if (typeof expiresAt !== 'number' || !Number.isFinite(expiresAt) ||
+      expiresAt <= Math.floor(Date.now() / 1000)) {
+    throw new OAuthError('OAuth token response has an invalid expiry timestamp');
+  }
+  if (typeof refreshToken !== 'string' || !refreshToken.trim()) {
+    throw new OAuthError('OAuth token response is missing a valid refresh token');
+  }
+  if (typeof scope !== 'string') {
+    throw new OAuthError('OAuth token response has an invalid scope');
+  }
+
+  return {
+    access_token: accessToken,
+    token_type: 'Bearer',
+    expires_in: expiresIn,
+    expires_at: expiresAt,
+    scope,
+    refresh_token: refreshToken,
+  };
+}
+
+/**
  * Exchange authorization code for access and refresh tokens.
  */
 export async function exchangeCodeForTokens(params: TokenExchangeParams): Promise<AuthInfo> {
@@ -171,15 +242,8 @@ export async function exchangeCodeForTokens(params: TokenExchangeParams): Promis
     throw new OAuthError(`Token exchange failed (${response.status}): ${errorBody}`);
   }
 
-  const tokenData = await response.json();
-  const authInfo: AuthInfo = {
-    access_token: tokenData.access_token,
-    token_type: tokenData.token_type,
-    expires_in: tokenData.expires_in,
-    expires_at: tokenData.expires_at ?? Math.floor(Date.now() / 1000) + tokenData.expires_in,
-    scope: tokenData.scope,
-    refresh_token: tokenData.refresh_token,
-  };
+  const tokenData = await readTokenResponse(response, 'Token exchange');
+  const authInfo = validateTokenResponse(tokenData);
 
   storeAuthInfo(authInfo);
   clearCodeVerifier();
@@ -211,18 +275,20 @@ export async function refreshAccessToken(
     throw new OAuthError(`Token refresh failed (${response.status})`);
   }
 
-  const tokenData = await response.json();
-  const authInfo: AuthInfo = {
-    access_token: tokenData.access_token,
-    token_type: tokenData.token_type,
-    expires_in: tokenData.expires_in,
-    expires_at: tokenData.expires_at ?? Math.floor(Date.now() / 1000) + tokenData.expires_in,
-    scope: tokenData.scope,
-    refresh_token: tokenData.refresh_token,
-  };
-
-  storeAuthInfo(authInfo);
-  return authInfo;
+  let tokenData: Record<string, unknown>;
+  try {
+    tokenData = await readTokenResponse(response, 'Token refresh');
+    const previousAuth = getAuthInfo();
+    const authInfo = validateTokenResponse(tokenData, {
+      refreshTokenFallback: refreshToken,
+      scopeFallback: previousAuth?.scope,
+    });
+    storeAuthInfo(authInfo);
+    return authInfo;
+  } catch (error) {
+    clearAllAuthData();
+    throw error;
+  }
 }
 
 /**
