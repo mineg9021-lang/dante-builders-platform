@@ -168,3 +168,45 @@ html,body,#root{background:#f4faf5;color:#193b29}
 .eo-terminal__outcomes span{font-size:9px;font-weight:900;letter-spacing:.7px;color:#698271}
 .eo-terminal__outcomes div:first-child strong{color:#168442;font-size:20px}
 .eo-terminal__outcomes div:last-child strong{color:#c3323b;font-size:20px}
+
+
+/* Dante Builders purple / indigo platform refresh */
+.dante-app{background:linear-gradient(180deg,#100d24 0%,#191331 48%,#f4f6fb 100%);color:#f7f5ff}
+.dante-header{border-color:rgba(211,195,255,.16)}
+.dante-brand{color:#f5f0ff}
+.dante-brand-mark{background:linear-gradient(135deg,#8549dc,#348de9)}
+.dante-header nav button{color:#c4b8df}
+.dante-header nav button.active,.dante-header nav button:hover{background:#342258;color:#fff}
+.connection.connected{color:#58d7ae}
+.dante-home,.dante-workspace{color:#f7f5ff}
+.dante-kicker,.dante-products-heading>span,.workspace-heading>div>span{color:#b69aff}
+.dante-hero h1,.dante-products-heading h2,.workspace-heading h1{color:#fff}
+.dante-hero h1 em{color:#7fcaff}
+.dante-hero p,.dante-products-heading p,.workspace-heading p{color:#c4bbd9}
+.dante-hero-art{border-color:#49356e;background:radial-gradient(circle at 50% 45%,#3c2a64 0,#21183e 52%,#15112c 100%)}
+.orbit{border-color:rgba(148,119,231,.35)}
+.core{border-color:#9b80e5;background:linear-gradient(145deg,#8851dc,#2869bd);box-shadow:0 20px 55px rgba(91,57,164,.4)}
+.core span{color:#9cecff}
+.float-chip{border-color:#5a447d;color:#e8dcff;background:#241b3e}
+.primary{border-color:#794bd0;background:linear-gradient(110deg,#7540c7,#287fdb)}
+.secondary{border-color:#5b477c;color:#e5d9ff;background:#241b3e}
+.product-tile{border-color:#493766;background:linear-gradient(145deg,#261b42,#1a1630);box-shadow:0 10px 28px rgba(0,0,0,.18)}
+.product-tile:hover{border-color:#9472d6}
+.product-tile strong{color:#f5efff}
+.product-tile p{color:#c2b8d7}
+.product-tile b{color:#a98aef}
+.tile-icon{border-color:#644b91;color:#e9ddff;background:linear-gradient(135deg,#47306c,#203c68)}
+.workspace-heading>button{border:1px solid #59447b;background:#241b3e;color:#e7dcff}
+.connect-panel,.generator-panel{border-color:#59447b;background:#211936;color:#f5efff}
+.connect-panel h2{color:#fff}
+.connect-panel p{color:#c2b8d7}
+.eo-terminal{border:1px solid #654b91!important;background:#1b1530!important;color:#f6f2ff!important}
+.eo-terminal__card{border:1px solid #4e3a70!important;background:linear-gradient(145deg,#2a1e46,#19152e)!important;color:#f5f0ff!important}
+.eo-terminal h1,.eo-terminal h2,.eo-terminal h3,.eo-terminal strong{color:#fff}
+.eo-terminal input,.eo-terminal select{border-color:#7055a0!important;background:#17132a!important;color:#fff!important}
+.eo-terminal button{border-color:#7950ce!important;background:linear-gradient(110deg,#7540c7,#287fdb)!important;color:#fff!important}
+.eo-terminal__stop{background:linear-gradient(110deg,#b72c4b,#8d233d)!important}
+.dmi-scanner{border-color:#59447b!important;background:#211936!important;color:#f5efff!important}
+.dante-footer{border-color:rgba(211,195,255,.16);color:#a99cbe}
+.dante-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:700px){.dante-product-grid{grid-template-columns:1fr}}
