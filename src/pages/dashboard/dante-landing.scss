@@ -22,3 +22,17 @@ html,body,#root{min-height:100%;margin:0;background:#f5f3fb;color:#241b3d}body{f
 .workspace-strategy{padding:7px 9px;border:1px solid #e3ddef;border-radius:8px;background:#faf9fd;color:#5c4a7c;font-size:9px;font-weight:800;cursor:pointer}
 .workspace-strategy.active{border-color:#8050c9;background:#eee7fb;color:#56339b}
 .workspace-unavailable{color:#9b5360!important}
+
+/* Dante-branded activity timeline: translated engine events, not a copied broker activity screen */
+.dante-activity{margin-top:18px;padding:22px;border:1px solid #e4deef;border-radius:17px;background:#fff}
+.dante-activity-list{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.dante-activity-list li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:12px;padding:14px 2px;border-bottom:1px solid #f0edf5}
+.dante-activity-list li:last-child{border-bottom:0}
+.dante-activity-list .activity-marker{width:8px;height:8px;margin-top:5px;border-radius:50%;background:#9b8bb7}
+.dante-activity-list .activity-success .activity-marker{background:#26966b}
+.dante-activity-list .activity-warning .activity-marker{background:#c18a35}
+.dante-activity-list .activity-error .activity-marker{background:#c94c62}
+.dante-activity-list strong{display:block;color:#403453;font-size:11px}
+.dante-activity-list p{margin:4px 0 0;color:#81778f;font-size:10px;line-height:1.5;overflow-wrap:anywhere}
+.dante-activity-list time{color:#9a91a5;font-size:9px;text-align:right;white-space:nowrap}
+@media(max-width:600px){.dante-activity-list li{grid-template-columns:9px minmax(0,1fr)}.dante-activity-list time{grid-column:2;text-align:left}}
