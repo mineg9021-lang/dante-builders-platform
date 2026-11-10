@@ -226,6 +226,24 @@ export async function refreshAccessToken(
 }
 
 /**
+ * Reject callbacks delivered to a different origin or path than the URI
+ * registered for this OAuth client. Query parameters are intentionally
+ * ignored because the provider adds code/state/error values to the callback.
+ */
+function assertCallbackLocation(callbackUrl: string, redirectUri: string): void {
+  try {
+    const callback = new URL(callbackUrl);
+    const expected = new URL(redirectUri);
+    if (callback.origin !== expected.origin || callback.pathname !== expected.pathname) {
+      throw new OAuthError('OAuth callback URL does not match the configured redirect URI');
+    }
+  } catch (error) {
+    if (error instanceof OAuthError) throw error;
+    throw new OAuthError('OAuth callback URL or configured redirect URI is invalid');
+  }
+}
+
+/**
  * Handle the complete OAuth callback flow:
  * validate → exchange code → return auth info.
  */
@@ -233,6 +251,7 @@ export async function handleOAuthCallback(
   callbackUrl: string,
   config: AuthConfig
 ): Promise<AuthInfo> {
+  assertCallbackLocation(callbackUrl, config.redirectUri);
   const params = parseCallbackParams(callbackUrl);
   const code = validateCallback(params, config.redirectUri);
 
