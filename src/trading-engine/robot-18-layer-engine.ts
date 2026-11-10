@@ -10,11 +10,11 @@ export type RobotEngineLayer = typeof ROBOT_ENGINE_LAYERS[number];
 export type RobotEngineReport = { passed:boolean; passedLayers:number; totalLayers:18; blockedAt?:RobotEngineLayer; reason:string; layers:{name:RobotEngineLayer;passed:boolean;detail:string}[] };
 export function runRobot18LayerEngine(input:{symbol:string;tick:StrategyTick;previous?:StrategyTick;sample:StrategyTick[];config:BotStrategyConfig;decision:StrategyDecisionResult;contractAvailable:boolean;risk:ExecutionRiskContext}):RobotEngineReport {
  const {tick,previous,sample,config,decision,risk}=input;
- const digitFromQuote=()=>{const fraction=tick.quote.split('.')[1]||'';const n=Number(fraction.slice(-1)||tick.quote.replace(/\\D/g,'').slice(-1));return Number.isInteger(n)&&n>=0&&n<=9&&n===tick.digit;};
+ const digitFromQuote=()=>{const fraction=tick.quote.split('.')[1]||'';const n=Number(fraction.slice(-1)||tick.quote.replace(/\D/g,'').slice(-1));return Number.isInteger(n)&&n>=0&&n<=9&&n===tick.digit;};
  const checks:{name:RobotEngineLayer;passed:boolean;detail:string}[]=[
  {name:'MARKET_SCOPE',passed:/^[A-Za-z0-9_]{2,30}$/.test(input.symbol)&&tick.symbol===input.symbol,detail:'Configured market and tick symbol match'},
  {name:'TICK_SCHEMA',passed:typeof tick.quote==='string'&&Number.isFinite(tick.epoch)&&Number.isInteger(tick.digit),detail:'Tick fields are valid'},
- {name:'QUOTE_PRECISION',passed:/^[-+]?\d+(?:\\.\d+)?$/.test(tick.quote)&&(tick.quote.split('.')[1]||'').length<=10,detail:'Quote is a decimal string without float conversion'},
+ {name:'QUOTE_PRECISION',passed:/^[-+]?\d+(?:\.\d+)?$/.test(tick.quote)&&(tick.quote.split('.')[1]||'').length<=10,detail:'Quote is a decimal string without float conversion'},
  {name:'DECIMAL_INTEGRITY',passed:digitFromQuote(),detail:'Final digit matches the source quote'},
  {name:'TIMESTAMP_FRESHNESS',passed:Date.now()/1000-tick.epoch<=15&&tick.epoch-Date.now()/1000<=5,detail:'Tick is within the freshness window'},
  {name:'SEQUENCE_ORDER',passed:!previous||tick.epoch>previous.epoch,detail:'Tick timestamp advances the stream'},
