@@ -108,6 +108,8 @@ const DashboardComponent = observer(() => {
     const [side, setSide] = useState<'DIGITEVEN' | 'DIGITODD'>('DIGITEVEN');
     const [generatedXml, setGeneratedXml] = useState('');
     const [validation, setValidation] = useState<{ valid: boolean; errors: string[] } | null>(null);
+    const [aiStatus, setAiStatus] = useState('AI service is optional; verified local generation is available.');
+    const [generating, setGenerating] = useState(false);
 
     const connectDeriv = async () => {
         setLoginError('');
@@ -120,28 +122,78 @@ const DashboardComponent = observer(() => {
         }
     };
 
-    const generateXml = () => {
-        const normalized = request.toLowerCase();
-        const requestedSide = /\bodd\b/.test(normalized) ? 'DIGITODD' : /\beven\b/.test(normalized) ? 'DIGITEVEN' : side;
-        const requestedSymbol = (request.match(/\bR_(?:10|25|50|75|100)(?:_1S)?\b/i)?.[0] || symbol).toUpperCase();
-        const requestedStake = Number(request.match(/stake\s*(?:of|:|=)?\s*([0-9]+(?:\.[0-9]+)?)/i)?.[1] || stake);
-        const requestedDuration = Number(request.match(/(\d+)\s*ticks?/i)?.[1] || duration);
-        if (!Number.isFinite(requestedStake) || requestedStake <= 0 || requestedStake > 100000) {
+    const generateXml = async () => {
+        setGenerating(true);
+        setValidation(null);
+        let resolvedSide = side;
+        let resolvedSymbol = symbol;
+        let resolvedStake = Number(stake);
+        let resolvedDuration = Number(duration);
+        let usedAi = false;
+        if (request.trim()) {
+            try {
+                const response = await fetch('/.netlify/functions/generate-xml', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: request.slice(0, 2000), defaults: { side, symbol, stake: resolvedStake, duration: resolvedDuration } }),
+                });
+                const result = await response.json();
+                if (response.ok && result?.supported === false) {
+                    setValidation({ valid: false, errors: [result.reason || 'This request is outside the supported DBot generator scope.'] });
+                    setAiStatus('AI analysis rejected an unsupported contract request.');
+                    setGenerating(false);
+                    return;
+                }
+                if (response.ok && result?.supported === true) {
+                    resolvedSide = result.contract;
+                    resolvedSymbol = result.symbol;
+                    resolvedStake = Number(result.stake);
+                    resolvedDuration = Number(result.duration);
+                    usedAi = true;
+                } else {
+                    setAiStatus(result?.error === 'AI_PROVIDER_NOT_CONFIGURED'
+                        ? 'AI provider key is not configured in Netlify yet; verified local generation was used.'
+                        : 'AI service was unavailable; verified local generation was used.');
+                }
+            } catch {
+                setAiStatus('AI endpoint is not reachable yet; verified local generation was used.');
+            }
+            if (!usedAi) {
+                const normalized = request.toLowerCase();
+                resolvedSide = /\bodd\b/.test(normalized) ? 'DIGITODD' : /\beven\b/.test(normalized) ? 'DIGITEVEN' : side;
+                resolvedSymbol = (request.match(/\bR_(?:10|25|50|75|100)(?:_1S)?\b/i)?.[0] || symbol).toUpperCase();
+                resolvedStake = Number(request.match(/stake\s*(?:of|:|=)?\s*([0-9]+(?:\.[0-9]+)?)/i)?.[1] || stake);
+                resolvedDuration = Number(request.match(/(\d+)\s*ticks?/i)?.[1] || duration);
+            }
+        } else {
+            setAiStatus('Using verified local DBot template from the selected settings.');
+        }
+
+        if (!['DIGITEVEN', 'DIGITODD'].includes(resolvedSide)) {
+            setValidation({ valid: false, errors: ['Only Even and Odd digit contracts are currently supported by this verified XML template.'] });
+            setGenerating(false);
+            return;
+        }
+        if (!Number.isFinite(resolvedStake) || resolvedStake <= 0 || resolvedStake > 100000) {
             setValidation({ valid: false, errors: ['Enter a positive stake within the supported range.'] });
+            setGenerating(false);
             return;
         }
-        if (!Number.isInteger(requestedDuration) || requestedDuration < 1 || requestedDuration > 10) {
+        if (!Number.isInteger(resolvedDuration) || resolvedDuration < 1 || resolvedDuration > 10) {
             setValidation({ valid: false, errors: ['Duration must be between 1 and 10 ticks for this generator template.'] });
+            setGenerating(false);
             return;
         }
-        const xml = makeParityXml(requestedSymbol, requestedStake, requestedDuration, requestedSide);
+        const xml = makeParityXml(resolvedSymbol, resolvedStake, resolvedDuration, resolvedSide);
         const result = validateParityXml(xml);
         setGeneratedXml(xml);
         setValidation(result);
-        setSide(requestedSide);
-        setSymbol(requestedSymbol);
-        setStake(String(requestedStake));
-        setDuration(String(requestedDuration));
+        setSide(resolvedSide);
+        setSymbol(resolvedSymbol);
+        setStake(String(resolvedStake));
+        setDuration(String(resolvedDuration));
+        if (usedAi) setAiStatus('AI interpreted your request; XML was assembled from verified DBot blocks and passed structural validation.');
+        setGenerating(false);
     };
 
     const downloadXml = () => {
@@ -201,8 +253,8 @@ const DashboardComponent = observer(() => {
                         <label>Stake<input type="number" min="0.35" step="0.01" value={stake} onChange={event => setStake(event.target.value)}/></label>
                         <label>Duration (ticks)<input type="number" min="1" max="10" step="1" value={duration} onChange={event => setDuration(event.target.value)}/></label>
                     </div>
-                    <button className="primary generate-button" onClick={generateXml}>Generate and validate XML</button>
-                    <p className="generator-note">Current local generation supports verified Even/Odd DBot structure. It does not claim to run a cloud LLM; unsupported contract requests are not silently converted.</p>
+                    <button className="primary generate-button" onClick={generateXml} disabled={generating}>{generating ? 'Generating…' : 'Generate and validate XML'}</button>
+                    <p className="generator-note">{aiStatus} Current verified XML template supports Even/Odd digit contracts; unsupported contract requests are rejected rather than converted.</p>
                     {validation && <div className={validation.valid ? 'validation-result valid' : 'validation-result invalid'}><strong>{validation.valid ? 'XML VALIDATION PASSED' : 'VALIDATION NEEDS ATTENTION'}</strong>{validation.errors.map(error => <p key={error}>{error}</p>)}{validation.valid && <p>Trade Parameters · Run Once at Start · Purchase Conditions · Sell Conditions · Restart Trading Conditions</p>}</div>}
                     {generatedXml && <div className="xml-output"><div><strong>Generated DBot XML</strong><button onClick={downloadXml} disabled={!validation?.valid}>Download XML</button></div><pre>{generatedXml}</pre></div>}
                 </div>
