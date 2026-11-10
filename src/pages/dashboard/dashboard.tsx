@@ -259,7 +259,7 @@ const DashboardComponent = observer(() => {
             {workspace === 'xml' && <section className="dante-workspace xml-workspace">
                 <div className="workspace-heading"><div><span>DBOT XML ENGINE</span><h1>AI Deriv XML Bots Generator</h1><p>Describe a supported Even/Odd strategy. The local generator builds real DBot blocks, checks the required sections and exports an XML file.</p></div><button onClick={() => setWorkspace('home')}>← All products</button></div>
                 <div className="generator-panel">
-                    <label>Describe the bot strategy<textarea value={request} onChange={event => setRequest(event.target.value)} placeholder="Example: Build an Even strategy for R_100 with stake 2 and duration 5 ticks."></textarea></label>
+                    <label>Describe the bot strategy<textarea value={request} onChange={event => setRequest(event.target.value)} placeholder="Describe the market, contract, stake, duration, entry logic and exit rules you want…"></textarea></label>
                     <div className="generator-fields">
                         <label>Market<select value={symbol} onChange={event => setSymbol(event.target.value)}>{['R_10','R_10_1S','R_25','R_25_1S','R_50','R_50_1S','R_75','R_75_1S','R_100','R_100_1S'].map(value => <option key={value}>{value}</option>)}</select></label>
                         <label>Contract<select value={side} onChange={event => setSide(event.target.value as 'DIGITEVEN' | 'DIGITODD')}><option value="DIGITEVEN">Even</option><option value="DIGITODD">Odd</option></select></label>
