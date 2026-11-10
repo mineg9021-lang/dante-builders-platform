@@ -4,6 +4,7 @@ const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(b
 });
 const cookieName = 'dante_account_session';
 const cookieOptions = 'Path=/; HttpOnly; Secure; SameSite=Lax';
+const sessionCookie = session => cookieName + '=' + encodeURIComponent(JSON.stringify(session)) + '; ' + cookieOptions + '; Max-Age=' + (60 * 60 * 24 * 30);
 const readSession = request => {
     const raw = request.headers.get('cookie') || '';
     const match = raw.match(new RegExp('(?:^|;\\s*)' + cookieName + '=([^;]+)'));
@@ -60,13 +61,32 @@ const cleanEventData = (type, data) => {
     }
     return null;
 };
-const getUser = async (cfg, session) => {
-    const response = await fetch(cfg.url + '/auth/v1/user', {
-        headers: { apikey: cfg.key, Authorization: 'Bearer ' + session.access_token },
-    });
-    if (!response.ok) return null;
-    const user = await response.json();
-    return user && typeof user.id === 'string' ? user : null;
+const authenticate = async (cfg, session) => {
+    const getUser = async token => {
+        const response = await fetch(cfg.url + '/auth/v1/user', {
+            headers: { apikey: cfg.key, Authorization: 'Bearer ' + token },
+        });
+        if (!response.ok) return null;
+        const user = await response.json();
+        return user && typeof user.id === 'string' ? user : null;
+    };
+    let activeSession = session;
+    let user = await getUser(activeSession.access_token);
+    let refreshed = false;
+    if (!user && activeSession.refresh_token) {
+        const response = await fetch(cfg.url + '/auth/v1/token?grant_type=refresh_token', {
+            method: 'POST',
+            headers: { apikey: cfg.key, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: activeSession.refresh_token }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.ok && typeof payload.access_token === 'string' && typeof payload.refresh_token === 'string') {
+            activeSession = { access_token: payload.access_token, refresh_token: payload.refresh_token };
+            user = await getUser(activeSession.access_token);
+            refreshed = Boolean(user);
+        }
+    }
+    return user ? { user, session: activeSession, refreshed } : null;
 };
 export default async request => {
     const cfg = config();
@@ -74,15 +94,17 @@ export default async request => {
     if (request.method !== 'GET' && request.method !== 'POST') return json({ error: 'METHOD_NOT_ALLOWED' }, 405);
     const session = readSession(request);
     if (!session) return json({ error: 'AUTHENTICATION_REQUIRED' }, 401);
-    const user = await getUser(cfg, session);
-    if (!user) return json({ error: 'SESSION_EXPIRED' }, 401);
+    const auth = await authenticate(cfg, session);
+    if (!auth) return json({ error: 'SESSION_EXPIRED' }, 401);
+    const user = auth.user;
+    const refreshHeaders = auth.refreshed ? { 'Set-Cookie': sessionCookie(auth.session) } : {};
     const authHeaders = { apikey: cfg.key, Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json' };
     if (request.method === 'GET') {
         const url = cfg.url + '/rest/v1/dante_trade_events?select=id,bot_key,deriv_account_id,contract_id,event_type,event_data,created_at&order=created_at.desc&limit=50';
         const response = await fetch(url, { headers: authHeaders });
         const payload = await response.json().catch(() => []);
         if (!response.ok) return json({ error: 'JOURNAL_READ_FAILED' }, 502);
-        return json({ events: Array.isArray(payload) ? payload : [] });
+        return json({ events: Array.isArray(payload) ? payload : [] }, 200, refreshHeaders);
     }
     const length = Number(request.headers.get('content-length') || 0);
     if (length > 12000) return json({ error: 'PAYLOAD_TOO_LARGE' }, 413);
@@ -110,5 +132,5 @@ export default async request => {
         body: JSON.stringify(row),
     });
     if (!response.ok) return json({ error: 'JOURNAL_WRITE_FAILED' }, 502);
-    return json({ saved: true }, 201);
+    return json({ saved: true }, 201, refreshHeaders);
 };
