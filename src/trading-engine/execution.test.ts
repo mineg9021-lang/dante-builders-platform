@@ -131,6 +131,17 @@ describe('shared Deriv proposal, purchase and settlement pipeline', () => {
         expect(send).toHaveBeenCalledTimes(4);
     });
 
+    it('continues settlement monitoring if the purchase observer throws', async () => {
+        const { api, send } = successfulApi('won');
+        const onPurchased = jest.fn(() => { throw new Error('dashboard observer failed'); });
+
+        const result = await executeDerivContract(executionInput(api, { onPurchased }));
+
+        expect(onPurchased).toHaveBeenCalledTimes(1);
+        expect(result).toEqual(expect.objectContaining({ contractId: 12345, settlement: 'WON' }));
+        expect(send).toHaveBeenCalledWith(expect.objectContaining({ proposal_open_contract: 1 }));
+    });
+
     it.each([
         ['won', 'WON'],
         ['lost', 'LOST'],
