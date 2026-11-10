@@ -226,7 +226,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
             executing = false;
             const reason = error instanceof Error ? error : new Error('DERIV_EXECUTION_FAILED');
             notify(() => input.onError?.(reason));
-            if (/PURCHASE_RESULT_UNCONFIRMED|PURCHASE_OUTCOME_UNKNOWN|SETTLEMENT_MONITOR_TIMEOUT|SETTLEMENT_MONITOR_FAILED/.test(reason.message)) {
+            if (/PURCHASE_RESULT_UNCONFIRMED|PURCHASE_OUTCOME_UNKNOWN|SETTLEMENT_NOT_VERIFIED|SETTLEMENT_MONITOR_TIMEOUT|SETTLEMENT_MONITOR_FAILED/.test(reason.message)) {
                 stop();
                 setStatus('PAUSED_ERROR', reason.message + ' Reconcile the Deriv account before restarting.');
             } else if (!stopped) {
