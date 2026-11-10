@@ -179,7 +179,7 @@ const DashboardComponent = observer(() => {
                     return;
                 }
                 resolvedSide = /\bodd\b/.test(normalized) ? 'DIGITODD' : /\beven\b/.test(normalized) ? 'DIGITEVEN' : side;
-                resolvedSymbol = (request.match(/\bR_(?:10|25|50|75|100)(?:_1S)?\b/i)?.[0] || symbol).toUpperCase();
+                resolvedSymbol = (request.match(/\b(?:R_(?:10|25|50|75|100)|1HZ(?:10|15|25|30|50|75|90|100)V)\b/i)?.[0] || symbol).toUpperCase();
                 resolvedStake = Number(request.match(/stake\s*(?:of|:|=)?\s*([0-9]+(?:\.[0-9]+)?)/i)?.[1] || stake);
                 resolvedDuration = Number(request.match(/(\d+)\s*ticks?/i)?.[1] || duration);
             }
