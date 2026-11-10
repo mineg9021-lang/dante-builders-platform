@@ -15,18 +15,18 @@ import './dante-landing.scss';
 
 type BotDefinition = { id: BotStrategyId; title: string; contract: string; description: string; group: string; icon: string };
 const BOT_LIBRARY: BotDefinition[] = [
- { id:'RISE',title:'Rise Bot',contract:'CALL',description:'Trades upward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↗' },
- { id:'FALL',title:'Fall Bot',contract:'PUT',description:'Trades downward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↘' },
- { id:'ONLY_UP',title:'Only Up Bot',contract:'RUNHIGH',description:'Requires consecutive strictly rising ticks before entry.',group:'Consecutive movement',icon:'↑' },
- { id:'ONLY_DOWN',title:'Only Down Bot',contract:'RUNLOW',description:'Requires consecutive strictly falling ticks before entry.',group:'Consecutive movement',icon:'↓' },
- { id:'ASIAN_UP',title:'Asian Up AI Bot',contract:'ASIANU',description:'Combines directional momentum with current-price versus sample-average confirmation.',group:'Asian',icon:'⌃' },
- { id:'ASIAN_DOWN',title:'Asian Down AI Bot',contract:'ASIAND',description:'Combines downward momentum with current-price versus sample-average confirmation.',group:'Asian',icon:'⌄' },
- { id:'DIGIT_MATCH',title:'Digit Matches Bot',contract:'DIGITMATCH',description:'Ranks observed final-digit frequency and validates a prediction barrier.',group:'Digit',icon:'=' },
- { id:'DIGIT_DIFFERS',title:'Digit Differs Bot',contract:'DIGITDIFF',description:'Selects a low-frequency digit candidate and validates its concentration.',group:'Digit',icon:'≠' },
- { id:'DIGIT_OVER',title:'Digit Over Bot',contract:'DIGITOVER',description:'Evaluates final-digit observations against an over barrier.',group:'Digit',icon:'>' },
- { id:'DIGIT_UNDER',title:'Digit Under Bot',contract:'DIGITUNDER',description:'Evaluates final-digit observations against an under barrier.',group:'Digit',icon:'<' },
- { id:'EVEN',title:'Even Bot',contract:'DIGITEVEN',description:'Uses bounded parity frequency and split-window checks before entry.',group:'Parity',icon:'E' },
- { id:'ODD',title:'Odd Bot',contract:'DIGITODD',description:'Uses bounded parity frequency and split-window checks before entry.',group:'Parity',icon:'O' },
+ { id:'RISE',title:'Rise Robot',contract:'CALL',description:'Trades upward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↗' },
+ { id:'FALL',title:'Fall Robot',contract:'PUT',description:'Trades downward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↘' },
+ { id:'ONLY_UP',title:'Only Up Robot',contract:'RUNHIGH',description:'Requires consecutive strictly rising ticks before entry.',group:'Consecutive movement',icon:'↑' },
+ { id:'ONLY_DOWN',title:'Only Down Robot',contract:'RUNLOW',description:'Requires consecutive strictly falling ticks before entry.',group:'Consecutive movement',icon:'↓' },
+ { id:'ASIAN_UP',title:'Asian Up AI Robot',contract:'ASIANU',description:'Combines directional momentum with current-price versus sample-average confirmation.',group:'Asian',icon:'⌃' },
+ { id:'ASIAN_DOWN',title:'Asian Down AI Robot',contract:'ASIAND',description:'Combines downward momentum with current-price versus sample-average confirmation.',group:'Asian',icon:'⌄' },
+ { id:'DIGIT_MATCH',title:'Digit Matches Robot',contract:'DIGITMATCH',description:'Ranks observed final-digit frequency and validates a prediction barrier.',group:'Digit',icon:'=' },
+ { id:'DIGIT_DIFFERS',title:'Digit Differs Robot',contract:'DIGITDIFF',description:'Selects a low-frequency digit candidate and validates its concentration.',group:'Digit',icon:'≠' },
+ { id:'DIGIT_OVER',title:'Digit Over Robot',contract:'DIGITOVER',description:'Evaluates final-digit observations against an over barrier.',group:'Digit',icon:'>' },
+ { id:'DIGIT_UNDER',title:'Digit Under Robot',contract:'DIGITUNDER',description:'Evaluates final-digit observations against an under barrier.',group:'Digit',icon:'<' },
+ { id:'EVEN',title:'Even Robot',contract:'DIGITEVEN',description:'Uses bounded parity frequency and split-window checks before entry.',group:'Parity',icon:'E' },
+ { id:'ODD',title:'Odd Robot',contract:'DIGITODD',description:'Uses bounded parity frequency and split-window checks before entry.',group:'Parity',icon:'O' },
 ];
 const BOT_IDS = getImplementedStrategyIds();
 const BOT_BY_ID = new Map(BOT_LIBRARY.map(bot => [bot.id, bot]));
@@ -149,7 +149,7 @@ const DashboardComponent = () => {
  const stopBot = () => { startAttemptRef.current += 1; runtimeRef.current?.stop(); runtimeRef.current=null; setRuntimeStatus('STOPPED'); setRuntimeMessage('Bot stopped. No new purchases will be initiated.'); };
  const startBot = async () => {
   const attempt = ++startAttemptRef.current;
-  if(runtimeRef.current){setRuntimeMessage('This bot already has an active runtime. Stop it before starting another session.');return;}
+  if(runtimeRef.current){setRuntimeMessage('This robot already has an active runtime. Stop it before starting another session.');return;}
   if(!isDerivConnected||!api_base.api){setRuntimeMessage('Deriv is not authorised. Connect your Deriv account before starting.');return;}
   if(mode==='live'){const accepted=window.confirm('You selected a REAL Deriv account. Trades will use real funds. Confirm live execution for this session.');if(!accepted)return;liveConfirmedRef.current=true;setLiveConfirmed(true);}
   if(!currency){setRuntimeMessage('Deriv did not provide an account currency. Refresh the account connection.');return;}
@@ -205,42 +205,40 @@ const DashboardComponent = () => {
    runtimeRef.current=handle;
   }catch(error){setRuntimeStatus('STOPPED');setRuntimeMessage(error instanceof Error?error.message:'The Deriv bot runtime could not start.');}
  };
- const selectBot=(id:BotStrategyId)=>{startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedBot(id);setDecision(null);setRuntimeMessage('Bot selected. Configure the controls below and press Start.');};
+ const selectBot=(id:BotStrategyId)=>{startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedBot(id);setDecision(null);setRuntimeMessage('Robot selected. Configure the controls below and press Start.');};
  const currentRows=useMemo(()=>trades.slice(0,10),[trades]);
 
  return <main className="dante-platform">
   <header className="dante-topbar">
    <button className="dante-brand" type="button" onClick={()=>selectBot('RISE')}><span className="dante-brand-mark">DB</span><span><strong>DANTE BUILDERS</strong><small>AI TRADING PLATFORM</small></span></button>
-   <nav aria-label="Platform navigation"><button className="active" type="button" onClick={()=>document.getElementById('bot-library')?.scrollIntoView({behavior:'smooth'})}>Bot library</button><button type="button" onClick={()=>document.getElementById('bot-terminal')?.scrollIntoView({behavior:'smooth'})}>Workspace</button><button type="button" onClick={()=>document.getElementById('trade-journal')?.scrollIntoView({behavior:'smooth'})}>Trade journal</button><button type="button" onClick={()=>document.getElementById('platform-activity')?.scrollIntoView({behavior:'smooth'})}>Platform activity</button></nav>
+   <nav aria-label="Platform navigation"><button className="active" type="button" onClick={()=>document.getElementById('bot-library')?.scrollIntoView({behavior:'smooth'})}>Rorobot library</button><button type="button" onClick={()=>document.getElementById('bot-terminal')?.scrollIntoView({behavior:'smooth'})}>Workspace</button><button type="button" onClick={()=>document.getElementById('trade-journal')?.scrollIntoView({behavior:'smooth'})}>Trade journal</button><button type="button" onClick={()=>document.getElementById('platform-activity')?.scrollIntoView({behavior:'smooth'})}>Platform activity</button></nav>
    <div className={isDerivConnected?'dante-connection is-connected':'dante-connection'}><span className="connection-dot"/>{isDerivConnected?'DERIV CONNECTED':'DERIV NOT CONNECTED'}</div>
   </header>
   <section className="dante-system-hero">
-   <div className="dante-system-copy"><span className="dante-eyebrow">DANTE AI CORE · MULTI-BOT RUNTIME</span><h1>One platform.<br/><em>Specialist trading engines.</em></h1><p>Connect your Deriv account once. Select a specialist bot, configure risk and let its contract-specific runtime handle live market data, validation, proposal, purchase and settlement.</p><div className="dante-system-tags"><span>DERIV OAUTH</span><span>LIVE MARKET DATA</span><span>RISK-GATED EXECUTION</span></div></div>
+   <div className="dante-system-copy"><span className="dante-eyebrow">DANTE AI CORE · SHARED 18-LAYER ROBOT ENGINE</span><h1>One platform.<br/><em>Specialist trading engines.</em></h1><p>Connect your Deriv account once. Select a specialist bot, configure risk and let its contract-specific runtime handle live market data, validation, proposal, purchase and settlement.</p><div className="dante-system-tags"><span>DERIV OAUTH</span><span>LIVE MARKET DATA</span><span>RISK-GATED EXECUTION</span></div></div>
    <div className="dante-system-portrait"><img src="/assets/images/dante-bot-portraits.webp" alt="Dante Builders robotic assistant"/><div className="portrait-glow"/><div className="portrait-caption"><span>AI CORE</span><strong>Specialist runtime</strong></div></div>
    <div className="dante-system-status"><div><span>PLATFORM SESSION</span><strong>{client.is_logged_in?'SIGNED IN':'ACCOUNT REQUIRED'}</strong></div><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Awaiting OAuth'}</strong></div><div><span>BOT STATUS</span><strong>{runtimeStatus.replace(/_/g,' ')}</strong></div></div>
   </section>
   <SarahMarketChart connected={isDerivConnected}/>
-  <section className="dante-library" id="bot-library">
-   <div className="dante-section-heading"><div><span className="dante-eyebrow">UNIFIED AI BOT WORKSPACES</span><h2>One platform · Eight specialist workspaces</h2></div><p>{BOT_IDS.length} registered strategy adapters</p></div>
-   <div className="dante-bot-grid">{BOT_WORKSPACES.map(workspace=>{
-    const active=workspace.strategies.includes(selectedBot);
-    return <section key={workspace.id} className={active?'dante-bot-card selected':'dante-bot-card'} aria-label={workspace.title}>
-     <span className="bot-card-icon">{workspace.icon}</span><span className="bot-card-group">{workspace.availability}</span><strong>{workspace.title}</strong><small>{workspace.description}</small>
-     {workspace.strategies.length>0?<div className="workspace-strategy-options" aria-label={workspace.title+' strategies'}>{workspace.strategies.map(strategyId=>{
-      const strategy=BOT_BY_ID.get(strategyId)!;
-      return <button key={strategyId} type="button" className={selectedBot===strategyId?'workspace-strategy active':'workspace-strategy'} onClick={()=>selectBot(strategyId)}>{strategy.title.replace(' Bot','').replace(' AI','')}</button>;
-     })}</div>:<small className="workspace-unavailable">Execution is disabled until its contract adapter, proposal validation and settlement tests are complete.</small>}
-     <span className="bot-card-action">{active?'WORKSPACE OPEN':workspace.strategies.length?'CHOOSE STRATEGY':'NOT YET ENABLED'} <b>↗</b></span>
-    </section>;
+  <section className="dante-library dante-robot-library" id="bot-library">
+   <div className="dante-section-heading"><div><span className="dante-eyebrow">SPECIALIST ROBOT FLEET · SHARED 18-LAYER ENGINE</span><h2>Choose your robot</h2></div><p>{BOT_IDS.length} robot strategies · one protected engine</p></div>
+   <div className="dante-bot-grid dante-robot-grid">{BOT_LIBRARY.map(robot=>{
+    const active=selectedBot===robot.id;
+    return <button key={robot.id} type="button" className={active?'dante-bot-card dante-robot-card selected':'dante-bot-card dante-robot-card'} onClick={()=>selectBot(robot.id)} aria-pressed={active}>
+     <span className={'robot-logo-frame robot-logo-'+robot.id.toLowerCase()}><img src="/assets/images/dante-bot-portraits.webp" alt={robot.title+' robot logo'}/></span>
+     <span className="bot-card-group">18-LAYER ENGINE</span><strong>{robot.title}</strong><small>{robot.description}</small>
+     <span className="robot-contract-tag">{robot.contract}</span>
+     <span className="bot-card-action">{active?'ACTIVE ROBOT':'SELECT ROBOT'} <b>↗</b></span>
+    </button>;
    })}</div>
   </section>
   <section className="dante-terminal" id="bot-terminal">
    <div className="dante-terminal-purple">
-    <div className="terminal-identity"><img src="/assets/images/dante-bot-portraits.webp" alt=""/><div><span className="dante-eyebrow">{bot.group.toUpperCase()} STRATEGY WORKSPACE</span><h2>{bot.title}</h2><p>Deriv contract: <strong>{bot.contract}</strong> · Market stream: <strong>AUTO · 13 VOLATILITY MARKETS</strong></p></div></div>
+    <div className="terminal-identity"><img src="/assets/images/dante-bot-portraits.webp" alt=""/><div><span className="dante-eyebrow">{bot.group.toUpperCase()} ROBOT WORKSPACE</span><h2>{bot.title}</h2><p>Deriv contract: <strong>{bot.contract}</strong> · Market stream: <strong>AUTO · 13 VOLATILITY MARKETS</strong></p></div></div>
     <div className="terminal-account-strip"><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Not connected'}</strong></div><div><span>ACCOUNT TYPE</span><strong>{accountType}</strong></div><div><span>LIVE BALANCE</span><strong>{isDerivConnected?(liveBalance===null?'Loading balance…':liveBalance.toFixed(2)+' '+currency):'—'}</strong></div><button type="button" className="terminal-connect" onClick={connectDeriv}>{isDerivConnected?'RECONNECT DERIV':'CONNECT DERIV'}</button></div>
     {loginError&&<p className="dante-error" role="alert">{loginError}</p>}
     <div className="terminal-state-row"><div><span>RUNTIME</span><strong>{runtimeStatus.replace(/_/g,' ')}</strong></div><div><span>STRATEGY DECISION</span><strong>{decision?.decision||'WAITING'}</strong></div><div><span>LAST EVIDENCE</span><strong>{decision?decision.evidenceScore+'%':'—'}</strong></div></div>
-    <div className="terminal-actions"><button type="button" className="terminal-start" onClick={startBot} disabled={runtimeStatus==='STARTING'||runtimeStatus==='RUNNING'||runtimeStatus==='EXECUTING'}>START BOT</button><button type="button" className="terminal-stop" onClick={stopBot} disabled={runtimeStatus==='STOPPED'}>STOP BOT</button><span className="terminal-mode">{mode.toUpperCase()} EXECUTION</span></div>
+    <div className="terminal-actions"><button type="button" className="terminal-start" onClick={startBot} disabled={runtimeStatus==='STARTING'||runtimeStatus==='RUNNING'||runtimeStatus==='EXECUTING'}>START ROBOT</button><button type="button" className="terminal-stop" onClick={stopBot} disabled={runtimeStatus==='STOPPED'}>STOP ROBOT</button><span className="terminal-mode">{mode.toUpperCase()} EXECUTION</span></div>
    </div>
    <div className="dante-white-dashboard">
     <div className="dante-section-heading compact"><div><span className="dante-eyebrow">BOT CONTROL CENTRE</span><h3>Execution settings</h3></div><span className="dante-status-pill">{runtimeStatus.replace(/_/g,' ')}</span></div>
@@ -263,7 +261,7 @@ const DashboardComponent = () => {
   <section className="dante-journal" id="trade-journal">
    <div className="dante-section-heading compact"><div><span className="dante-eyebrow">VERIFIED CONTRACT EVENTS</span><h3>Trade journal</h3></div><span>{trades.length} contracts · persistent</span></div>
    {journalError&&<p className="runtime-message" role="status">{journalError}</p>}
-   {currentRows.length?<div className="dante-table-wrap"><table><thead><tr><th>Contract</th><th>Market</th><th>Contract ID</th><th>Status</th><th>Profit / loss</th></tr></thead><tbody>{currentRows.map(row=><tr key={row.id}><td>{row.contractType}</td><td>{row.symbol}</td><td>{row.contractId}</td><td><span className={'trade-status '+row.status.toLowerCase()}>{row.status}</span></td><td>{row.profit===undefined?'Pending settlement':row.profit.toFixed(2)+' '+currency}</td></tr>)}</tbody></table></div>:<div className="dante-empty-journal">No Deriv contracts have been purchased in this session.</div>}
+   {currentRows.length?<div className="dante-table-wrap"><table><thead><tr><th>Contract</th><th>Market</th><th>Contract ID</th><th>Status</th><th>Profit / loss</th></tr></thead><tbody>{currentRows.map(row=><tr key={row.id}><td>{row.contractType}</td><td>{row.symbol}</td><td>{row.contractId}</td><td><span className={'trade-status '+row.status.toLowerCase()}>{row.status}</span></td><td>{row.profit===undefined?'Pending settlement':row.profit.toFixed(2)+' '+currency}</td></tr>)}</tbody></table></div>:<div className="dante-empty-journal">No robot has purchased a Deriv contract in this session.</div>}
   </section>
   <PlatformActivity />
   <footer className="dante-footer"><span>DANTE BUILDERS</span><span>Deriv OAuth · Contract-aware execution · User-controlled risk</span></footer>
