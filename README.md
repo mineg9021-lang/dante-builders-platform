@@ -48,7 +48,7 @@ The Over 2 pipeline has 18 logical gates and uses `market-metrics-engine.ts` plu
 
 The website now places a separate Dante account registration/login gate in front of the bot library. This is distinct from Deriv OAuth: users first authenticate to Dante, then connect a Deriv account from a bot workspace when trading access is needed.
 
-The account service uses Supabase Auth through a Netlify Function and stores the access/refresh pair in a Secure, HttpOnly, SameSite cookie. No password or Deriv token is stored in browser local storage.
+The account service uses Supabase Auth through a Netlify Function and stores the access/refresh pair in a Secure, HttpOnly, SameSite cookie. The Dante password and platform session are not stored in browser local storage. The existing Deriv OAuth token handling has not yet been migrated to a server-side token vault and must be reviewed before production live-trading use.
 
 Before enabling registration on the deployed site:
 
