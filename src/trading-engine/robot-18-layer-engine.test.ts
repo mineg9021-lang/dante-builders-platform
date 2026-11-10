@@ -129,6 +129,13 @@ describe('shared 18-layer Robot engine', () => {
         expect(report.blockedAt).toBe('MARKET_STABILITY');
     });
 
+    it('blocks malformed historical prices inside the stability window', () => {
+        const malformed = sample.map((tick, index) => index === 8 ? { ...tick, quote: '1e2' } : tick);
+        const report = run({ sample: malformed, tick: malformed[11] });
+        expect(report.passed).toBe(false);
+        expect(report.blockedAt).toBe('MARKET_STABILITY');
+    });
+
     it('allows a calm five-tick price range', () => {
         const calm = sample.map((tick, index) => index < 7 ? tick : {
             ...tick,
