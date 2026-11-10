@@ -410,7 +410,7 @@ const EvenOddTerminal = () => {
         }).finally(() => {
             executionLock.current = false;
         });
-    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, effectiveStake, martingaleEnabled, autoRestart, stopLoss, takeProfit, sessionPnl, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized, connectionStatus, tradesThisSession]);
+    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, effectiveStake, martingaleEnabled, autoRestart, stopLoss, takeProfit, sessionPnl, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized, connectionStatus, tradesThisSession, recoveryStep]);
 
     useEffect(() => {
         if (selected && latest && selected.ticks.length >= MAX_TICKS && !running && !pipeline.executionAuthorized) {
