@@ -8,7 +8,7 @@ import './dante-landing.scss';
 
 type Workspace = 'home' | 'parity' | 'matches' | 'xml';
 
-const escapeXml = (value: string) => value.replace(/[<>&"']/g, char => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[char] || char);
+const XML_ENTITIES: Record<string, string> = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' };\nconst escapeXml = (value: string) => value.replace(/[<>&"']/g, char => XML_ENTITIES[char] || char);
 
 const makeParityXml = (symbol: string, stake: number, duration: number, side: 'DIGITEVEN' | 'DIGITODD') => {
     const safeSymbol = escapeXml(symbol);
