@@ -206,40 +206,57 @@ const OverTwoTerminal = () => {
             if (result.settlement === 'LOST') setLosses(previous => previous + 1);
             setTrades(previous => previous.map(row => row.contractId === result.contractId ? { ...row, status: result.settlement, profit: result.profit } : row));
             setExecutionStatus(result.settlement + ' · ' + result.profit.toFixed(2) + ' ' + currency);
+            const nextPnl = sessionPnl + result.profit;
+            const sessionLimitReached = nextPnl <= -Number(stopLoss) || nextPnl >= Number(takeProfit) || trades.length + 1 >= 10;
             if (result.settlement === 'WON') {
                 setLossStep(0);
                 setRecoveryLevel(0);
-            } else if (result.settlement === 'LOST') {
-                if (martingaleEnabled) {
-                    if (lossStep >= 3) {
-                        executionAllowed.current = false;
-                        setExecutionArmed(false);
-                        setRunning(false);
-                        setStatus('MARTINGALE LIMIT · PAUSED');
-                    } else setLossStep(previous => previous + 1);
-                }
-                if (recoveryLevel >= 3) {
-                    setCooldown(true);
-                    executionAllowed.current = false;
-                    setExecutionArmed(false);
-                    setRunning(false);
-                    setStatus('COOLDOWN · 4TH LOSS');
-                    setExecutionStatus('Fourth consecutive recovery loss reached. Bot paused for cooldown; manual review required.');
-                } else setRecoveryLevel(previous => previous + 1);
-            }
-            const nextPnl = sessionPnl + result.profit;
-            if (nextPnl <= -Number(stopLoss) || nextPnl >= Number(takeProfit) || trades.length + 1 >= 10) {
                 executionAllowed.current = false;
                 setExecutionArmed(false);
                 setRunning(false);
-                setStatus('SESSION LIMIT · PAUSED');
-                setNotice('A configured session limit was reached. Review the session before starting again.');
+                setStatus(sessionLimitReached ? 'SESSION LIMIT · PAUSED' : 'TRADE WON · STOPPED');
+                setNotice(sessionLimitReached ? 'A configured session limit was reached. Review the session before restarting.' : 'Winning contract settled and recorded. Start a fresh scan when ready.');
+            } else if (result.settlement === 'LOST') {
+                const martingaleLimitReached = martingaleEnabled && lossStep >= 3;
+                const recoveryLimitReached = recoveryLevel >= 3;
+                if (martingaleEnabled && !martingaleLimitReached) setLossStep(previous => previous + 1);
+                if (!recoveryLimitReached) setRecoveryLevel(previous => previous + 1);
+                if (sessionLimitReached || martingaleLimitReached || recoveryLimitReached) {
+                    executionAllowed.current = false;
+                    setExecutionArmed(false);
+                    setRunning(false);
+                    if (recoveryLimitReached) {
+                        setCooldown(true);
+                        setStatus('COOLDOWN · 4TH LOSS');
+                        setExecutionStatus('Fourth consecutive recovery loss reached. Bot paused for cooldown; manual review required.');
+                    } else if (martingaleLimitReached) {
+                        setStatus('MARTINGALE LIMIT · PAUSED');
+                        setExecutionStatus('Maximum configured 1.5× progression reached. No further recovery trade will be placed.');
+                    } else {
+                        setStatus('SESSION LIMIT · PAUSED');
+                    }
+                    setNotice('Recovery stopped because a session or configured safety limit was reached.');
+                } else {
+                    executionAllowed.current = true;
+                    setExecutionArmed(false);
+                    setRunning(false);
+                    setStatus('RECOVERY ' + (recoveryLevel + 1) + ' · PREPARING');
+                    setExecutionStatus('LOSS · preparing a fresh bounded recovery scan');
+                    setNotice('Loss recorded. The next recovery stage will collect a new market sample; it will not reuse the previous entry.');
+                    window.setTimeout(() => {
+                        if (!executionAllowed.current) return;
+                        setMarkets([]);
+                        setExecutionArmed(true);
+                        setRunning(true);
+                        setStatus('RECOVERY ' + (recoveryLevel + 1) + ' · SCANNING');
+                    }, 650);
+                }
             } else {
                 executionAllowed.current = false;
                 setExecutionArmed(false);
                 setRunning(false);
-                setStatus('TRADE SETTLED · STOPPED');
-                setNotice('The contract settled and was recorded. Start a new scan for the next independent entry.');
+                setStatus('CONTRACT VOID · STOPPED');
+                setNotice('The contract was voided. No recovery progression was applied.');
             }
         }).catch(error => {
             executionAllowed.current = false;
@@ -342,20 +359,20 @@ const OverTwoTerminal = () => {
 
             <div className='over2-metrics'>
                 <div><small>LIVE DIGIT</small><strong>{latest ? latest.digit : '—'}</strong><span>{latest ? latest.quote : 'Waiting for tick'}</span></div>
-                <div><small>AI SAMPLE CANDIDATE</small><strong>{current?.result.selectedDigit ?? '—'}</strong><span>{current ? current.market.name : 'Awaiting sample'}</span></div>
+                <div><small>SELECTED DIGIT (OBSERVED)</small><strong>{current?.result.selectedDigit ?? '—'}</strong><span>{current ? current.market.name : 'Awaiting sample'}</span></div>
                 <div><small>OVER 2 OBSERVED</small><strong>{current ? current.result.evidenceScore + '%' : '—'}</strong><span>{current ? current.result.overCount + ' / ' + current.result.sampleSize + ' ticks' : 'No sample yet'}</span></div>
                 <div><small>SESSION P/L</small><strong className={sessionPnl >= 0 ? 'is-win' : 'is-loss'}>{sessionPnl.toFixed(2)} {currency}</strong><span>{wins} wins · {losses} losses · {winRate}% win rate</span></div>
             </div>
 
             <div className='over2-recovery'>
-                <div className={recoveryLevel >= 1 ? 'is-active' : ''}><small>RECOVERY 1</small><b>{recoveryLevel >= 1 ? 'ACTIVE / DONE' : 'READY'}</b></div>
-                <div className={recoveryLevel >= 2 ? 'is-active' : ''}><small>RECOVERY 2</small><b>{recoveryLevel >= 2 ? 'ACTIVE / DONE' : 'READY'}</b></div>
-                <div className={recoveryLevel >= 3 ? 'is-active' : ''}><small>RECOVERY 3</small><b>{recoveryLevel >= 3 ? 'ACTIVE / DONE' : 'READY'}</b></div>
+                <div className={recoveryLevel >= 1 ? 'is-active' : ''}><small>1ST RECOVERY</small><b>{recoveryLevel === 1 ? 'NEXT UP' : recoveryLevel > 1 ? 'COMPLETED' : 'READY'}</b></div>
+                <div className={recoveryLevel >= 2 ? 'is-active' : ''}><small>2ND RECOVERY</small><b>{recoveryLevel === 2 ? 'NEXT UP' : recoveryLevel > 2 ? 'COMPLETED' : 'READY'}</b></div>
+                <div className={recoveryLevel >= 3 ? 'is-active' : ''}><small>3RD RECOVERY</small><b>{recoveryLevel === 3 ? 'NEXT UP' : cooldown ? 'COMPLETED' : 'READY'}</b></div>
                 <div className={cooldown ? 'is-cooldown' : ''}><small>4TH · COOLDOWN</small><b>{cooldown ? 'COOLDOWN ACTIVE' : 'NOT TRIGGERED'}</b></div>
             </div>
 
             <div className='over2-live-panel'>
-                <div className='over2-panel-title'><div><h3>AI analysis and live market feed</h3><p>13 supported Volatility markets are checked in the background; the list stays off the dashboard.</p></div><span>{status}</span></div>
+                <div className='over2-panel-title'><div><h3>Strategy analysis and live market feed</h3><p>13 supported Volatility markets are checked in the background; the list stays off the dashboard.</p></div><span>{status}</span></div>
                 <div className='over2-analysis-row'>
                     <div><small>SELECTED MARKET</small><b>{current?.market.name || 'Waiting for eligible market'}</b></div>
                     <div><small>CONTRACT</small><b>DIGITOVER · BARRIER 2</b></div>
