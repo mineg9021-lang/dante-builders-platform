@@ -31,6 +31,10 @@ export type StartStrategyRuntimeInput = {
     onPurchased?: (purchase: { contractId: number; buyPrice: number; symbol: string; contractType: string }) => void;
     onSettled?: (result: VerifiedTradeResult) => void;
     onError?: (error: Error) => void;
+    /** Maximum fresh ticks collected in one analysis cycle. Defaults to 30. */
+    analysisMaxTicks?: number;
+    /** Maximum duration of one analysis cycle. Defaults to 10 seconds. */
+    analysisMaxDurationMs?: number;
 };
 
 const toDecimalString = (value: string | number, precision: number): string | null => {
@@ -79,6 +83,11 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
     let status: RuntimeStatus = 'STARTING';
     let stopped = false;
     let executing = false;
+    let analysisClosed = false;
+    let analysisTickCount = 0;
+    let analysisTimer: ReturnType<typeof setTimeout> | undefined;
+    const maxAnalysisTicks = Math.max(5, Math.min(500, Math.floor(input.analysisMaxTicks ?? 30)));
+    const maxAnalysisDurationMs = Math.max(1000, Math.min(120000, Math.floor(input.analysisMaxDurationMs ?? 10000)));
     const subscriptionIds: string[] = [];
     let tickStream: { unsubscribe: () => void } | undefined;
     const ticksBySymbol = new Map<string, StrategyTick[]>(eligibleSymbols.map(symbol => [symbol, []]));
@@ -87,14 +96,42 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         status = next;
         input.onStatus?.(next, message);
     };
+    const clearAnalysisTimer = () => {
+        if (analysisTimer) clearTimeout(analysisTimer);
+        analysisTimer = undefined;
+    };
     const stop = () => {
         if (stopped) return;
         stopped = true;
+        clearAnalysisTimer();
         tickStream?.unsubscribe();
         subscriptionIds.splice(0).forEach(id => {
             void input.api.send({ forget: id }).catch(() => undefined);
         });
         setStatus('STOPPED', 'Bot stopped. No new purchases will be initiated.');
+    };
+    const expireAnalysis = (reason: string) => {
+        if (stopped || executing || analysisClosed) return;
+        analysisClosed = true;
+        clearAnalysisTimer();
+        const symbol = eligibleSymbols.find(candidate => (ticksBySymbol.get(candidate)?.length ?? 0) > 0) ?? eligibleSymbols[0];
+        const finalDecision = evaluateBotStrategy({
+            symbol,
+            ticks: ticksBySymbol.get(symbol) ?? [],
+            config: input.strategy,
+        });
+        input.onDecision?.({ ...finalDecision, decision: 'REJECTED', reason, opportunityKey: undefined });
+        stop();
+        setStatus('PAUSED_ERROR', reason + ' No purchase was made. Restart analysis to try again.');
+    };
+    const beginAnalysisWindow = () => {
+        clearAnalysisTimer();
+        analysisClosed = false;
+        analysisTickCount = 0;
+        ticksBySymbol.forEach(symbolTicks => { symbolTicks.length = 0; });
+        analysisTimer = setTimeout(() => {
+            expireAnalysis('ANALYSIS_TIME_LIMIT_REACHED');
+        }, maxAnalysisDurationMs);
     };
     const handleTick = (raw: any) => {
         if (!canContinue() || raw?.msg_type !== 'tick' || typeof raw?.tick?.symbol !== 'string') return;
@@ -111,11 +148,17 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         if (digit === null) return;
         symbolTicks.push({ symbol, quote, epoch, digit });
         if (symbolTicks.length > 200) symbolTicks.splice(0, symbolTicks.length - 200);
-        if (executing) return;
+        if (executing || analysisClosed) return;
+        analysisTickCount += 1;
 
         const decision = evaluateBotStrategy({ symbol, ticks: symbolTicks, config: input.strategy });
         input.onDecision?.(decision);
-        if (decision.decision !== 'READY' || !decision.opportunityKey) return;
+        if (decision.decision !== 'READY' || !decision.opportunityKey) {
+            if (analysisTickCount >= maxAnalysisTicks) expireAnalysis('ANALYSIS_TICK_LIMIT_REACHED');
+            return;
+        }
+        analysisClosed = true;
+        clearAnalysisTimer();
 
         const baseRisk = input.getRiskContext ? input.getRiskContext() : input.risk;
         const risk: ExecutionRiskContext = { ...baseRisk, strategyDecision: decision.decision, lastTickEpoch: epoch };
@@ -134,7 +177,10 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         }).then(result => {
             input.onSettled?.(result);
             executing = false;
-            if (!stopped) setStatus('RUNNING', 'Settlement verified. Monitoring eligible markets for the next opportunity.');
+            if (!stopped) {
+                setStatus('RUNNING', 'Settlement verified. Starting a fresh bounded analysis cycle.');
+                beginAnalysisWindow();
+            }
         }).catch(error => {
             executing = false;
             const reason = error instanceof Error ? error : new Error('DERIV_EXECUTION_FAILED');
@@ -148,6 +194,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         });
     };
 
+    beginAnalysisWindow();
     tickStream = input.api.onMessage().subscribe(handleTick);
     const subscriptionResults = await Promise.all(eligibleSymbols.map(async symbol => {
         if (!canContinue()) return null;
@@ -174,6 +221,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         return { stop, getStatus: () => status, getTicks: () => Array.from(ticksBySymbol.values()).flat() };
     }
     if (!subscriptionResults.some(Boolean)) {
+        clearAnalysisTimer();
         tickStream.unsubscribe();
         throw new Error('NO_MARKET_TICK_SUBSCRIPTIONS_AVAILABLE');
     }
