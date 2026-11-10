@@ -1,6 +1,6 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import React from 'react';
-import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router';
+import { createBrowserRouter, createRoutesFromElements, Outlet, Route, RouterProvider } from 'react-router';
 import { cleanupUrl, handleOAuthCallback } from '@/external/deriv-core';
 import { getOAuthRedirectUri } from '@/external/deriv-core/config/urls';
 import ChunkLoader from '@/components/loader/chunk-loader';
@@ -15,67 +15,42 @@ import CoreStoreProvider from './CoreStoreProvider';
 import i18nInstance from './i18n';
 import './app-root.scss';
 
-const Layout = lazy(() => import('../components/layout'));
-const AppRoot = lazy(() => import('./app-root'));
+const AppRoot = React.lazy(() => import('./app-root'));
 
-/**
- * Component wrapper to handle language URL parameter
- * Uses the useLanguageFromURL hook to process language switching
- */
 const LanguageHandler = ({ children }: { children: React.ReactNode }) => {
     useLanguageFromURL();
     return <>{children}</>;
 };
 
-// The static preview build is served under /bot/preview (see rsbuild.config.ts
-// assetPrefix), so React Router must resolve routes under that prefix. Standalone
-// partner deploys are served at the root, so no basename there.
 const routerBasename = isPreviewMode() ? PREVIEW_BASE_PATH : undefined;
 
 const router = createBrowserRouter(
     createRoutesFromElements(
-        <Route
-            path='/'
-            element={
-                <Suspense
-                    fallback={<ChunkLoader message={localize('Please wait while we connect to the server...')} />}
-                >
-                    <TranslationProvider defaultLang='EN' i18nInstance={i18nInstance}>
-                        <LanguageHandler>
-                            <StoreProvider>
-                                <LocalStorageSyncWrapper>
-                                    <RoutePromptDialog />
-                                    <CoreStoreProvider>
-                                        <Layout />
-                                    </CoreStoreProvider>
-                                </LocalStorageSyncWrapper>
-                            </StoreProvider>
-                        </LanguageHandler>
-                    </TranslationProvider>
-                </Suspense>
-            }
-        >
-            {/* All child routes will be passed as children to Layout */}
+        <Route path='/' element={
+            <Suspense fallback={<ChunkLoader message={localize('Loading Dante Builders…')} />}>
+                <TranslationProvider defaultLang='EN' i18nInstance={i18nInstance}>
+                    <LanguageHandler>
+                        <StoreProvider>
+                            <LocalStorageSyncWrapper>
+                                <RoutePromptDialog />
+                                <CoreStoreProvider>
+                                    <Outlet />
+                                </CoreStoreProvider>
+                            </LocalStorageSyncWrapper>
+                        </StoreProvider>
+                    </LanguageHandler>
+                </TranslationProvider>
+            </Suspense>
+        }>
             <Route index element={<AppRoot />} />
-            {/* App Builder embeds the template at /preview — render the same app shell */}
             <Route path='preview' element={<AppRoot />} />
-            {/* Partner Netlify deploy-preview links may include a legacy trailing path; keep the SPA shell reachable. */}
             <Route path='*' element={<AppRoot />} />
         </Route>
     ),
     { basename: routerBasename }
 );
 
-/**
- * Main App component
- *
- * Responsibilities:
- * 1. OAuth callback handling (via vendored deriv-core handleOAuthCallback)
- * 2. Account switching from URL (via useAccountSwitching hook)
- * 3. Router provider setup
- */
 function App() {
-    // Handle account switching via URL parameter
     useAccountSwitching();
 
     React.useEffect(() => {
@@ -89,18 +64,14 @@ function App() {
                     redirectUri: getOAuthRedirectUri(),
                     scopes: 'trade',
                 });
-
                 const { DerivWSAccountsService } = await import('@/services/derivws-accounts.service');
                 const accounts = await DerivWSAccountsService.fetchAccountsList(authInfo.access_token);
-
                 if (accounts && accounts.length > 0) {
                     DerivWSAccountsService.storeAccounts(accounts);
                     const firstAccount = accounts[0];
                     localStorage.setItem('active_loginid', firstAccount.account_id);
-                    const isDemo =
-                        firstAccount.account_id.startsWith('VRT') || firstAccount.account_id.startsWith('VRTC');
+                    const isDemo = firstAccount.account_id.startsWith('VRT') || firstAccount.account_id.startsWith('VRTC');
                     localStorage.setItem('account_type', isDemo ? 'demo' : 'real');
-
                     const { api_base } = await import('@/external/bot-skeleton');
                     await api_base.init(true);
                 } else {
@@ -112,7 +83,6 @@ function App() {
                 cleanupUrl(getOAuthRedirectUri());
             }
         };
-
         handleCallback();
     }, []);
 

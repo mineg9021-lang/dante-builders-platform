@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { generateOAuthURL } from '@/components/shared';
 import { useStore } from '@/hooks/useStore';
@@ -6,107 +6,208 @@ import EvenOddTerminal from './even-odd-terminal';
 import DigitMatchesScanner from './digit-matches-scanner';
 import './dante-landing.scss';
 
-type TMobileIconGuide = {
-    handleTabChange: (active_number: number) => void;
+type Workspace = 'home' | 'parity' | 'matches' | 'xml';
+
+const escapeXml = (value: string) => value.replace(/[<>&"']/g, char => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[char] || char);
+
+const makeParityXml = (symbol: string, stake: number, duration: number, side: 'DIGITEVEN' | 'DIGITODD') => {
+    const safeSymbol = escapeXml(symbol);
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<xml xmlns="http://www.w3.org/1999/xhtml" is_dbot="true" collection="false">
+  <variables>
+    <variable type="" id="dante_initialized" islocal="false" iscloud="false">DANTE:initialized</variable>
+  </variables>
+  <block type="trade_definition" id="dante_trade_definition" deletable="false" x="0" y="0">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="dante_market" deletable="false" movable="false">
+        <field name="MARKET_LIST">volidx</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">${safeSymbol}</field>
+        <next>
+          <block type="trade_definition_tradetype" id="dante_trade_type" deletable="false" movable="false">
+            <field name="TRADETYPECAT_LIST">digits</field>
+            <field name="TRADETYPE_LIST">evenodd</field>
+            <next>
+              <block type="trade_definition_contracttype" id="dante_contract_type" deletable="false" movable="false">
+                <field name="TYPE_LIST">both</field>
+                <next>
+                  <block type="trade_definition_candleinterval" id="dante_candle_interval" deletable="false" movable="false">
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" id="dante_restart_buy_sell" deletable="false" movable="false">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" id="dante_restart_error" deletable="false" movable="false">
+                            <field name="RESTARTONERROR">FALSE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+    <statement name="INITIALIZATION">
+      <block type="variables_set" id="dante_initialize">
+        <field name="VAR" id="dante_initialized" variabletype="">DANTE:initialized</field>
+        <value name="VALUE"><block type="logic_boolean" id="dante_initialized_true"><field name="BOOL">TRUE</field></block></value>
+      </block>
+    </statement>
+    <statement name="SUBMARKET">
+      <block type="trade_definition_tradeoptions" id="dante_trade_options">
+        <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>
+        <field name="DURATIONTYPE_LIST">t</field>
+        <field name="CURRENCY_LIST">USD</field>
+        <value name="DURATION"><shadow type="math_number_positive" id="dante_duration"><field name="NUM">${duration}</field></shadow></value>
+        <value name="AMOUNT"><shadow type="math_number_positive" id="dante_stake"><field name="NUM">${stake}</field></shadow></value>
+      </block>
+    </statement>
+  </block>
+  <block type="during_purchase" id="dante_during_purchase" x="720" y="0">
+    <statement name="DURING_PURCHASE_STACK">
+      <block type="controls_if" id="dante_sell_check">
+        <value name="IF0"><block type="check_sell" id="dante_check_sell"></block></value>
+        <statement name="DO0"><block type="sell_at_market" id="dante_sell_at_market"></block></statement>
+      </block>
+    </statement>
+  </block>
+  <block type="after_purchase" id="dante_after_purchase" x="720" y="248">
+    <statement name="AFTERPURCHASE_STACK"><block type="trade_again" id="dante_trade_again"></block></statement>
+  </block>
+  <block type="before_purchase" id="dante_before_purchase" deletable="false" x="0" y="576">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="purchase" id="dante_purchase"><field name="PURCHASE_LIST">${side}</field></block>
+    </statement>
+  </block>
+</xml>`;
 };
 
-const DashboardComponent = observer((_props: TMobileIconGuide) => {
+const validateParityXml = (xml: string) => {
+    const parsed = new DOMParser().parseFromString(xml, 'application/xml');
+    if (parsed.querySelector('parsererror')) return { valid: false, errors: ['XML is not well-formed.'] };
+    const required = ['trade_definition', 'before_purchase', 'during_purchase', 'after_purchase'];
+    const missing = required.filter(type => !parsed.querySelector(`block[type="${type}"]`));
+    if (!parsed.querySelector('block[type="trade_definition"] statement[name="INITIALIZATION"] block')) {
+        missing.push('Run Once at Start initialization');
+    }
+    return { valid: missing.length === 0, errors: missing.map(item => `Missing required section: ${item}`) };
+};
+
+const DashboardComponent = observer(() => {
     const { client } = useStore();
-    const [section, setSection] = useState<'overview' | 'parity' | 'matches' | 'xml'>('overview');
+    const [workspace, setWorkspace] = useState<Workspace>('home');
     const [loginError, setLoginError] = useState('');
+    const [request, setRequest] = useState('');
+    const [symbol, setSymbol] = useState('R_100');
+    const [stake, setStake] = useState('1');
+    const [duration, setDuration] = useState('5');
+    const [side, setSide] = useState<'DIGITEVEN' | 'DIGITODD'>('DIGITEVEN');
+    const [generatedXml, setGeneratedXml] = useState('');
+    const [validation, setValidation] = useState<{ valid: boolean; errors: string[] } | null>(null);
 
-    useEffect(() => {
-        document.body.classList.toggle('db-parity-workspace-active', section === 'parity');
-        return () => document.body.classList.remove('db-parity-workspace-active');
-    }, [section]);
-
-    const handleConnectDeriv = async () => {
+    const connectDeriv = async () => {
         setLoginError('');
         try {
-            const oauthUrl = await generateOAuthURL();
-            if (!oauthUrl) {
-                setLoginError('Deriv sign-in could not be started. Please check the registered OAuth application settings.');
-                return;
-            }
-            window.location.assign(oauthUrl);
-        } catch {
-            setLoginError('Unable to start Deriv sign-in. Please try again.');
+            const url = await generateOAuthURL();
+            if (!url) throw new Error('Deriv sign-in could not be started. Check the registered OAuth application settings.');
+            window.location.assign(url);
+        } catch (error) {
+            setLoginError(error instanceof Error ? error.message : 'Unable to start Deriv sign-in.');
         }
     };
 
+    const generateXml = () => {
+        const normalized = request.toLowerCase();
+        const requestedSide = /\bodd\b/.test(normalized) ? 'DIGITODD' : /\beven\b/.test(normalized) ? 'DIGITEVEN' : side;
+        const requestedSymbol = (request.match(/\bR_(?:10|25|50|75|100)(?:_1S)?\b/i)?.[0] || symbol).toUpperCase();
+        const requestedStake = Number(request.match(/stake\s*(?:of|:|=)?\s*([0-9]+(?:\.[0-9]+)?)/i)?.[1] || stake);
+        const requestedDuration = Number(request.match(/(\d+)\s*ticks?/i)?.[1] || duration);
+        if (!Number.isFinite(requestedStake) || requestedStake <= 0 || requestedStake > 100000) {
+            setValidation({ valid: false, errors: ['Enter a positive stake within the supported range.'] });
+            return;
+        }
+        if (!Number.isInteger(requestedDuration) || requestedDuration < 1 || requestedDuration > 10) {
+            setValidation({ valid: false, errors: ['Duration must be between 1 and 10 ticks for this generator template.'] });
+            return;
+        }
+        const xml = makeParityXml(requestedSymbol, requestedStake, requestedDuration, requestedSide);
+        const result = validateParityXml(xml);
+        setGeneratedXml(xml);
+        setValidation(result);
+        setSide(requestedSide);
+        setSymbol(requestedSymbol);
+        setStake(String(requestedStake));
+        setDuration(String(requestedDuration));
+    };
+
+    const downloadXml = () => {
+        if (!generatedXml || !validation?.valid) return;
+        const blob = new Blob([generatedXml], { type: 'application/xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `dante-${side.toLowerCase()}-${symbol.toLowerCase()}.xml`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+    };
+
     return (
-        <main className='db-platform'>
-            <header className='db-platform__header'>
-                <a className='db-platform__brand' href='/' onClick={event => { event.preventDefault(); setSection('overview'); }}>
-                    <span>DB</span><strong>DANTE BUILDERS</strong>
-                </a>
-                <nav className='db-platform__nav' aria-label='Main navigation'>
-                    <button type='button' className={section === 'overview' ? 'is-active' : ''} onClick={() => setSection('overview')}>Dashboard</button>
-                    <button type='button' className={section === 'parity' ? 'is-active' : ''} onClick={() => setSection('parity')}>Parity Bot</button>
-                    <button type='button' className={section === 'matches' ? 'is-active' : ''} onClick={() => setSection('matches')}>Matches Scanner</button>
-                    <button type='button' className={section === 'xml' ? 'is-active' : ''} onClick={() => setSection('xml')}>XML Generator</button>
+        <main className="dante-app">
+            <header className="dante-header">
+                <button className="dante-brand" type="button" onClick={() => setWorkspace('home')}><span className="dante-brand-mark">DB</span><span>DANTE BUILDERS</span></button>
+                <nav aria-label="Product workspaces">
+                    <button className={workspace === 'home' ? 'active' : ''} onClick={() => setWorkspace('home')}>Home</button>
+                    <button className={workspace === 'parity' ? 'active' : ''} onClick={() => setWorkspace('parity')}>Parity Bot</button>
+                    <button className={workspace === 'matches' ? 'active' : ''} onClick={() => setWorkspace('matches')}>Matches Scanner</button>
+                    <button className={workspace === 'xml' ? 'active' : ''} onClick={() => setWorkspace('xml')}>XML Generator</button>
                 </nav>
-                <span className='db-platform__account'>{client.is_logged_in ? 'DERIV CONNECTED' : 'ACCOUNT NOT CONNECTED'}</span>
+                <span className={client.is_logged_in ? 'connection connected' : 'connection'}>{client.is_logged_in ? 'DERIV SESSION CONNECTED' : 'DERIV SESSION REQUIRED FOR TRADING'}</span>
             </header>
 
-            {section === 'overview' ? (
-                <section className='db-platform__overview'>
-                    <div className='db-platform__hero'>
-                        <div className='db-platform__copy'>
-                            <span className='db-platform__eyebrow'>DANTE BUILDERS · DERIV PLATFORM</span>
-                            <h1>Market analysis, with control in your hands.</h1>
-                            <p>A focused workspace for reviewing market activity and accessing your Even/Odd parity bot when you need it.</p>
-                            <div className='db-platform__actions'>
-                                <button type='button' className='db-platform__primary' onClick={() => client.is_logged_in ? setSection('parity') : handleConnectDeriv()}>
-                                    {client.is_logged_in ? 'Open Parity Bot' : 'Connect Deriv account'}
-                                </button>
-                                <button type='button' className='db-platform__secondary' onClick={() => setSection('parity')}>Go to Parity Bot</button>
-                            </div>
-                            {loginError && <p className='db-platform__error' role='alert'>{loginError}</p>}
-                            <div className='db-platform__trust'><span>Analysis-first</span><span>No martingale</span><span>No profit guarantees</span></div>
-                        </div>
-                        <div className='db-platform__visual' aria-hidden='true'>
-                            <div className='db-platform__visual-orbit'><span>DB</span></div>
-                            <div className='db-platform__visual-chip db-platform__visual-chip--one'>MARKET INSIGHT</div>
-                            <div className='db-platform__visual-chip db-platform__visual-chip--two'>CONTROLLED EXECUTION</div>
-                        </div>
+            {workspace === 'home' && <section className="dante-home">
+                <div className="dante-hero">
+                    <div><span className="dante-kicker">INDEPENDENT MARKET TECHNOLOGY</span><h1>Build with intelligence.<br/><em>Operate with control.</em></h1><p>Dante Builders brings three focused tools into one clean workspace. Each product has its own engine, controls and validation.</p><div className="dante-hero-actions"><button className="primary" onClick={() => setWorkspace('parity')}>Open Parity Bot</button><button className="secondary" onClick={() => setWorkspace('matches')}>Explore Market Scanner</button></div></div>
+                    <div className="dante-hero-art" aria-hidden="true"><div className="orbit orbit-one"></div><div className="orbit orbit-two"></div><div className="core">D<span>B</span></div><div className="float-chip chip-a">LIVE DATA</div><div className="float-chip chip-b">ENGINE ACTIVE</div></div>
+                </div>
+                <div className="dante-products-heading"><span>PRODUCT WORKSPACES</span><h2>Choose your tool</h2><p>Three separate products. No legacy bot-builder clutter.</p></div>
+                <div className="dante-product-grid">
+                    <button className="product-tile parity-tile" onClick={() => setWorkspace('parity')}><span className="tile-icon">±</span><strong>Even / Odd Parity Bot</strong><p>Market sampling, parity analysis, risk gates and guarded execution.</p><b>Open workspace <i>↗</i></b></button>
+                    <button className="product-tile scanner-tile" onClick={() => setWorkspace('matches')}><span className="tile-icon">◎</span><strong>Digit Intelligence Matches Scanner</strong><p>Live tick collection, precision-aware digit analysis and Matches/Differs evidence.</p><b>Open scanner <i>↗</i></b></button>
+                    <button className="product-tile xml-tile" onClick={() => setWorkspace('xml')}><span className="tile-icon">&lt;/&gt;</span><strong>AI Deriv XML Bots Generator</strong><p>Generate a supported DBot strategy, validate required sections and download XML.</p><b>Open generator <i>↗</i></b></button>
+                </div>
+            </section>}
+
+            {workspace === 'parity' && <section className="dante-workspace">
+                <div className="workspace-heading"><div><span>EXECUTION ENGINE</span><h1>Even / Odd Parity Bot</h1><p>Fresh tick validation, bounded analysis, contract checks and account-level risk controls.</p></div><button onClick={() => setWorkspace('home')}>← All products</button></div>
+                {client.is_logged_in ? <EvenOddTerminal /> : <div className="connect-panel"><h2>Connect your Deriv account</h2><p>Authentication is required for account balance, proposals, purchases and settlement monitoring.</p><button className="primary" onClick={connectDeriv}>Connect Deriv securely</button>{loginError && <p role="alert">{loginError}</p>}</div>}
+            </section>}
+
+            {workspace === 'matches' && <section className="dante-workspace">
+                <div className="workspace-heading"><div><span>MARKET INTELLIGENCE ENGINE</span><h1>Digit Intelligence Matches Scanner AI</h1><p>Live market feed, 0–9 distribution, rolling sample analysis and evidence-led Matches/Differs candidates.</p></div><button onClick={() => setWorkspace('home')}>← All products</button></div>
+                {client.is_logged_in ? <DigitMatchesScanner /> : <div className="connect-panel"><h2>Connect to Deriv market data</h2><p>Connect a Deriv session to start the scanner and retrieve market ticks.</p><button className="primary" onClick={connectDeriv}>Connect Deriv securely</button>{loginError && <p role="alert">{loginError}</p>}</div>}
+            </section>}
+
+            {workspace === 'xml' && <section className="dante-workspace xml-workspace">
+                <div className="workspace-heading"><div><span>DBOT XML ENGINE</span><h1>AI Deriv XML Bots Generator</h1><p>Describe a supported Even/Odd strategy. The local generator builds real DBot blocks, checks the required sections and exports an XML file.</p></div><button onClick={() => setWorkspace('home')}>← All products</button></div>
+                <div className="generator-panel">
+                    <label>Describe the bot strategy<textarea value={request} onChange={event => setRequest(event.target.value)} placeholder="Example: Build an Even strategy for R_100 with stake 2 and duration 5 ticks."></textarea></label>
+                    <div className="generator-fields">
+                        <label>Market<select value={symbol} onChange={event => setSymbol(event.target.value)}>{['R_10','R_10_1S','R_25','R_25_1S','R_50','R_50_1S','R_75','R_75_1S','R_100','R_100_1S'].map(value => <option key={value}>{value}</option>)}</select></label>
+                        <label>Contract<select value={side} onChange={event => setSide(event.target.value as 'DIGITEVEN' | 'DIGITODD')}><option value="DIGITEVEN">Even</option><option value="DIGITODD">Odd</option></select></label>
+                        <label>Stake<input type="number" min="0.35" step="0.01" value={stake} onChange={event => setStake(event.target.value)}/></label>
+                        <label>Duration (ticks)<input type="number" min="1" max="10" step="1" value={duration} onChange={event => setDuration(event.target.value)}/></label>
                     </div>
-                    <div className='db-platform__welcome'>
-                        <div><span>YOUR WORKSPACE</span><h2>Market tools and activity</h2><p>Open a focused tool while keeping the rest of your workspace one tap away.</p></div>
-                        <button type='button' onClick={() => setSection('parity')}>Open Even/Odd Bot <span aria-hidden='true'>→</span></button>
-                    </div>
-                    <section className='db-activity-area'>
-                        <div className='db-activity-heading'><span>WORKSPACE ACTIVITIES</span><h2>Choose a tool</h2><p>Separate workspaces, one Deriv connection.</p></div>
-                        <div className='db-activity-grid'>
-                            <button type='button' onClick={() => setSection('parity')}><span className='db-activity-icon'>↕</span><strong>Even / Odd Bot</strong><small>Live parity analysis and guarded Deriv execution</small><b>Open bot →</b></button>
-                            <button type='button' onClick={() => setSection('matches')}><span className='db-activity-icon'>◎</span><strong>Digit Matches Scanner</strong><small>Live 0–9 digit distribution and contract analysis</small><b>Open scanner →</b></button>
-                            <button type='button' onClick={() => setSection('xml')}><span className='db-activity-icon'>⌘</span><strong>AI XML Generator</strong><small>Create and validate Deriv DBot XML strategies</small><b>Open generator →</b></button>
-                            <button type='button' onClick={() => setSection('overview')}><span className='db-activity-icon'>▤</span><strong>Tutorials & Help</strong><small>Platform guidance and safe demo-account setup</small><b>View guidance ↓</b></button>
-                        </div>
-                    </section>
-                    <section className='db-tutorial-strip'>
-                        <div><span>GETTING STARTED</span><h2>Connect · Analyse · Review · Execute</h2><p>Start with a Deriv demo account. Check the market feed and risk settings before you run a bot.</p></div>
-                        <button type='button' onClick={handleConnectDeriv}>{client.is_logged_in ? 'Account connected' : 'Connect Deriv →'}</button>
-                    </section>
-                </section>
-            ) : section === 'parity' ? (
-                <section className='db-platform__bot-section'>
-                    <div className='db-platform__section-heading'><div><span>TRADING WORKSPACE</span><h1>Even / Odd Parity Bot</h1><p>Compact live market analysis and controlled Deriv execution.</p></div><button type='button' onClick={() => setSection('overview')}>← All activities</button></div>
-                    {client.is_logged_in ? <EvenOddTerminal /> : <div className='db-platform__connect-card'><h2>Connect your Deriv account</h2><p>Sign in securely to use the parity bot.</p><button type='button' className='db-platform__primary' onClick={handleConnectDeriv}>Connect Deriv account</button>{loginError && <p className='db-platform__error'>{loginError}</p>}</div>}
-                    <div className='db-compact-activities'><strong>OTHER ACTIVITIES</strong><button type='button' onClick={() => setSection('matches')}>Digit Matches Scanner</button><button type='button' onClick={() => setSection('xml')}>AI XML Generator</button><button type='button' onClick={() => setSection('overview')}>Tutorials & Dashboard</button></div>
-                </section>
-            ) : section === 'matches' ? (
-                <section className='db-platform__bot-section db-product-page'>
-                    <div className='db-product-hero'>
-                        <div className='db-robot-art' aria-hidden='true'><div className='db-robot-halo'></div><div className='db-robot-head'><i></i><b></b><span></span></div></div>
-                        <div><span className='db-product-kicker'>DANTE MARKET INTELLIGENCE</span><h1>Digit Intelligence Matches Scanner AI</h1><p>Independent live ten-digit analysis for Matches and Differs. Scanner mode does not place trades.</p><div className='db-product-pills'><span>Live market feed</span><span>10-digit intelligence</span><span>Independent engine</span></div></div>
-                    </div>
-                    {client.is_logged_in ? <DigitMatchesScanner /> : <div className='db-product-card'><h2>Connect your Deriv account</h2><p>Authorize a Deriv session to retrieve historical ticks and start the live scanner.</p><button type='button' className='db-platform__primary' onClick={handleConnectDeriv}>Connect Deriv account</button></div>}
-                    <button className='db-back-link' type='button' onClick={() => setSection('overview')}>← Back to dashboard</button>
-                </section>
-            ) : (
-                <section className='db-product-page db-xml-page'><div className='db-xml-hero'><div className='db-xml-orb'>AI</div><span className='db-product-kicker'>DANTE BUILDERS · DBOT WORKSPACE</span><h1>AI Deriv XML Bots Generator</h1><p>Describe the bot you want. The generator will use DBot structure and validate the required XML sections.</p></div><div className='db-product-card'><label className='db-request-label'>Describe your bot<textarea id='dante-xml-request' placeholder='Describe the market, contract, entry rules, exit rules, risk limits and restart behaviour…' rows={6}></textarea></label><div className='db-xml-sections'><span>Trade Parameters</span><span>Purchase Conditions</span><span>Sell Conditions</span><span>Restart Trading Conditions</span><span>Run Once at Start</span></div><button type='button' disabled className='db-xml-generate' title='Secure server-side AI provider connection is required'>Generate complete XML</button><p className='db-xml-note'>AI generation is not enabled: no server-side AI provider is configured. No example bots or fabricated XML are displayed.</p></div><button className='db-back-link' type='button' onClick={() => setSection('overview')}>← Back to dashboard</button></section>
-            )}
+                    <button className="primary generate-button" onClick={generateXml}>Generate and validate XML</button>
+                    <p className="generator-note">Current local generation supports verified Even/Odd DBot structure. It does not claim to run a cloud LLM; unsupported contract requests are not silently converted.</p>
+                    {validation && <div className={validation.valid ? 'validation-result valid' : 'validation-result invalid'}><strong>{validation.valid ? 'XML VALIDATION PASSED' : 'VALIDATION NEEDS ATTENTION'}</strong>{validation.errors.map(error => <p key={error}>{error}</p>)}{validation.valid && <p>Trade Parameters · Run Once at Start · Purchase Conditions · Sell Conditions · Restart Trading Conditions</p>}</div>}
+                    {generatedXml && <div className="xml-output"><div><strong>Generated DBot XML</strong><button onClick={downloadXml} disabled={!validation?.valid}>Download XML</button></div><pre>{generatedXml}</pre></div>}
+                </div>
+            </section>}
+            <footer className="dante-footer"><span>DANTE BUILDERS</span><span>Independent tools · Evidence before execution</span></footer>
         </main>
     );
 });
