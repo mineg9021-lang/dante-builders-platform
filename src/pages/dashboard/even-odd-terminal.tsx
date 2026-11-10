@@ -39,6 +39,8 @@ const EvenOddTerminal = () => {
     const [stake, setStake] = useState('1');
     const [martingaleEnabled, setMartingaleEnabled] = useState(false);
     const [lossProgression, setLossProgression] = useState(0);
+    const [recoveryStep, setRecoveryStep] = useState(0);
+    const [cooldown, setCooldown] = useState(false);
     const effectiveStake = calculateParityStake(Number(stake), martingaleEnabled, lossProgression);
     const [stopLoss, setStopLoss] = useState('10');
     const [takeProfit, setTakeProfit] = useState('10');
@@ -358,10 +360,22 @@ const EvenOddTerminal = () => {
             setExecutionStatus(`${result.settlement} · ${result.contractType} · P/L ${result.profit.toFixed(2)} ${authData.currency}`);
             const martingaleProgress = advanceMartingaleAfterSettlement(lossProgression, result.settlement, martingaleEnabled);
             setLossProgression(martingaleProgress.nextStep);
+            const nextRecoveryStep = result.settlement === 'WON' ? 0 : result.settlement === 'LOST' ? recoveryStep + 1 : recoveryStep;
+            if (result.settlement === 'WON') setRecoveryStep(0);
+            else if (result.settlement === 'LOST') setRecoveryStep(nextRecoveryStep);
             const nextSessionPnl = sessionPnl + result.profit;
             const nextTradeCount = tradesThisSession + 1;
             const withinSessionLimits = Math.max(0, -nextSessionPnl) < Number(stopLoss) && Math.max(0, nextSessionPnl) < Number(takeProfit) && nextTradeCount < 10;
-            if (martingaleProgress.halt) {
+            if (result.settlement === 'LOST' && recoveryStep >= 3) {
+                setCooldown(true);
+                executionAllowed.current = false;
+                setExecutionArmed(false);
+                autoRestartAllowed.current = false;
+                setAutoRestart(false);
+                setRunning(false);
+                setExecutionStatus('Fourth consecutive recovery loss · cooldown active.');
+                setNotice('The fourth loss has reached the recovery cooldown. Reset only after reviewing the session.');
+            } else if (martingaleProgress.halt) {
                 executionAllowed.current = false;
                 setExecutionArmed(false);
                 autoRestartAllowed.current = false;
@@ -453,6 +467,7 @@ const EvenOddTerminal = () => {
     };
 
     const armOneTrade = () => {
+        if (cooldown) { setNotice('Recovery cooldown is active after the fourth loss. Reset the session after manual review.'); return; }
         if (mode === 'analysis') {
             setNotice('Choose Demo or Live mode before arming execution. Analysis mode never places orders.');
             return;
@@ -475,6 +490,16 @@ const EvenOddTerminal = () => {
         setExecutionArmed(true);
         setNotice('Bot is running. It will submit one Deriv trade only after the selected market produces a fresh validated signal and all account and risk checks pass.');
         if (!running) setRunning(true);
+    };
+
+    const resetRecovery = () => {
+        setCooldown(false);
+        setRecoveryStep(0);
+        setLossProgression(0);
+        setSessionPnlByAccount(previous => ({ ...previous, [activeLoginid]: 0 }));
+        setTradeCountByAccount(previous => ({ ...previous, [activeLoginid]: 0 }));
+        setExecutionStatus('Recovery and session counters reset after manual review.');
+        setNotice('Recovery stages reset. Review the account and risk settings before restarting.');
     };
 
     const stopBot = () => {
@@ -548,6 +573,12 @@ const EvenOddTerminal = () => {
                         <h3>Risk configuration</h3>
                         <label>Base stake amount<input type='number' min='0.35' step='0.01' value={stake} onChange={event => { setStake(event.target.value); setLossProgression(0); }} /></label>
                         <div className='eo-terminal__martingale'><div><strong>Martingale · 1.5×</strong><small>{martingaleEnabled ? `Enabled · loss step ${lossProgression}/${MAX_MARTINGALE_STEPS} · next stake ${effectiveStake.toFixed(2)} ${authData?.currency || ''}` : 'Disabled · fixed base stake'}</small></div><label className='eo-terminal__switch'><input type='checkbox' checked={martingaleEnabled} onChange={event => { setMartingaleEnabled(event.target.checked); setLossProgression(0); }} /><span>{martingaleEnabled ? 'ON' : 'OFF'}</span></label></div>
+                        <div className='eo-terminal__recovery'>
+                            <div className={recoveryStep >= 1 ? 'is-active' : ''}><small>1ST RECOVERY</small><b>{recoveryStep === 1 ? 'NEXT UP' : recoveryStep > 1 ? 'COMPLETED' : 'READY'}</b></div>
+                            <div className={recoveryStep >= 2 ? 'is-active' : ''}><small>2ND RECOVERY</small><b>{recoveryStep === 2 ? 'NEXT UP' : recoveryStep > 2 ? 'COMPLETED' : 'READY'}</b></div>
+                            <div className={recoveryStep >= 3 ? 'is-active' : ''}><small>3RD RECOVERY</small><b>{recoveryStep === 3 ? 'NEXT UP' : cooldown ? 'COMPLETED' : 'READY'}</b></div>
+                            <div className={cooldown ? 'is-cooldown' : ''}><small>4TH · COOLDOWN</small><b>{cooldown ? 'ACTIVE' : 'NOT TRIGGERED'}</b></div>
+                        </div>
                         <label>Stop-loss<input type='number' min='0' step='0.01' value={stopLoss} onChange={event => setStopLoss(event.target.value)} /></label>
                         <label>Take-profit<input type='number' min='0' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
                         <label>Execution mode<select value={mode} onChange={event => changeMode(event.target.value as 'analysis' | 'demo' | 'live')}><option value='analysis'>Analysis only</option><option value='demo'>Demo auto execution</option><option value='live'>Live auto execution</option></select></label>
@@ -559,6 +590,7 @@ const EvenOddTerminal = () => {
                         <button type='button' onClick={startFreshAnalysis} disabled={running || executionLock.current}>Start analysis</button>
                         <button type='button' className='eo-terminal__arm' onClick={armOneTrade} disabled={executionArmed || executionLock.current}>Run bot · guarded execution</button>
                         <button type='button' className='eo-terminal__stop' onClick={stopBot} disabled={!running && !executionArmed && !executionLock.current}>Stop / disarm</button>
+                        <button type='button' className='eo-terminal__reset' onClick={resetRecovery} disabled={!cooldown && recoveryStep === 0 && lossProgression === 0}>Reset recovery</button>
                     </div>
                     <div className='eo-terminal__card eo-terminal__portrait'>
                         <div className='eo-terminal__robot' aria-hidden='true'>
