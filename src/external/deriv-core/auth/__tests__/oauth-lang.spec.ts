@@ -3,7 +3,7 @@
  * authorize URL carried no `lang` (#804). `packages/core`'s twin already
  * appended it — bot's vendored copy had drifted.
  */
-import { buildAuthorizationUrl, buildSignUpUrl } from '../oauth';
+import { buildAuthorizationUrl, buildSignUpUrl, handleOAuthCallback, OAuthError } from '../oauth';
 import type { AuthConfig } from '../../types';
 
 jest.mock('../../config/urls', () => ({
@@ -74,4 +74,31 @@ it('sign-up keeps prompt=registration once lang is appended', async () => {
     const params = new URL(url).searchParams;
     expect(params.get('prompt')).toBe('registration');
     expect(params.get('lang')).toBe('FR');
+});
+
+
+describe('OAuth callback redirect validation', () => {
+    it('rejects a callback from an unexpected origin before exchanging a code', async () => {
+        await expect(handleOAuthCallback(
+            'https://attacker.example.com/?code=auth-code&state=state',
+            config,
+        )).rejects.toThrow(new OAuthError('OAuth callback URL does not match the configured redirect URI'));
+        expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('rejects a callback delivered to an unexpected path', async () => {
+        await expect(handleOAuthCallback(
+            'https://partner.example.com/unregistered?code=auth-code&state=state',
+            config,
+        )).rejects.toThrow(new OAuthError('OAuth callback URL does not match the configured redirect URI'));
+        expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('allows provider query parameters on the configured callback URL', async () => {
+        await expect(handleOAuthCallback(
+            'https://partner.example.com/?code=auth-code&state=state',
+            config,
+        )).rejects.toThrow('CSRF token mismatch');
+        expect(global.fetch).not.toHaveBeenCalled();
+    });
 });
