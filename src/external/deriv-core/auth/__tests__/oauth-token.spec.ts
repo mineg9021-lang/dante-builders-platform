@@ -68,6 +68,14 @@ describe('OAuth token response validation', () => {
     expect(getAuthInfo()).toBeNull();
   });
 
+  it('does not expose provider error bodies when token exchange fails', async () => {
+    mockTokenResponse({ error: 'invalid_grant', error_description: 'provider error details' }, false);
+
+    await expect(exchangeCodeForTokens(exchangeParams)).rejects.toThrow('Token exchange failed (400)');
+    await expect(exchangeCodeForTokens(exchangeParams)).rejects.not.toThrow('provider error details');
+    expect(getAuthInfo()).toBeNull();
+  });
+
   it('rejects invalid JSON and does not expose provider response details', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
