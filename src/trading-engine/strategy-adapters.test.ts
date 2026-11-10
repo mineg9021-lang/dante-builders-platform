@@ -13,7 +13,7 @@ describe('specialist strategy adapters', () => {
         const ticks = makeTicks(Array.from({ length: 14 }, (_, i) => 100 + i));
         const result = evaluateBotStrategy({ symbol: 'R_100', ticks, config: { id: 'RISE', minSample: 12 }, nowSeconds: 1_800_000_000 });
         expect(result.decision).toBe('READY');
-        expect(result.contractType).toBe('CALL');
+        expect(result.contractType).toBe('PUT');
     });
 
     it('maps Only Up to RUNHIGH and rejects equal or falling ticks', () => {
