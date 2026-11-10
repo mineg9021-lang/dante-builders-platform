@@ -9,6 +9,7 @@ import type { DerivTradingApi, ExecutionRiskContext } from '@/trading-engine/exe
 import { getImplementedStrategyIds, type BotStrategyId, type StrategyDecisionResult } from '@/trading-engine/strategy-adapters';
 import { DANTE_VOLATILITY_SYMBOLS } from './market-universe';
 import { appendDanteJournalEvent, loadDanteJournal } from '@/services/dante-journal.service';
+import PlatformActivity from './platform-activity';
 import './dante-landing.scss';
 
 type BotDefinition = { id: BotStrategyId; title: string; contract: string; description: string; group: string; icon: string };
@@ -259,6 +260,7 @@ const DashboardComponent = () => {
    {journalError&&<p className="runtime-message" role="status">{journalError}</p>}
    {currentRows.length?<div className="dante-table-wrap"><table><thead><tr><th>Contract</th><th>Market</th><th>Contract ID</th><th>Status</th><th>Profit / loss</th></tr></thead><tbody>{currentRows.map(row=><tr key={row.id}><td>{row.contractType}</td><td>{row.symbol}</td><td>{row.contractId}</td><td><span className={'trade-status '+row.status.toLowerCase()}>{row.status}</span></td><td>{row.profit===undefined?'Pending settlement':row.profit.toFixed(2)+' '+currency}</td></tr>)}</tbody></table></div>:<div className="dante-empty-journal">No Deriv contracts have been purchased in this session.</div>}
   </section>
+  <PlatformActivity />
   <footer className="dante-footer"><span>DANTE BUILDERS</span><span>Deriv OAuth · Contract-aware execution · User-controlled risk</span></footer>
  </main>;
 };
