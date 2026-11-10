@@ -8,6 +8,24 @@ export const ROBOT_ENGINE_LAYERS = [
 ] as const;
 export type RobotEngineLayer = typeof ROBOT_ENGINE_LAYERS[number];
 export type RobotEngineReport = { passed:boolean; passedLayers:number; totalLayers:18; blockedAt?:RobotEngineLayer; reason:string; layers:{name:RobotEngineLayer;passed:boolean;detail:string}[] };
+
+// Conservative hard stops for abrupt single-tick jumps and short-window price shocks.
+// These are execution safety limits, not a prediction or a claim that calm markets are profitable.
+export const ROBOT_STABILITY_LIMITS = { maxSingleTickMovePercent: 0.5, maxFiveTickRangePercent: 1 } as const;
+const hasStableRecentPrices = (ticks: StrategyTick[]): boolean => {
+ const recent = ticks.slice(-5);
+ if (recent.length < 5) return false;
+ const prices = recent.map(item => Number(item.quote));
+ if (prices.some(price => !Number.isFinite(price) || price <= 0)) return false;
+ for (let index = 1; index < prices.length; index += 1) {
+  const movePercent = Math.abs((prices[index] - prices[index - 1]) / prices[index - 1]) * 100;
+  if (!Number.isFinite(movePercent) || movePercent > ROBOT_STABILITY_LIMITS.maxSingleTickMovePercent) return false;
+ }
+ const low = Math.min(...prices);
+ const high = Math.max(...prices);
+ const rangePercent = ((high - low) / low) * 100;
+ return Number.isFinite(rangePercent) && rangePercent <= ROBOT_STABILITY_LIMITS.maxFiveTickRangePercent;
+};
 export function runRobot18LayerEngine(input:{symbol:string;tick:StrategyTick;previous?:StrategyTick;sample:StrategyTick[];config:BotStrategyConfig;decision:StrategyDecisionResult;contractAvailable:boolean;risk:ExecutionRiskContext}):RobotEngineReport {
  const {tick,previous,sample,config,decision,risk}=input;
  const digitFromQuote=()=>{if(typeof tick.quote!=='string')return false;const fraction=tick.quote.split('.')[1]||'';const n=Number(fraction.slice(-1)||tick.quote.replace(/\D/g,'').slice(-1));return Number.isInteger(n)&&n>=0&&n<=9&&n===tick.digit;};
@@ -22,7 +40,7 @@ export function runRobot18LayerEngine(input:{symbol:string;tick:StrategyTick;pre
  {name:'DIGIT_EXTRACTION',passed:Number.isInteger(tick.digit)&&tick.digit>=0&&tick.digit<=9,detail:'Final digit is in the 0–9 domain'},
  {name:'SAMPLE_WINDOW',passed:sample.length<=200&&sample.every(v=>v.symbol===input.symbol),detail:'Analysis sample is bounded and single-market'},
  {name:'SAMPLE_MINIMUM',passed:sample.length>=Math.max(5,Math.min(200,config.minSample??12)),detail:'Minimum configured evidence sample is present'},
- {name:'MARKET_STABILITY',passed:sample.length>=5&&sample.slice(-5).every((v,i,a)=>i===0||v.epoch>a[i-1].epoch),detail:'Recent sample has ordered observations'},
+ {name:'MARKET_STABILITY',passed:hasStableRecentPrices(sample),detail:'Five recent prices must be valid and remain within single-tick and total-range shock limits'},
  {name:'PATTERN_ANALYSIS',passed:decision.decision==='READY'&&decision.sampleSize===sample.length,detail:'Specialist strategy has produced a READY analysis'},
  {name:'STRATEGY_EVIDENCE',passed:decision.evidenceScore>=8,detail:'Evidence score meets the common execution floor'},
  {name:'CONTRACT_MAPPING',passed:typeof decision.contractType==='string'&&decision.contractType.length>0,detail:'Strategy resolves to a Deriv contract type'},
