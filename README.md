@@ -53,12 +53,13 @@ The account service uses Supabase Auth through a Netlify Function and stores the
 Before enabling registration on the deployed site:
 
 1. Create a Supabase project.
-2. Apply `supabase/migrations/20261110_dante_platform_schema.sql` in the Supabase SQL editor.
-3. Add these Netlify environment variables:
+2. Add the GitHub repository secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` (the project ref is already configured in the workflow).
+3. Run **Actions → Apply Supabase database migrations → Run workflow**. This links the Supabase project and applies pending timestamped migrations from `supabase/migrations/`.
+4. Add these Netlify environment variables:
    - `SUPABASE_URL` — the project URL.
    - `SUPABASE_ANON_KEY` — the project's public anon/publishable key.
-4. Configure the desired email confirmation policy in Supabase Auth.
-5. Trigger a new Netlify production deploy and test signup, email confirmation, login, refresh and logout.
+5. Configure the desired email confirmation policy in Supabase Auth.
+6. Trigger a new Netlify production deploy and test signup, email confirmation, login, refresh and logout.
 
 Until those environment variables are configured, the site intentionally blocks account access and reports that registration is not configured; it does not create fake local accounts.
 
