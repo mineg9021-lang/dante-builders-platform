@@ -10,6 +10,7 @@ import { getImplementedStrategyIds, type BotStrategyId, type StrategyDecisionRes
 import { DANTE_VOLATILITY_SYMBOLS } from './market-universe';
 import { appendDanteJournalEvent, loadDanteJournal } from '@/services/dante-journal.service';
 import PlatformActivity from './platform-activity';
+import SarahMarketChart from './sarah-market-chart';
 import './dante-landing.scss';
 
 type BotDefinition = { id: BotStrategyId; title: string; contract: string; description: string; group: string; icon: string };
@@ -218,6 +219,7 @@ const DashboardComponent = () => {
    <div className="dante-system-portrait"><img src="/assets/images/dante-bot-portraits.webp" alt="Dante Builders robotic assistant"/><div className="portrait-glow"/><div className="portrait-caption"><span>AI CORE</span><strong>Specialist runtime</strong></div></div>
    <div className="dante-system-status"><div><span>PLATFORM SESSION</span><strong>{client.is_logged_in?'SIGNED IN':'ACCOUNT REQUIRED'}</strong></div><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Awaiting OAuth'}</strong></div><div><span>BOT STATUS</span><strong>{runtimeStatus.replace(/_/g,' ')}</strong></div></div>
   </section>
+  <SarahMarketChart connected={isDerivConnected}/>
   <section className="dante-library" id="bot-library">
    <div className="dante-section-heading"><div><span className="dante-eyebrow">UNIFIED AI BOT WORKSPACES</span><h2>One platform · Eight specialist workspaces</h2></div><p>{BOT_IDS.length} registered strategy adapters</p></div>
    <div className="dante-bot-grid">{BOT_WORKSPACES.map(workspace=>{
