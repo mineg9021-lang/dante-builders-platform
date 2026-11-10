@@ -14,7 +14,7 @@ export function runRobot18LayerEngine(input:{symbol:string;tick:StrategyTick;pre
  const checks:{name:RobotEngineLayer;passed:boolean;detail:string}[]=[
  {name:'MARKET_SCOPE',passed:/^[A-Za-z0-9_]{2,30}$/.test(input.symbol)&&tick.symbol===input.symbol,detail:'Configured market and tick symbol match'},
  {name:'TICK_SCHEMA',passed:typeof tick.quote==='string'&&Number.isFinite(tick.epoch)&&Number.isInteger(tick.digit),detail:'Tick fields are valid'},
- {name:'QUOTE_PRECISION',passed:/^[-+]?\\d+(?:\\.\\d+)?$/.test(tick.quote)&&tick.quote.split('.')[1]?.length===tick.quote.split('.')[1]?.length,detail:'Quote is a decimal string without float conversion'},
+ {name:'QUOTE_PRECISION',passed:/^[-+]?\\d+(?:\\.\\d+)?$/.test(tick.quote)&&(tick.quote.split('.')[1]||'').length<=10,detail:'Quote is a decimal string without float conversion'},
  {name:'DECIMAL_INTEGRITY',passed:digitFromQuote(),detail:'Final digit matches the source quote'},
  {name:'TIMESTAMP_FRESHNESS',passed:Date.now()/1000-tick.epoch<=15&&tick.epoch-Date.now()/1000<=5,detail:'Tick is within the freshness window'},
  {name:'SEQUENCE_ORDER',passed:!previous||tick.epoch>previous.epoch,detail:'Tick timestamp advances the stream'},
@@ -24,7 +24,7 @@ export function runRobot18LayerEngine(input:{symbol:string;tick:StrategyTick;pre
  {name:'SAMPLE_MINIMUM',passed:sample.length>=Math.max(5,Math.min(200,config.minSample??12)),detail:'Minimum configured evidence sample is present'},
  {name:'MARKET_STABILITY',passed:sample.length>=5&&sample.slice(-5).every((v,i,a)=>i===0||v.epoch>a[i-1].epoch),detail:'Recent sample has ordered observations'},
  {name:'PATTERN_ANALYSIS',passed:decision.decision==='READY'&&decision.sampleSize===sample.length,detail:'Specialist strategy has produced a READY analysis'},
- {name:'STRATEGY_EVIDENCE',passed:decision.evidenceScore>=55,detail:'Evidence score meets the common execution floor'},
+ {name:'STRATEGY_EVIDENCE',passed:decision.evidenceScore>=8,detail:'Evidence score meets the common execution floor'},
  {name:'CONTRACT_MAPPING',passed:typeof decision.contractType==='string'&&decision.contractType.length>0,detail:'Strategy resolves to a Deriv contract type'},
  {name:'CONTRACT_AVAILABILITY',passed:input.contractAvailable,detail:'Deriv reports this contract for the selected market'},
  {name:'OPPORTUNITY_IDENTITY',passed:Boolean(decision.opportunityKey),detail:'Signal has a unique opportunity identity'},
