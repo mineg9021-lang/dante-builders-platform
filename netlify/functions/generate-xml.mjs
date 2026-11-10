@@ -1,4 +1,4 @@
-const allowedSymbols = ['R_10', 'R_10_1S', 'R_25', 'R_25_1S', 'R_50', 'R_50_1S', 'R_75', 'R_75_1S', 'R_100', 'R_100_1S'];
+const allowedSymbols = ['R_10', 'R_25', 'R_50', 'R_75', 'R_100', '1HZ10V', '1HZ15V', '1HZ25V', '1HZ30V', '1HZ50V', '1HZ75V', '1HZ90V', '1HZ100V'];
 const allowedContracts = ['DIGITEVEN', 'DIGITODD'];
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
