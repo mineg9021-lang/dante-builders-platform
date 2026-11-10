@@ -6,6 +6,7 @@ import { runParityPipeline } from './even-odd-parity-engine';
 import { advanceMartingaleAfterSettlement, calculateParityStake, MAX_MARTINGALE_STEPS } from './even-odd-martingale';
 import { executeParityContract, type DerivParityApi, type ParityContractType } from './even-odd-parity-execution';
 import './even-odd-terminal.scss';
+import { isDanteVolatilitySymbol } from './market-universe';
 
 type TickMessage = {
     msg_type?: string;
@@ -128,7 +129,7 @@ const EvenOddTerminal = () => {
         return active.filter((item: any) => {
             const name = String(item.display_name || item.symbol_display_name || item.underlying_symbol_name || '');
             const symbol = String(item.symbol || item.underlying_symbol || '');
-            return /volatility/i.test(name) && Boolean(symbol);
+            return /volatility/i.test(name) && isDanteVolatilitySymbol(symbol);
         });
     }, [connectionStatus, isAuthorized, lastUpdated]);
 
