@@ -35,6 +35,15 @@ NEXT_PUBLIC_DERIV_APP_NAME=Dante Builders
 Never place an account token, OAuth access token, or private credential in frontend source code.
 
 
+
+## Independent Over 2 bot and shared market universe
+
+The Over 2 workspace is a separate specialist bot. Its strategy engine evaluates a bounded sample, validates source ticks, computes digit metrics, scores the Over 2 evidence and returns READY / WAIT / REJECTED. Its execution adapter discovers `DIGITOVER` through `contracts_for`, requests a one-tick proposal with barrier `2`, buys only after all gates pass, and monitors the returned contract ID to a verified settlement.
+
+The background market universe is the exact 13-symbol set in `src/pages/dashboard/market-universe.ts`: five standard Volatility indices plus the eight available 1-second Volatility indices (including 15, 30 and 90). The list is not shown as a dashboard selector. Parity and Over 2 subscribe to the configured markets and rank eligible samples internally.
+
+The Over 2 pipeline has 18 logical gates and uses `market-metrics-engine.ts` plus `prediction-scoring-engine.ts`. The scoring module is deterministic statistical evidence from historical observations, not a trained machine-learning model and not a calibrated probability of the next tick. No strategy is forced to trade when evidence or safety gates fail. Recovery progression is bounded; the fourth consecutive loss pauses the bot for manual cooldown review.
+
 ## Dante platform registration and login
 
 The website now places a separate Dante account registration/login gate in front of the bot library. This is distinct from Deriv OAuth: users first authenticate to Dante, then connect a Deriv account from a bot workspace when trading access is needed.
