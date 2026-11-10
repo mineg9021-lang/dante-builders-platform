@@ -6,6 +6,7 @@ import {
 } from './execution';
 import { evaluateBotStrategy, type BotStrategyConfig, type StrategyDecisionResult, type StrategyTick } from './strategy-adapters';
 import { discoverContractsForSymbol, isContractAvailable } from './contracts';
+import { runRobot18LayerEngine } from './robot-18-layer-engine';
 
 export type RuntimeStatus = 'STARTING' | 'RUNNING' | 'EXECUTING' | 'STOPPED' | 'PAUSED_ERROR';
 export type RuntimeHandle = {
@@ -170,11 +171,32 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
             if (allMarketsExhausted) expireAnalysis('ANALYSIS_TICK_LIMIT_REACHED');
             return;
         }
+        const baseRisk = input.getRiskContext ? input.getRiskContext() : input.risk;
+        const risk: ExecutionRiskContext = { ...baseRisk, strategyDecision: decision.decision, lastTickEpoch: epoch };
+        const engineReport = runRobot18LayerEngine({
+            symbol,
+            tick: symbolTicks[symbolTicks.length - 1],
+            previous: symbolTicks.length > 1 ? symbolTicks[symbolTicks.length - 2] : undefined,
+            sample: symbolTicks.slice(-Math.max(5, Math.min(200, input.strategy.maxSample ?? 40))),
+            config: input.strategy,
+            decision,
+            contractAvailable: eligibleSymbols.includes(symbol),
+            risk,
+        });
+        if (!engineReport.passed) {
+            input.onDecision?.({
+                ...decision,
+                decision: 'REJECTED',
+                reason: '18-LAYER ENGINE BLOCKED AT ' + engineReport.blockedAt + ': ' + engineReport.reason,
+                opportunityKey: undefined,
+            });
+            stop();
+            setStatus('PAUSED_ERROR', 'Shared 18-layer robot engine rejected this entry. ' + engineReport.reason);
+            return;
+        }
         analysisClosed = true;
         clearAnalysisTimer();
 
-        const baseRisk = input.getRiskContext ? input.getRiskContext() : input.risk;
-        const risk: ExecutionRiskContext = { ...baseRisk, strategyDecision: decision.decision, lastTickEpoch: epoch };
         executing = true;
         setStatus('EXECUTING', 'READY · validating contract, risk and Deriv proposal.');
         void executeDerivContract({
