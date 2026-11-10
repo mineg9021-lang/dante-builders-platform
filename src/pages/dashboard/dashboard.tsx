@@ -5,7 +5,7 @@ import { api_base } from '@/external/bot-skeleton';
 import { useApiBase } from '@/hooks/useApiBase';
 import { useStore } from '@/hooks/useStore';
 import { startStrategyRuntime, type RuntimeHandle, type RuntimeStatus } from '@/trading-engine/runtime';
-import type { DerivTradingApi, ExecutionRiskContext, VerifiedTradeResult } from '@/trading-engine/execution';
+import type { DerivTradingApi, ExecutionRiskContext } from '@/trading-engine/execution';
 import { getImplementedStrategyIds, type BotStrategyId, type StrategyDecisionResult } from '@/trading-engine/strategy-adapters';
 import './dante-landing.scss';
 
@@ -50,6 +50,7 @@ const DashboardComponent = () => {
  const [losses,setLosses] = useState(0);
  const [loginError,setLoginError] = useState('');
  const runtimeRef = useRef<RuntimeHandle|null>(null);
+ const liveConfirmedRef = useRef(false);
  const pnlRef = useRef(0);
  const tradeCountRef = useRef(0);
  const bot = BOT_BY_ID.get(selectedBot) || BOT_LIBRARY[0];
@@ -61,7 +62,7 @@ const DashboardComponent = () => {
  const winRate = wins + losses ? Math.round(wins/(wins+losses)*100) : 0;
 
  useEffect(() => () => { runtimeRef.current?.stop(); runtimeRef.current=null; }, []);
- useEffect(() => { if(mode!=='live') setLiveConfirmed(false); },[mode]);
+ useEffect(() => { if(mode!=='live'){setLiveConfirmed(false);liveConfirmedRef.current=false;} },[mode]);
 
  const connectDeriv = async () => {
   setLoginError('');
@@ -70,7 +71,7 @@ const DashboardComponent = () => {
  };
  const buildRisk = (): Omit<ExecutionRiskContext,'strategyDecision'|'lastTickEpoch'> => ({
   mode,authorized:isDerivConnected,isVirtual:Boolean(authData?.is_virtual),
-  liveTradingConfirmed:mode==='live'&&liveConfirmed,stake:Number(stake),balance:accountBalance,
+  liveTradingConfirmed:mode==='live'&&liveConfirmedRef.current,stake:Number(stake),balance:accountBalance,
   maxStake:Number(stake),maxStakePercent:2,sessionPnl:pnlRef.current,
   stopLoss:Number(stopLoss),takeProfit:Number(takeProfit),
   tradesThisSession:tradeCountRef.current,maxTradesPerSession:Number(maxTrades),
@@ -79,7 +80,7 @@ const DashboardComponent = () => {
  const startBot = async () => {
   if(runtimeRef.current){setRuntimeMessage('This bot already has an active runtime. Stop it before starting another session.');return;}
   if(!isDerivConnected||!api_base.api){setRuntimeMessage('Deriv is not authorised. Connect your Deriv account before starting.');return;}
-  if(mode==='live'){const accepted=window.confirm('You selected a REAL Deriv account. Trades will use real funds. Confirm live execution for this session.');if(!accepted)return;setLiveConfirmed(true);}
+  if(mode==='live'){const accepted=window.confirm('You selected a REAL Deriv account. Trades will use real funds. Confirm live execution for this session.');if(!accepted)return;liveConfirmedRef.current=true;setLiveConfirmed(true);}
   if(!currency){setRuntimeMessage('Deriv did not provide an account currency. Refresh the account connection.');return;}
   const stakeValue=Number(stake),sl=Number(stopLoss),tp=Number(takeProfit),limit=Number(maxTrades),ticks=Number(duration);
   if(![stakeValue,sl,tp,limit,ticks].every(Number.isFinite)||stakeValue<=0||sl<=0||tp<=0||!Number.isInteger(limit)||limit<1||!Number.isInteger(ticks)||ticks<1){setRuntimeMessage('Check stake, stop loss, take profit, trade limit and duration values.');return;}
