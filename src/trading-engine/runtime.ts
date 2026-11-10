@@ -106,7 +106,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         clearAnalysisTimer();
         tickStream?.unsubscribe();
         subscriptionIds.splice(0).forEach(id => {
-            void input.api.send({ forget: id }).catch(() => undefined);
+            void Promise.resolve(input.api.send({ forget: id })).catch(() => undefined);
         });
         setStatus('STOPPED', 'Bot stopped. No new purchases will be initiated.');
     };
@@ -204,7 +204,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
             if (response?.error) return null;
             const id = response?.subscription?.id;
             if (!canContinue()) {
-                if (typeof id === 'string') void input.api.send({ forget: id }).catch(() => undefined);
+                if (typeof id === 'string') void Promise.resolve(input.api.send({ forget: id })).catch(() => undefined);
                 return null;
             }
             if (typeof id === 'string') subscriptionIds.push(id);
@@ -216,7 +216,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
     }));
     if (!canContinue()) {
         tickStream.unsubscribe();
-        subscriptionIds.splice(0).forEach(id => void input.api.send({ forget: id }).catch(() => undefined));
+        subscriptionIds.splice(0).forEach(id => void Promise.resolve(input.api.send({ forget: id })).catch(() => undefined));
         if (!stopped) {
             stopped = true;
             status = 'STOPPED';
@@ -229,7 +229,7 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
         throw new Error('NO_MARKET_TICK_SUBSCRIPTIONS_AVAILABLE');
     }
     if (stopped) {
-        subscriptionIds.splice(0).forEach(id => void input.api.send({ forget: id }).catch(() => undefined));
+        subscriptionIds.splice(0).forEach(id => void Promise.resolve(input.api.send({ forget: id })).catch(() => undefined));
     } else {
         setStatus('RUNNING', 'Connected to live Deriv ticks across eligible Volatility markets. Waiting for a validated opportunity.');
     }
