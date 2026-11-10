@@ -136,18 +136,18 @@ html,body,#root{background:#f4faf5;color:#193b29}
 
 
 /* Distinct original android portraits for each specialist workspace */
-.product-tile .tile-icon{width:66px;height:66px;border:2px solid #d4ead9;border-radius:50%;background-image:url('/assets/images/dante-bot-portraits.webp');background-size:200% 200%;background-repeat:no-repeat;font-size:0;box-shadow:0 4px 14px rgba(32,92,49,.12)}
+.product-tile .tile-icon{width:66px;height:66px;border:2px solid #d4ead9;border-radius:50%;background-image:url('../../../public/assets/images/dante-bot-portraits.webp');background-size:200% 200%;background-repeat:no-repeat;font-size:0;box-shadow:0 4px 14px rgba(32,92,49,.12)}
 .parity-tile .tile-icon{background-position:0 0}
 .scanner-tile .tile-icon{background-position:100% 0}
 .over2-tile .tile-icon{background-position:0 100%}
 .xml-tile .tile-icon{background-position:100% 100%}
-.eo-terminal__robot{background-image:url('/assets/images/dante-bot-portraits.webp')!important;background-size:200% 200%!important;background-position:0 0!important;font-size:0!important}
+.eo-terminal__robot{background-image:url('../../../public/assets/images/dante-bot-portraits.webp')!important;background-size:200% 200%!important;background-position:0 0!important;font-size:0!important}
 .dmi-scanner{position:relative;padding-top:92px!important}
-.dmi-scanner:before{content:'';position:absolute;top:16px;left:18px;width:66px;height:66px;border:2px solid #d4ead9;border-radius:50%;background-image:url('/assets/images/dante-bot-portraits.webp');background-size:200% 200%;background-position:100% 0;box-shadow:0 4px 14px rgba(32,92,49,.12)}
-.over2-portrait{background-image:url('/assets/images/dante-bot-portraits.webp')!important;background-size:200% 200%!important;background-position:0 100%!important}
+.dmi-scanner:before{content:'';position:absolute;top:16px;left:18px;width:66px;height:66px;border:2px solid #d4ead9;border-radius:50%;background-image:url('../../../public/assets/images/dante-bot-portraits.webp');background-size:200% 200%;background-position:100% 0;box-shadow:0 4px 14px rgba(32,92,49,.12)}
+.over2-portrait{background-image:url('../../../public/assets/images/dante-bot-portraits.webp')!important;background-size:200% 200%!important;background-position:0 100%!important}
 .over2-portrait span{display:none}
 .xml-workspace .workspace-heading{position:relative;padding-left:84px;min-height:70px}
-.xml-workspace .workspace-heading:before{content:'';position:absolute;left:0;top:0;width:66px;height:66px;border:2px solid #d4ead9;border-radius:50%;background-image:url('/assets/images/dante-bot-portraits.webp');background-size:200% 200%;background-position:100% 100%;box-shadow:0 4px 14px rgba(32,92,49,.12)}
+.xml-workspace .workspace-heading:before{content:'';position:absolute;left:0;top:0;width:66px;height:66px;border:2px solid #d4ead9;border-radius:50%;background-image:url('../../../public/assets/images/dante-bot-portraits.webp');background-size:200% 200%;background-position:100% 100%;box-shadow:0 4px 14px rgba(32,92,49,.12)}
 
 
 .eo-terminal__robot svg{display:none!important}
