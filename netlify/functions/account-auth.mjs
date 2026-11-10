@@ -96,6 +96,13 @@ export default async request => {
         refresh_token: result.payload.refresh_token,
     };
     if (session.access_token && session.refresh_token) {
+        if (action === 'signup') {
+            return json({
+                authenticated: false,
+                registrationComplete: true,
+                message: 'Your Dante account was created. Sign in with your new account to continue.',
+            });
+        }
         return json({ authenticated: true, user: { id: result.payload.user?.id, email: result.payload.user?.email || email } }, 200, {
             'Set-Cookie': sessionCookie(session),
         });
