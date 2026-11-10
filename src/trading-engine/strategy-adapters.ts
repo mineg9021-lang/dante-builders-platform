@@ -69,12 +69,15 @@ const validTicks = (ticks: StrategyTick[], symbol: string, maxSample: number, no
     let previousEpoch = 0;
     for (const tick of selected) {
         if (!Number.isFinite(tick.epoch) || tick.epoch <= previousEpoch ||
-            now - tick.epoch > 15 || tick.epoch - now > 5 ||
+            tick.epoch - now > 5 ||
             typeof tick.quote !== 'string' || !/^[-+]?\d+(?:\.\d+)?$/.test(tick.quote) ||
             !Number.isInteger(tick.digit) || tick.digit < 0 || tick.digit > 9) continue;
         result.push(tick);
         previousEpoch = tick.epoch;
     }
+    // Historical ticks may span longer than the live-feed freshness window.
+    // Validate freshness on the newest tick, not on every sample tick.
+    if (result.length && now - result[result.length - 1].epoch > 15) return [];
     return result;
 };
 
