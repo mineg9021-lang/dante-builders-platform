@@ -161,3 +161,10 @@ html,body,#root{background:#f4faf5;color:#193b29}
 .eo-terminal__recovery .is-cooldown b{color:#bd3038}
 .eo-terminal__reset{border:1px solid #d5e8da!important;background:#f0f8f2!important;color:#237343!important}
 @media(max-width:600px){.eo-terminal__recovery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+.eo-terminal__outcomes{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0}
+.eo-terminal__outcomes>div{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #dcebe0;border-radius:9px;background:#fbfefc}
+.eo-terminal__outcomes span{font-size:9px;font-weight:900;letter-spacing:.7px;color:#698271}
+.eo-terminal__outcomes div:first-child strong{color:#168442;font-size:20px}
+.eo-terminal__outcomes div:last-child strong{color:#c3323b;font-size:20px}
