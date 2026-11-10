@@ -4,7 +4,7 @@ Dante Builders is an independent market-technology workspace containing three se
 
 1. **Even/Odd Parity Bot** — live tick sampling, parity analysis, guarded Deriv proposals and purchases, settlement verification, and account-level risk controls.
 2. **Digit Intelligence Matches Scanner** — live tick collection, precision-aware final-digit extraction, rolling 0–9 statistics, and Matches/Differs evidence analysis. Scanner mode does not place trades.
-3. **AI Deriv XML Bots Generator** — interprets a supported strategy request, assembles XML from DBot block definitions already present in this repository, validates required sections, and exports the XML.
+3. **AI Deriv XML Bots Generator** — interprets a supported strategy request, assembles XML using block types defined in this repository, checks all required sections and strategy conditions, and exports the XML. Structural validation is implemented; a full import test in the live DBot environment is still required before calling the output import-verified.
 
 The old general-purpose Blockly bot-builder screen, SmartCharts trading page, Deriv transaction modal, tutorials, and legacy trading dashboard are not part of the Dante product interface. The three products remain independent workspaces.
 
@@ -66,7 +66,7 @@ To enable cloud AI interpretation, add these as **Netlify environment variables*
 
 After adding or changing these values, trigger a new production deploy. The key is read only by the server-side function and is never exposed to the browser. Without the key, the UI clearly falls back to the verified local generator.
 
-The current verified XML template supports Even and Odd digit contracts on the listed Volatility Index symbols. Other contract types and unsupported strategy instructions are rejected rather than silently converted. Generated XML includes Trade Parameters, Run Once at Start, Purchase Conditions, Sell Conditions, and Restart Trading Conditions.
+The current local XML template supports Even and Odd digit contracts on the exact 13-symbol Volatility universe. Unsupported contract types and strategy instructions are rejected rather than silently converted. Generated XML includes populated Trade Parameters, Run Once at Start, digit-based Purchase Conditions, a safe hold-to-expiry Sell Conditions rule, and Restart Trading Conditions. Structural checks are implemented; import into DBot is still required to verify runtime compatibility.
 
 ## Deployment
 
