@@ -131,3 +131,49 @@ describe('specialist strategy adapters', () => {
         expect(odd.contractType).toBe('DIGITODD');
     });
 
+
+describe('directional and barrier Robot coverage', () => {
+    it('requires falling momentum for Fall and consecutive down ticks for Only Down', () => {
+        const falling = makeTicks(Array.from({ length: 14 }, (_, index) => 120 - index));
+        const fall = evaluateBotStrategy({ symbol: 'R_100', ticks: falling, config: { id: 'FALL', minSample: 12 }, nowSeconds: 1_800_000_000 });
+        const onlyDown = evaluateBotStrategy({ symbol: 'R_100', ticks: falling, config: { id: 'ONLY_DOWN', runLength: 5 }, nowSeconds: 1_800_000_000 });
+        expect(fall.decision).toBe('READY');
+        expect(fall.contractType).toBe('PUT');
+        expect(onlyDown.decision).toBe('READY');
+        expect(onlyDown.contractType).toBe('RUNLOW');
+    });
+
+    it('requires downward momentum and below-average confirmation for Asian Down', () => {
+        const falling = makeTicks(Array.from({ length: 14 }, (_, index) => 120 - index));
+        const result = evaluateBotStrategy({ symbol: 'R_100', ticks: falling, config: { id: 'ASIAN_DOWN' }, nowSeconds: 1_800_000_000 });
+        expect(result.decision).toBe('READY');
+        expect(result.contractType).toBe('ASIAND');
+    });
+
+    it('maps Over and Under barriers to the requested Deriv contracts', () => {
+        const makeDigitTicks = (digits: number[]): StrategyTick[] => digits.map((digit, index) => ({
+            symbol: 'R_100', quote: `100.0${digit}`, epoch: 1_800_000_000 - digits.length + index + 1, digit,
+        }));
+        const over = evaluateBotStrategy({
+            symbol: 'R_100', ticks: makeDigitTicks(Array.from({ length: 20 }, (_, index) => 6 + index % 4)),
+            config: { id: 'DIGIT_OVER', minSample: 12, barrier: 4 }, nowSeconds: 1_800_000_000,
+        });
+        const under = evaluateBotStrategy({
+            symbol: 'R_100', ticks: makeDigitTicks(Array.from({ length: 20 }, (_, index) => index % 4)),
+            config: { id: 'DIGIT_UNDER', minSample: 12, barrier: 4 }, nowSeconds: 1_800_000_000,
+        });
+        expect(over.decision).toBe('READY');
+        expect(over.contractType).toBe('DIGITOVER');
+        expect(over.proposalFields).toMatchObject({ barrier: '4' });
+        expect(under.decision).toBe('READY');
+        expect(under.contractType).toBe('DIGITUNDER');
+        expect(under.proposalFields).toMatchObject({ barrier: '4' });
+    });
+
+    it('rejects a stale latest tick without discarding fresh historical samples', () => {
+        const ticks = makeTicks(Array.from({ length: 14 }, (_, index) => 100 + index), 1_800_000_000 - 100);
+        const stale = evaluateBotStrategy({ symbol: 'R_100', ticks, config: { id: 'RISE', minSample: 12 }, nowSeconds: 1_800_000_000 });
+        expect(stale.decision).toBe('WAIT');
+        expect(stale.sampleSize).toBe(0);
+    });
+});
