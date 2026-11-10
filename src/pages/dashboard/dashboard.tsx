@@ -267,6 +267,7 @@ const DashboardComponent = observer(() => {
                 <div className="dante-product-grid">
                     <button className="product-tile parity-tile" onClick={() => setWorkspace('parity')}><span className="tile-icon">±</span><strong>Even / Odd Parity Bot</strong><p>Market sampling, parity analysis, risk gates and guarded execution.</p><b>Open workspace <i>↗</i></b></button>
                     <button className="product-tile scanner-tile" onClick={() => setWorkspace('matches')}><span className="tile-icon">◎</span><strong>Digit Intelligence Matches Scanner</strong><p>Live tick collection, precision-aware digit analysis and Matches/Differs evidence.</p><b>Open scanner <i>↗</i></b></button>
+                    <button className="product-tile over2-tile" onClick={() => setWorkspace('over2')}><span className="tile-icon">2+</span><strong>Over 2 Specialist Bot</strong><p>18-stage Over 2 analysis, hidden 13-market scan, barrier validation and guarded execution.</p><b>Open bot dashboard <i>↗</i></b></button>
                     <button className="product-tile xml-tile" onClick={() => setWorkspace('xml')}><span className="tile-icon">&lt;/&gt;</span><strong>AI Deriv XML Bots Generator</strong><p>Generate a supported DBot strategy, validate required sections and download XML.</p><b>Open generator <i>↗</i></b></button>
                 </div>
             </section>}
