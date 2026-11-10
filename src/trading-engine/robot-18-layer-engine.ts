@@ -35,7 +35,7 @@ export function runRobot18LayerEngine(input:{symbol:string;tick:StrategyTick;pre
  const digitBarrierContracts = new Set(['DIGITMATCH','DIGITDIFF','DIGITOVER','DIGITUNDER']);
  const barrier = decision.proposalFields?.barrier;
  const barrierValid = !digitBarrierContracts.has(decision.contractType) ? barrier === undefined :
-  typeof barrier === 'string' && /^\\d$/.test(barrier) &&
+  typeof barrier === 'string' && /^\d$/.test(barrier) &&
   (decision.contractType === 'DIGITOVER' || decision.contractType === 'DIGITUNDER' ? Number(barrier) <= 8 : true);
  const mappingValid = supportedContracts.has(decision.contractType) &&
   Number.isInteger(decision.proposalFields?.duration) && decision.proposalFields.duration >= 1 &&
