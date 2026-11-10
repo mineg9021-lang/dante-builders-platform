@@ -208,7 +208,7 @@ const DashboardComponent = () => {
   <section className="dante-system-hero">
    <div className="dante-system-copy"><span className="dante-eyebrow">DANTE AI CORE · SHARED 18-LAYER ROBOT ENGINE</span><h1>One platform.<br/><em>Specialist trading engines.</em></h1><p>Connect your Deriv account once. Select a specialist Robot, configure risk and let its contract-specific runtime handle live market data, validation, proposal, purchase and settlement.</p><div className="dante-system-tags"><span>DERIV OAUTH</span><span>LIVE MARKET DATA</span><span>RISK-GATED EXECUTION</span></div></div>
    <div className="dante-system-portrait"><img src="/assets/images/dante-bot-portraits.webp" alt="Dante Builders robotic assistant"/><div className="portrait-glow"/><div className="portrait-caption"><span>AI CORE</span><strong>Specialist runtime</strong></div></div>
-   <div className="dante-system-status"><div><span>PLATFORM SESSION</span><strong>{client.is_logged_in?'SIGNED IN':'ACCOUNT REQUIRED'}</strong></div><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Awaiting OAuth'}</strong></div><div><span>ROROBOT STATUS</span><strong>{runtimeStatus.replace(/_/g,' ')}</strong></div></div>
+   <div className="dante-system-status"><div><span>PLATFORM SESSION</span><strong>{client.is_logged_in?'SIGNED IN':'ACCOUNT REQUIRED'}</strong></div><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Awaiting OAuth'}</strong></div><div><span>ROBOT STATUS</span><strong>{runtimeStatus.replace(/_/g,' ')}</strong></div></div>
   </section>
   <SarahMarketChart connected={isDerivConnected}/>
   <section className="dante-library dante-robot-library" id="bot-library">
