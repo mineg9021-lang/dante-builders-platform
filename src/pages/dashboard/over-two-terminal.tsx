@@ -173,9 +173,9 @@ const OverTwoTerminal = () => {
         return b.result.sampleSize - a.result.sampleSize;
     }), [markets, config]);
     const best = ranked[0];
-    const latest = best?.market.ticks[best.market.ticks.length - 1];
     const ready = ranked.find(item => item.result.executionAuthorized);
     const current = ready || best;
+    const latest = current?.market.ticks[current.market.ticks.length - 1];
     const winRate = wins + losses ? Math.round((wins / (wins + losses)) * 100) : 0;
 
     useEffect(() => {
