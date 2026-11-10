@@ -21,7 +21,7 @@ const parseSession = request => {
 };
 
 const getConfig = () => {
-    const url = String(process.env.SUPABASE_URL || '').replace(/\\/$/, '');
+    const url = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
     const key = process.env.SUPABASE_ANON_KEY || '';
     return url && key ? { url, key } : null;
 };
@@ -74,7 +74,7 @@ export default async request => {
 
     const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
     const password = typeof body?.password === 'string' ? body.password : '';
-    if (!/^\\S+@\\S+\\.\\S+$/.test(email) || password.length < 8 || password.length > 256) {
+    if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8 || password.length > 256) {
         return json({ error: 'INVALID_CREDENTIALS', message: 'Enter a valid email and a password with at least 8 characters.' }, 400);
     }
 
