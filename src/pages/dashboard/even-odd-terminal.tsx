@@ -140,8 +140,15 @@ const EvenOddTerminal = () => {
             return;
         }
         if (!availableSymbols.length) {
-            setNotice('Waiting for Deriv active-symbol data.');
-            return;
+            setNotice('Waiting for Deriv active-symbol data. The 10-second analysis limit is active.');
+            const unavailableTimeout = window.setTimeout(() => {
+                setExecutionArmed(false);
+                executionAllowed.current = false;
+                setRunning(false);
+                setExecutionStatus('WAIT · no active markets were available before the analysis timeout.');
+                setNotice('Analysis timed out because Deriv did not return active market symbols. No trade was placed.');
+            }, MAX_ANALYSIS_DURATION_MS);
+            return () => window.clearTimeout(unavailableTimeout);
         }
 
         const initial: SymbolState[] = availableSymbols.map((item: any) => {
@@ -438,17 +445,6 @@ const EvenOddTerminal = () => {
         setAutoRestart(false);
         setMode(nextMode);
         setExecutionStatus(nextMode === 'analysis' ? 'Analysis only · orders disabled' : `${nextMode.toUpperCase()} mode · disarmed`);
-    };
-
-    const startFreshAnalysis = () => {
-        setSymbols([]);
-        executionAllowed.current = false;
-        setExecutionArmed(false);
-        autoRestartAllowed.current = false;
-        setAutoRestart(false);
-        setExecutionStatus('Not armed');
-        setNotice('Starting a fresh bounded market scan…');
-        setRunning(true);
     };
 
     const consecutiveLossCount = accountJournal.reduce((count, row, index) => index === count && row.status === 'LOST' ? count + 1 : count, 0);
