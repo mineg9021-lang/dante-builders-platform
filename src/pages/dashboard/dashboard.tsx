@@ -220,7 +220,7 @@ const DashboardComponent = () => {
    <div className="dante-bot-grid dante-robot-grid">{ROBOT_LIBRARY.map((robot,index)=>{
     const active=selectedBot===robot.id;
     return <button key={robot.id} type="button" className={active?'dante-bot-card dante-robot-card selected':'dante-bot-card dante-robot-card'} onClick={()=>selectBot(robot.id)} aria-pressed={active}>
-     <span role="img" aria-label={robot.title+' logo'} className={'robot-logo-frame robot-logo-'+robot.id.toLowerCase()} style={{backgroundImage:'url(/assets/images/robot-fleet.svg)',backgroundSize:'400% 300%',backgroundPosition:(index%4)*100/3+'% '+Math.floor(index/4)*50+'%'}}/>
+     <span role="img" aria-label={robot.title+' logo'} className={'robot-logo-frame robot-logo-'+robot.id.toLowerCase()} style={{backgroundImage:'url(/assets/images/robot-fleet.svg)',backgroundSize:'400% 400%',backgroundPosition:(index%4)*100/3+'% '+Math.floor(index/4)*100/3+'%'}}/>
      <span className="bot-card-group">{robot.group.toUpperCase()}</span><strong>{robot.title}</strong><small>{robot.description}</small>
      <span className="robot-contract-tag">{robot.contract}</span>
      <span className="bot-card-action">{active?'ACTIVE ROBOT':'SELECT ROBOT'} <b>↗</b></span>
