@@ -32,10 +32,10 @@ jobs:
         run: npm ci
 
       - name: Check Netlify function syntax
-        run: node --check netlify/functions/trade-journal.mjs
+        run: find netlify/functions -name '*.mjs' -print0 | xargs -0 -n1 node --check
 
       - name: Run unit tests
-        run: npm test -- --runInBand --runTestsByPath src/pages/dashboard/even-odd-analysis-engine.test.ts src/pages/dashboard/even-odd-parity-engine.test.ts src/pages/dashboard/even-odd-parity-execution.test.ts src/pages/dashboard/digit-matches-engine.test.ts src/pages/dashboard/over-two-engine.test.ts src/pages/dashboard/over-two-execution.test.ts src/pages/dashboard/market-metrics-engine.test.ts src/trading-engine/execution.test.ts src/trading-engine/strategy-adapters.test.ts src/trading-engine/runtime.test.ts src/external/deriv-core/auth/__tests__/accounts.spec.ts
+        run: npm test -- --runInBand --runTestsByPath src/pages/dashboard/even-odd-analysis-engine.test.ts src/pages/dashboard/even-odd-parity-engine.test.ts src/pages/dashboard/even-odd-parity-execution.test.ts src/pages/dashboard/digit-matches-engine.test.ts src/pages/dashboard/over-two-engine.test.ts src/pages/dashboard/over-two-execution.test.ts src/pages/dashboard/market-metrics-engine.test.ts src/trading-engine/execution.test.ts src/trading-engine/strategy-adapters.test.ts src/trading-engine/runtime.test.ts src/external/deriv-core/auth/__tests__/accounts.spec.ts src/external/deriv-core/auth/__tests__/oauth-token.spec.ts src/external/deriv-core/auth/__tests__/oauth-lang.spec.ts src/external/deriv-core/auth/__tests__/storage.spec.ts src/services/__tests__/derivws-accounts.service.test.ts src/components/shared/utils/config/__tests__/get-socket-url-auth.spec.ts
 
       - name: Run TypeScript check
         run: npm run type-check
