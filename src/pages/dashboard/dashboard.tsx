@@ -30,6 +30,7 @@ const PrimeDashboard = () => {
                 <div><span>DERIV ACCOUNT</span><strong>{connected ? activeLoginid || authData?.loginid : 'Not connected'}</strong></div>
                 <div><span>ACCOUNT TYPE</span><strong>{connected ? (authData?.is_virtual ? 'DEMO' : 'REAL') : '—'}</strong></div>
                 <div><span>CONNECTION</span><strong className={connected ? 'is-connected' : ''}>{connected ? 'CONNECTED' : 'OFFLINE'}</strong></div>
+                <div className='prime-account-balance'><span>DERIV BALANCE</span><strong>{connected && authData?.balance !== undefined ? `${Number(authData.balance).toFixed(2)} ${authData?.currency || ''}` : '—'}</strong></div>
                 <button type='button' onClick={connectDeriv} disabled={connecting}>{connecting ? 'CONNECTING…' : connected ? 'RECONNECT DERIV' : 'CONNECT DERIV'}</button>
             </div>
             {connectionError && <p className='prime-connect-error' role='alert'>{connectionError}</p>}
