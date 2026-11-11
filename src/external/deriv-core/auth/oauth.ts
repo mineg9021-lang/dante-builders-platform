@@ -10,7 +10,8 @@ async function requestAuthorizationUrl(config: AuthConfig, mode: 'login' | 'sign
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       mode, lang: config.lang, affiliateToken: config.affiliateToken,
-      affiliateTokenParam: config.affiliateTokenParam,
+      affiliateTokenParam: config.affiliateTokenParam, utmSource: config.utmSource,
+      utmMedium: config.utmMedium, utmCampaign: config.utmCampaign,
     }),
   });
   const result = await response.json().catch(() => ({}));
