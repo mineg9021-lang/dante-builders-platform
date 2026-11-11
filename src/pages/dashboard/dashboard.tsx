@@ -212,9 +212,9 @@ const DashboardComponent = () => {
     <p className="runtime-message">{runtimeMessage}</p>
     <div className="dante-control-grid">
      <label>Deriv account<select value={activeLoginid} onChange={event=>switchDerivAccount(event.target.value)} disabled={!isDerivConnected || runtimeStatus!=='STOPPED'}>{accountList.map(account=><option key={account.loginid} value={account.loginid}>{account.is_virtual ? 'Demo' : 'Real'} · {account.loginid} · {account.currency}</option>)}</select></label>
-     <label>Stake ({currency||'account currency'})<input type="number" min="0.01" step="0.01" value={stake} onChange={event=>setStake(event.target.value)}/></label>
-     <label>Stop loss<input type="number" min="0.01" step="0.01" value={stopLoss} onChange={event=>setStopLoss(event.target.value)}/></label>
-     <label>Take profit<input type="number" min="0.01" step="0.01" value={takeProfit} onChange={event=>setTakeProfit(event.target.value)}/></label>
+     <label>Stake ({currency||'account currency'})<input type="number" min="0.01" step="0.01" value={stake} onChange={event=>{setStake(event.target.value);currentStakeRef.current=null;}} disabled={runtimeStatus!=='STOPPED'}/></label>
+     <label>Stop loss<input type="number" min="0.01" step="0.01" value={stopLoss} onChange={event=>setStopLoss(event.target.value)} disabled={runtimeStatus!=='STOPPED'}/></label>
+     <label>Take profit<input type="number" min="0.01" step="0.01" value={takeProfit} onChange={event=>setTakeProfit(event.target.value)} disabled={runtimeStatus!=='STOPPED'}/></label>
      <label>Contract type<select value={selectedStrategy} onChange={event=>selectStrategy(event.target.value as BotStrategyId)} disabled={runtimeStatus!=='STOPPED'}>{SELECTABLE_STRATEGIES.map(id=><option key={id} value={id}>{STRATEGY_LABELS[id]} · {id}</option>)}</select></label>
      <label>Maximum trades<input type="number" min="1" step="1" value={maxTrades} onChange={event=>setMaxTrades(event.target.value)} disabled={runtimeStatus!=='STOPPED'}/></label>
      <label>Contract duration (ticks)<input type="number" min="1" max="100" step="1" value={duration} onChange={event=>setDuration(event.target.value)} disabled={runtimeStatus!=='STOPPED'}/></label>
