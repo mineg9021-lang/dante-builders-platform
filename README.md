@@ -75,7 +75,14 @@ NEXT_PUBLIC_DERIV_REFERRAL_LINK=
 NEXT_PUBLIC_DERIV_APP_NAME=Dante Builders
 ```
 
-The Deriv application ID is public configuration. Never place an account token, OAuth access token or private credential in frontend source code. The server-side token-vault work remains a production security requirement.
+The Deriv application ID is public configuration. Never place an account token, OAuth access token or private credential in frontend source code. The deployed Netlify Functions also require these server-only variables (never add them to `NEXT_PUBLIC_*` variables or commit them):
+
+- `DERIV_APP_ID` — Deriv application ID.
+- `DERIV_REDIRECT_URI` — exact registered callback URI, matching `NEXT_PUBLIC_DERIV_REDIRECT_URI` and the Deriv app registration.
+- `DERIV_TOKEN_ENCRYPTION_KEY` — base64-encoded 32-byte random key used for AES-256-GCM encryption. Generate with `openssl rand -base64 32`; store only in Netlify environment variables.
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service-role key used only by Netlify Functions to access the private token-vault table. Never expose it to the browser.
+
+The token-vault migration must be applied before connecting Deriv. Supabase RLS denies browser roles access to the vault; server functions use the service-role key. Do not paste secrets into GitHub issues, commits or chat.
 
 ## Dante registration and Supabase
 
@@ -111,10 +118,10 @@ Netlify builds `dist/` using `npm run build`; Netlify Functions are served from 
 
 Before general production use, complete and verify:
 
-- Server-side Deriv OAuth token storage and refresh; no access token exposed to browser storage or logs.
+- Verify Netlify server-side Deriv OAuth configuration, encrypted token-vault migration, account isolation and reauthorization on expiry. Deriv OAuth access tokens do not have refresh tokens; do not implement a refresh-token grant.
 - Supabase migrations, row-level security and user/account isolation tests.
 - Durable bot configuration, session and trade-journal persistence.
-- End-to-end tests against a Deriv Demo account: account selection, market subscriptions, contract discovery, proposal, purchase, open-contract monitoring and settlement.
+- End-to-end tests against a Deriv Demo account: OAuth callback, encrypted token storage, account selection, one-time WebSocket OTP, market subscriptions, contract discovery, proposal, purchase, open-contract monitoring and settlement.
 - Contract-specific validation and end-to-end tests for every strategy before marking it available.
 - DBot import and runtime compatibility tests for generated XML.
 - Netlify production deployment verification against the intended Git commit.
