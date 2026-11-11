@@ -17,6 +17,10 @@ export default async request => {
     });
     if (body?.mode === 'signup') params.set('prompt', 'registration');
     if (typeof body?.lang === 'string' && /^[a-z]{2}(-[A-Z]{2})?$/i.test(body.lang)) params.set('lang', body.lang.toUpperCase());
+    for (const key of ['utm_source', 'utm_medium', 'utm_campaign']) {
+      const field = key === 'utm_source' ? 'utmSource' : key === 'utm_medium' ? 'utmMedium' : 'utmCampaign';
+      if (typeof body?.[field] === 'string' && body[field].length <= 128) params.set(key, body[field]);
+    }
     if (typeof body?.affiliateToken === 'string' && body.affiliateToken.length <= 128) {
       const key = ['t', 'affiliate_token', 'sidi', 'ca'].includes(body.affiliateTokenParam) ? body.affiliateTokenParam : 't';
       params.set(key, body.affiliateToken);
