@@ -79,9 +79,7 @@ export default async request => {
         } catch {
             // Always clear the Dante browser session even if vault cleanup is unavailable.
         }
-        return json({ authenticated: false }, 200, {
-            'Set-Cookie': [clearCookie, 'dante_deriv_oauth_tx=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0'],
-        });
+        return json({ authenticated: false }, 200, { 'Set-Cookie': clearCookie });
     }
 
     const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
