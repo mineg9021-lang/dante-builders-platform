@@ -88,16 +88,16 @@ const DanteAccountGate = ({ children }: Props) => {
         setMessage('You have been signed out.');
     };
 
-    if (loading) return <div className='dante-account-loading'>Loading secure Dante account…</div>;
+    if (loading) return <div className='dante-account-loading'>Loading secure PRIME account…</div>;
     if (user) return <div className='dante-account-shell'><div className='dante-account-bar'><span>Signed in as <strong>{user.email}</strong></span><button type='button' onClick={logout}>Sign out</button></div>{children}</div>;
 
     return (
         <main className='dante-account-page'>
             <section className='dante-account-card'>
-                <div className='dante-account-mark'>DB</div>
-                <span className='dante-account-kicker'>DANTE BUILDERS · SECURE ACCESS</span>
+                <div className='dante-account-mark'>P</div>
+                <span className='dante-account-kicker'>PRIME PARITY · SECURE ACCESS</span>
                 <h1>{mode === 'signup' ? 'Create your account' : 'Welcome back'}</h1>
-                <p>Register or sign in to access your separate bot workspaces. Deriv connection is a separate step inside the platform.</p>
+                <p>Register or sign in to access your the PRIME Even/Odd workstation. Deriv connection is a separate step inside the platform.</p>
                 <form onSubmit={submit}>
                     <label>Email address<input type='email' autoComplete='email' required value={email} onChange={event => setEmail(event.target.value)} /></label>
                     <label>Password<input type='password' autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={8} required value={password} onChange={event => setPassword(event.target.value)} /></label>
