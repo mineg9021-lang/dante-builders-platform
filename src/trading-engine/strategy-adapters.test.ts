@@ -170,6 +170,21 @@ describe('directional and barrier Robot coverage', () => {
         expect(under.proposalFields).toMatchObject({ barrier: '4' });
     });
 
+    it('fixes the Over 2 Robot barrier at 2 regardless of the supplied barrier', () => {
+        const makeDigitTicks = (digits: number[]): StrategyTick[] => digits.map((digit, index) => ({
+            symbol: 'R_100', quote: `100.0${digit}`, epoch: 1_800_000_000 - digits.length + index + 1, digit,
+        }));
+        const result = evaluateBotStrategy({
+            symbol: 'R_100',
+            ticks: makeDigitTicks(Array.from({ length: 20 }, (_, index) => 6 + index % 4)),
+            config: { id: 'OVER_TWO', minSample: 12, barrier: 8 },
+            nowSeconds: 1_800_000_000,
+        });
+        expect(result.decision).toBe('READY');
+        expect(result.contractType).toBe('DIGITOVER');
+        expect(result.proposalFields).toMatchObject({ barrier: '2' });
+    });
+
     it('rejects a stale latest tick without discarding fresh historical samples', () => {
         const ticks = makeTicks(Array.from({ length: 14 }, (_, index) => 100 + index), 1_800_000_000 - 100);
         const stale = evaluateBotStrategy({ symbol: 'R_100', ticks, config: { id: 'RISE', minSample: 12 }, nowSeconds: 1_800_000_000 });
