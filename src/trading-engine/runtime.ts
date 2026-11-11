@@ -37,6 +37,8 @@ export type StartStrategyRuntimeInput = {
     analysisMaxTicks?: number;
     /** Maximum duration of one analysis cycle. Defaults to 10 seconds. */
     analysisMaxDurationMs?: number;
+    /** Number of simultaneous purchases per qualifying signal; 1 keeps normal single-trade mode. */
+    bulkRuns?: number;
 };
 
 const toDecimalString = (value: string | number, precision: number): string | null => {
@@ -205,28 +207,48 @@ export async function startStrategyRuntime(input: StartStrategyRuntimeInput): Pr
 
         executing = true;
         setStatus('EXECUTING', 'READY · validating contract, risk and Deriv proposal.');
-        void executeDerivContract({
-            api: input.api,
-            symbol,
-            contractType: decision.contractType,
-            currency: input.currency,
-            proposalFields: decision.proposalFields,
-            risk,
-            idempotencyKey: symbol + ':' + decision.opportunityKey,
-            shouldContinue: canContinue,
-            onPurchased: purchase => notify(() => input.onPurchased?.(purchase)),
-        }).then(result => {
-            notify(() => input.onSettled?.(result));
+        const bulkRuns = Math.max(1, Math.min(20, Math.floor(input.bulkRuns ?? 1)));
+        const execution = bulkRuns > 1
+            ? executeDerivBulk({
+                api: input.api,
+                symbol,
+                contractType: decision.contractType,
+                currency: input.currency,
+                proposalFields: decision.proposalFields,
+                risk,
+                runs: bulkRuns,
+                idempotencyKey: symbol + ':' + decision.opportunityKey + ':bulk:' + bulkRuns,
+                shouldContinue: canContinue,
+                onPurchased: purchase => notify(() => input.onPurchased?.(purchase)),
+                onSettled: result => notify(() => input.onSettled?.(result)),
+            })
+            : executeDerivContract({
+                api: input.api,
+                symbol,
+                contractType: decision.contractType,
+                currency: input.currency,
+                proposalFields: decision.proposalFields,
+                risk,
+                idempotencyKey: symbol + ':' + decision.opportunityKey,
+                shouldContinue: canContinue,
+                onPurchased: purchase => notify(() => input.onPurchased?.(purchase)),
+            }).then(result => {
+                notify(() => input.onSettled?.(result));
+                return [result];
+            });
+        void execution.then(results => {
             executing = false;
             if (!stopped) {
-                setStatus('RUNNING', 'Settlement verified. Starting a fresh bounded analysis cycle.');
+                setStatus('RUNNING', results.length > 1
+                    ? results.length + ' bulk purchases settled and verified. Starting a fresh bounded analysis cycle.'
+                    : 'Settlement verified. Starting a fresh bounded analysis cycle.');
                 beginAnalysisWindow();
             }
         }).catch(error => {
             executing = false;
             const reason = error instanceof Error ? error : new Error('DERIV_EXECUTION_FAILED');
             notify(() => input.onError?.(reason));
-            if (/PURCHASE_RESULT_UNCONFIRMED|PURCHASE_OUTCOME_UNKNOWN|SETTLEMENT_NOT_VERIFIED|SETTLEMENT_MONITOR_TIMEOUT|SETTLEMENT_MONITOR_FAILED/.test(reason.message)) {
+            if (/PURCHASE_RESULT_UNCONFIRMED|PURCHASE_OUTCOME_UNKNOWN|SETTLEMENT_NOT_VERIFIED|SETTLEMENT_MONITOR_TIMEOUT|SETTLEMENT_MONITOR_FAILED|BULK_PARTIAL_EXECUTION|BULK_SETTLEMENT_NOT_VERIFIED|BULK_EXECUTION_COUNT_NOT_CONFIRMED/.test(reason.message)) {
                 stop();
                 setStatus('PAUSED_ERROR', reason.message + ' Reconcile the Deriv account before restarting.');
             } else if (!stopped) {
