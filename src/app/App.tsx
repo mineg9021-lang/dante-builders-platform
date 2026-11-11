@@ -62,13 +62,13 @@ function App() {
 
         const handleCallback = async () => {
             try {
-                const authInfo = await handleOAuthCallback(window.location.href, {
+                await handleOAuthCallback(window.location.href, {
                     clientId: process.env.NEXT_PUBLIC_DERIV_APP_ID || '',
                     redirectUri: getOAuthRedirectUri(),
                     scopes: 'trade',
                 });
                 const { DerivWSAccountsService } = await import('@/services/derivws-accounts.service');
-                const accounts = await DerivWSAccountsService.fetchAccountsList(authInfo.access_token);
+                const accounts = await DerivWSAccountsService.fetchAccountsList();
                 if (accounts && accounts.length > 0) {
                     DerivWSAccountsService.storeAccounts(accounts);
                     const firstAccount = accounts[0];
@@ -80,7 +80,7 @@ function App() {
                 }
             } catch (error) {
                 const message = error instanceof Error ? error.message : 'Deriv sign-in could not be completed.';
-                console.error('OAuth callback error:', error);
+                console.error('OAuth callback failed:', message);
                 setOauthError(message);
             } finally {
                 cleanupUrl(getOAuthRedirectUri());
