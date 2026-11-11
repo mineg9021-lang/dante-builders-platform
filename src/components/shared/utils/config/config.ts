@@ -1,9 +1,6 @@
 import {
     buildAuthorizationUrl,
     buildSignUpUrl,
-    getAuthInfo,
-    getStoredAuthInfo,
-    refreshAccessToken,
     parseReferralLink,
     parseLandingParams,
     resolveReferralViaProxy,
@@ -68,57 +65,19 @@ const getDefaultServerURL = () => {
 };
 
 /**
- * Gets the WebSocket URL using the authenticated flow
- * 1. Get access token from auth_info (localStorage via vendored deriv-core)
- * 2. Fetch OTP WebSocket URL from DerivWSAccountsService
- *
- * @returns Promise with WebSocket URL or fallback to default server
+ * Obtain an authenticated socket URL through the Dante backend.
+ * A public socket is used only when the user has not connected Deriv.
+ * Expired Deriv authorization is surfaced and never silently downgraded.
  */
-let refreshInFlight: Promise<import('@/external/deriv-core').AuthInfo> | null = null;
-const TOKEN_REFRESH_SKEW_SECONDS = 60;
-
 export const getSocketURL = async (): Promise<string> => {
-    // getStoredAuthInfo deliberately includes expired sessions so they cannot
-    // be mistaken for anonymous users and silently downgraded to a public socket.
-    const storedAuth = getStoredAuthInfo();
-    if (!storedAuth) {
-        return getDefaultServerURL();
-    }
-
-    try {
-        let accessToken = storedAuth.access_token;
-        const refreshRequired = storedAuth.expires_at <=
-            Math.floor(Date.now() / 1000) + TOKEN_REFRESH_SKEW_SECONDS;
-
-        if (refreshRequired) {
-            const clientId = process.env.NEXT_PUBLIC_DERIV_APP_ID;
-            if (!clientId || !storedAuth.refresh_token) {
-                throw new Error('DERIV_TOKEN_REFRESH_UNAVAILABLE');
-            }
-
-            // Share one refresh request across concurrent socket initializations.
-            if (!refreshInFlight) {
-                refreshInFlight = refreshAccessToken(storedAuth.refresh_token, clientId)
-                    .finally(() => { refreshInFlight = null; });
-            }
-            const refreshedAuth = await refreshInFlight;
-            accessToken = refreshedAuth.access_token;
-        } else {
-            // A second read ensures the session was not logged out/replaced
-            // between the first read and authenticated socket setup.
-            const currentAuth = getAuthInfo();
-            if (!currentAuth || currentAuth.access_token !== storedAuth.access_token) {
-                throw new Error('DERIV_AUTH_SESSION_CHANGED');
-            }
-        }
-
-        return await DerivWSAccountsService.getAuthenticatedWebSocketURL(accessToken);
-    } catch {
-        // Never downgrade a stored authenticated session to a public socket.
-        // Keep provider errors and credential-bearing request details out of logs.
-        console.error('[DerivWS] Authenticated WebSocket setup failed; public fallback was blocked.');
-        throw new Error('DERIV_AUTHENTICATED_CONNECTION_FAILED');
-    }
+    const response = await fetch('/.netlify/functions/deriv-session-status', { credentials: 'same-origin' });
+    if (response.status === 401) throw new Error('DANTE_LOGIN_REQUIRED');
+    if (!response.ok) throw new Error('DERIV_SESSION_STATUS_UNAVAILABLE');
+    const status = await response.json() as { status?: string };
+    if (status.status === 'not_connected') return getDefaultServerURL();
+    if (status.status === 'reauthorization_required') throw new Error('DERIV_REAUTHORIZATION_REQUIRED');
+    if (status.status !== 'connected') throw new Error('DERIV_SESSION_STATUS_INVALID');
+    return DerivWSAccountsService.getAuthenticatedWebSocketURL();
 };
 
 export const getDebugServiceWorker = () => {
