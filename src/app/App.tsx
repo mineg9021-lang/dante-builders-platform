@@ -55,7 +55,7 @@ function App() {
     const [oauthError, setOauthError] = useState('');
 
     useEffect(() => {
-        ['auth_info', 'authToken', 'accountsList', 'clientAccounts', 'callback_token'].forEach(key => localStorage.removeItem(key));
+        ['auth_info', 'authToken', 'accountsList', 'clientAccounts', 'callback_token', 'session_token'].forEach(key => localStorage.removeItem(key));
         const urlParams = new URLSearchParams(window.location.search);
         if (!urlParams.has('code') && !urlParams.has('error')) { setOauthProcessing(false); return; }
 
