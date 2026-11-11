@@ -48,7 +48,7 @@ function readDanteSession(request) {
 }
 export async function requireDanteUser(request) {
   const session = readDanteSession(request);
-  const url = String(process.env.SUPABASE_URL || '').replace(/\\/$/, '');
+  const url = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
   const key = process.env.SUPABASE_ANON_KEY || '';
   if (!session || !url || !key) return null;
   const response = await fetch(url + '/auth/v1/user', {
@@ -76,7 +76,7 @@ export function config() {
   return { clientId, redirectUri, authBase, apiBase };
 }
 async function supabaseAdmin(path, options = {}) {
-  const url = String(process.env.SUPABASE_URL || '').replace(/\\/$/, '');
+  const url = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   if (!url || !key) throw new Error('SUPABASE_SERVER_CONFIGURATION_REQUIRED');
   return fetch(url + '/rest/v1/' + path, {
