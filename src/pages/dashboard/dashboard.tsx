@@ -14,7 +14,8 @@ import PlatformActivity from './platform-activity';
 import SarahMarketChart from './sarah-market-chart';
 import './dante-landing.scss';
 
-type RobotDefinition = { id: BotStrategyId; title: string; contract: string; description: string; group: string; icon: string };
+type RobotId = BotStrategyId | 'BULK';
+type RobotDefinition = { id: RobotId; title: string; contract: string; description: string; group: string; icon: string };
 const ROBOT_LIBRARY: RobotDefinition[] = [
  { id:'RISE',title:'Rise Robot',contract:'CALL',description:'Trades upward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↗' },
  { id:'FALL',title:'Fall Robot',contract:'PUT',description:'Trades downward price movement after bounded momentum and direction checks.',group:'Directional',icon:'↘' },
@@ -24,19 +25,22 @@ const ROBOT_LIBRARY: RobotDefinition[] = [
  { id:'ASIAN_DOWN',title:'Asian Down AI Robot',contract:'ASIAND',description:'Combines downward momentum with current-price versus sample-average confirmation.',group:'Asian',icon:'⌄' },
  { id:'DIGIT_MATCH',title:'Digit Matches Robot',contract:'DIGITMATCH',description:'Ranks observed final-digit frequency and validates a prediction barrier.',group:'Digit',icon:'=' },
  { id:'DIGIT_DIFFERS',title:'Digit Differs Robot',contract:'DIGITDIFF',description:'Selects a low-frequency digit candidate and validates its concentration.',group:'Digit',icon:'≠' },
- { id:'DIGIT_OVER',title:'Digit Over Robot',contract:'DIGITOVER',description:'Evaluates final-digit observations against an over barrier.',group:'Digit',icon:'>' },
+ { id:'DIGIT_OVER',title:'Digit Over Robot',contract:'DIGITOVER',description:'Evaluates final-digit observations against a user-selected over barrier.',group:'Digit',icon:'>' },
+ { id:'OVER_TWO',title:'Over 2 Robot',contract:'DIGITOVER · BARRIER 2',description:'A dedicated Over 2 specialist. Only digits 3–9 qualify; digits 0–2 never satisfy its entry rule.',group:'Digit specialist',icon:'2' },
  { id:'DIGIT_UNDER',title:'Digit Under Robot',contract:'DIGITUNDER',description:'Evaluates final-digit observations against an under barrier.',group:'Digit',icon:'<' },
  { id:'EVEN',title:'Even Robot',contract:'DIGITEVEN',description:'Uses bounded parity frequency and split-window checks before entry.',group:'Parity',icon:'E' },
  { id:'ODD',title:'Odd Robot',contract:'DIGITODD',description:'Uses bounded parity frequency and split-window checks before entry.',group:'Parity',icon:'O' },
+ { id:'BULK',title:'Bulk Robot',contract:'MULTI-CONTRACT',description:'Analyses the selected contract strategy, waits for its strongest qualifying signal, then dispatches a risk-capped batch together.',group:'Batch execution',icon:'B' },
 ];
-const ROBOT_IDS = getImplementedStrategyIds();
 const ROBOT_BY_ID = new Map(ROBOT_LIBRARY.map(bot => [bot.id, bot]));
 type TradeRow = { id:string; contractId:number; contractType:string; symbol:string; status:'OPEN'|'WON'|'LOST'|'VOID'; profit?:number; time:number };
 
 const DashboardComponent = () => {
  const { client } = useStore();
  const { isAuthorized, connectionStatus, authData, accountList, activeLoginid } = useApiBase();
- const [selectedBot,setSelectedBot] = useState<BotStrategyId>('RISE');
+ const [selectedBot,setSelectedBot] = useState<RobotId>('RISE');
+ const [bulkStrategy,setBulkStrategy] = useState<BotStrategyId>('DIGIT_OVER');
+ const [bulkRuns,setBulkRuns] = useState('10');
  const mode: 'demo'|'live' = authData?.is_virtual ? 'demo' : 'live';
  const [stake,setStake] = useState('0.35');
  const [stopLoss,setStopLoss] = useState('5');
@@ -66,6 +70,8 @@ const DashboardComponent = () => {
  const lastDecisionLogKeyRef = useRef('');
  const tradeCountRef = useRef(0);
  const bot = ROBOT_BY_ID.get(selectedBot) || ROBOT_LIBRARY[0];
+ const activeStrategy: BotStrategyId = selectedBot === 'BULK' ? bulkStrategy : selectedBot;
+ const configuredBulkRuns = selectedBot === 'BULK' ? Number(bulkRuns) : 1;
  const isDerivConnected = isAuthorized && connectionStatus === 'opened';
  const accountId = authData?.loginid || '';
  const accountBalance = liveBalance ?? 0;
@@ -144,7 +150,7 @@ const DashboardComponent = () => {
   if(mode==='live'){const accepted=window.confirm('You selected a REAL Deriv account. Trades will use real funds. Confirm live execution for this session.');if(!accepted)return;liveConfirmedRef.current=true;setLiveConfirmed(true);}
   if(!currency){setRuntimeMessage('Deriv did not provide an account currency. Refresh the account connection.');return;}
   const stakeValue=Number(stake),sl=Number(stopLoss),tp=Number(takeProfit),limit=Number(maxTrades),ticks=Number(duration);
-  if(![stakeValue,sl,tp,limit,ticks].every(Number.isFinite)||stakeValue<=0||sl<=0||tp<=0||!Number.isInteger(limit)||limit<1||!Number.isInteger(ticks)||ticks<1){setRuntimeMessage('Check stake, stop loss, take profit, trade limit and duration values.');return;}
+  if(![stakeValue,sl,tp,limit,ticks].every(Number.isFinite)||stakeValue<=0||sl<=0||tp<=0||!Number.isInteger(limit)||limit<1||!Number.isInteger(ticks)||ticks<1||(selectedBot==='BULK'&&(!Number.isInteger(batchRuns)||batchRuns<2||batchRuns>20||limit<batchRuns))){setRuntimeMessage('Check stake, stop loss, take profit, trade limit and duration values.');return;}
   const symbols=[...DANTE_VOLATILITY_SYMBOLS];
   const precisionBySymbol=Object.fromEntries(symbols.map(symbol=>[symbol,Number(api_base.pip_sizes?.[symbol]??2)]));
   setDecision(null);setEngineReport(null);setRuntimeStatus('STARTING');setRuntimeMessage('Checking live contract availability and opening the Deriv tick stream…');
@@ -152,7 +158,8 @@ const DashboardComponent = () => {
    const baseRisk=buildRisk();
    const handle=await startStrategyRuntime({
     api:api_base.api as unknown as DerivTradingApi,symbols,precisionBySymbol,
-    strategy:{id:selectedBot,minSample:12,maxSample:40,runLength:Number(runLength),barrier:Number(barrier),duration:ticks,durationUnit:'t'},
+    strategy:{id:activeStrategy,minSample:12,maxSample:40,runLength:Number(runLength),barrier:Number(barrier),duration:ticks,durationUnit:'t'},
+    bulkRuns:configuredBulkRuns,
     currency,risk:baseRisk,getRiskContext:buildRisk,shouldContinue:()=>startAttemptRef.current===attempt,
     onStatus:(status,message)=>{
      setRuntimeStatus(status);setRuntimeMessage(message);
@@ -196,7 +203,7 @@ const DashboardComponent = () => {
    runtimeRef.current=handle;
   }catch(error){setRuntimeStatus('STOPPED');setRuntimeMessage(error instanceof Error?error.message:'The Deriv bot runtime could not start.');}
  };
- const selectBot=(id:BotStrategyId)=>{startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedBot(id);setDecision(null);setEngineReport(null);setRuntimeMessage('Robot selected. Configure the controls below and press Start.');};
+ const selectBot=(id:RobotId)=>{startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedBot(id);setDecision(null);setEngineReport(null);setRuntimeMessage('Robot selected. Configure the controls below and press Start.');};
  const currentRows=useMemo(()=>trades.slice(0,10),[trades]);
 
  return <main className="dante-platform">
@@ -212,7 +219,7 @@ const DashboardComponent = () => {
   </section>
   <SarahMarketChart connected={isDerivConnected}/>
   <section className="dante-library dante-robot-library" id="bot-library">
-   <div className="dante-section-heading"><div><span className="dante-eyebrow">SPECIALIST ROBOT FLEET · SHARED 18-LAYER ENGINE</span><h2>Choose your robot</h2></div><p>{ROBOT_IDS.length} robot strategies · one protected engine</p></div>
+   <div className="dante-section-heading"><div><span className="dante-eyebrow">SPECIALIST ROBOT FLEET · SHARED 18-LAYER ENGINE</span><h2>Choose your robot</h2></div><p>{ROBOT_LIBRARY.length} robot workspaces · one protected engine</p></div>
    <div className="dante-bot-grid dante-robot-grid">{ROBOT_LIBRARY.map((robot,index)=>{
     const active=selectedBot===robot.id;
     return <button key={robot.id} type="button" className={active?'dante-bot-card dante-robot-card selected':'dante-bot-card dante-robot-card'} onClick={()=>selectBot(robot.id)} aria-pressed={active}>
@@ -241,8 +248,9 @@ const DashboardComponent = () => {
      <label>Take profit<input type="number" min="0.01" step="0.01" value={takeProfit} onChange={event=>setTakeProfit(event.target.value)}/></label>
      <label>Maximum trades<input type="number" min="1" step="1" value={maxTrades} onChange={event=>setMaxTrades(event.target.value)}/></label>
      <label>Contract duration (ticks)<input type="number" min="1" max="100" step="1" value={duration} onChange={event=>setDuration(event.target.value)}/></label>
+     {selectedBot==='BULK'&&<><label>Contract strategy<select value={bulkStrategy} onChange={event=>setBulkStrategy(event.target.value as BotStrategyId)} disabled={runtimeStatus!=='STOPPED'}>{getImplementedStrategyIds().map(id=><option key={id} value={id}>{id.replace(/_/g,' ')}</option>)}</select></label><label>Bulk purchases per signal<input type='number' min='2' max='20' step='1' value={bulkRuns} onChange={event=>setBulkRuns(event.target.value)}/></label></>}
      {(selectedBot==='ONLY_UP'||selectedBot==='ONLY_DOWN')&&<label>Consecutive ticks<input type="number" min="3" max="30" step="1" value={runLength} onChange={event=>setRunLength(event.target.value)}/></label>}
-     {(selectedBot==='DIGIT_OVER'||selectedBot==='DIGIT_UNDER')&&<label>Digit barrier<input type="number" min="0" max="8" step="1" value={barrier} onChange={event=>setBarrier(event.target.value)}/></label>}
+     {(selectedBot==='DIGIT_OVER'||selectedBot==='DIGIT_UNDER'||(selectedBot==='BULK'&&(bulkStrategy==='DIGIT_OVER'||bulkStrategy==='DIGIT_UNDER')))&&<label>Digit barrier<input type="number" min="0" max="8" step="1" value={barrier} onChange={event=>setBarrier(event.target.value)}/></label>}
     </div>
     <div className="dante-risk-note"><strong>Risk protection:</strong> fixed stake · 2% balance exposure cap · session stop loss · session take profit · trade-count limit · no martingale · no automatic purchase retries.</div>
     <div className="dante-metric-grid"><div><span>SESSION P/L</span><strong className={sessionPnl>=0?'metric-positive':'metric-negative'}>{sessionPnl.toFixed(2)} {currency}</strong></div><div><span>SETTLED WINS</span><strong>{wins}</strong></div><div><span>SETTLED LOSSES</span><strong>{losses}</strong></div><div><span>WIN RATE</span><strong>{winRate}%</strong></div></div>
