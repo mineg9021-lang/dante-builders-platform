@@ -5,7 +5,6 @@ import { cleanupUrl, handleOAuthCallback } from '@/external/deriv-core';
 import { getOAuthRedirectUri } from '@/external/deriv-core/config/urls';
 import ChunkLoader from '@/components/loader/chunk-loader';
 import LocalStorageSyncWrapper from '@/components/localStorage-sync-wrapper';
-import { useAccountSwitching } from '@/hooks/useAccountSwitching';
 import { useLanguageFromURL } from '@/hooks/useLanguageFromURL';
 import { StoreProvider } from '@/hooks/useStore';
 import { isPreviewMode, PREVIEW_BASE_PATH } from '@/utils/is-preview-mode';
@@ -49,7 +48,6 @@ const router = createBrowserRouter(
 );
 
 function App() {
-    useAccountSwitching();
     const [oauthProcessing, setOauthProcessing] = useState(() => {
         const params = new URLSearchParams(window.location.search);
         return params.has('code') || params.has('error');
@@ -57,6 +55,7 @@ function App() {
     const [oauthError, setOauthError] = useState('');
 
     useEffect(() => {
+        ['auth_info', 'authToken', 'accountsList', 'clientAccounts', 'callback_token'].forEach(key => localStorage.removeItem(key));
         const urlParams = new URLSearchParams(window.location.search);
         if (!urlParams.has('code') && !urlParams.has('error')) { setOauthProcessing(false); return; }
 
