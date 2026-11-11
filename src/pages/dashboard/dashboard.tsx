@@ -7,7 +7,6 @@ import { useStore } from '@/hooks/useStore';
 import { startStrategyRuntime, type RuntimeHandle, type RuntimeStatus } from '@/trading-engine/runtime';
 import type { DerivTradingApi, ExecutionRiskContext } from '@/trading-engine/execution';
 import { getImplementedStrategyIds, type BotStrategyId, type StrategyDecisionResult } from '@/trading-engine/strategy-adapters';
-import type { RobotEngineReport } from '@/trading-engine/robot-18-layer-engine';
 import { DANTE_VOLATILITY_SYMBOLS } from './market-universe';
 import { appendDanteJournalEvent, loadDanteJournal } from '@/services/dante-journal.service';
 import PlatformActivity from './platform-activity';
@@ -37,9 +36,8 @@ const DashboardComponent = () => {
  const [barrier,setBarrier] = useState('4');
  const [liveConfirmed,setLiveConfirmed] = useState(false);
  const [runtimeStatus,setRuntimeStatus] = useState<RuntimeStatus>('STOPPED');
- const [runtimeMessage,setRuntimeMessage] = useState('Connect your Deriv account, configure the Robot and press Start.');
+ const [runtimeMessage,setRuntimeMessage] = useState('Connect Deriv, choose a contract and press Start to begin Sara AI analysis.');
  const [decision,setDecision] = useState<StrategyDecisionResult|null>(null);
- const [engineReport,setEngineReport] = useState<RobotEngineReport|null>(null);
  const [trades,setTrades] = useState<TradeRow[]>([]);
  const [sessionPnl,setSessionPnl] = useState(0);
  const [wins,setWins] = useState(0);
@@ -125,10 +123,10 @@ const DashboardComponent = () => {
   stopLoss:Number(stopLoss),takeProfit:Number(takeProfit),
   tradesThisSession:tradeCountRef.current,maxTradesPerSession:Number(maxTrades),
  });
- const stopBot = () => { startAttemptRef.current += 1; runtimeRef.current?.stop(); runtimeRef.current=null; setRuntimeStatus('STOPPED'); setRuntimeMessage('Robot stopped. No new purchases will be initiated.'); };
+ const stopBot = () => { startAttemptRef.current += 1; runtimeRef.current?.stop(); runtimeRef.current=null; currentStakeRef.current=null; setRuntimeStatus('STOPPED'); setRuntimeMessage('Sara AI stopped. No new purchases will be initiated.'); };
  const startBot = async () => {
   const attempt = ++startAttemptRef.current;
-  if(runtimeRef.current){setRuntimeMessage('This robot already has an active runtime. Stop it before starting another session.');return;}
+  if(runtimeRef.current){setRuntimeMessage('Sara AI already has an active session. Stop it before starting another one.');return;}
   if(!isDerivConnected||!api_base.api){setRuntimeMessage('Deriv is not authorised. Connect your Deriv account before starting.');return;}
   if(mode==='live'){const accepted=window.confirm('You selected a REAL Deriv account. Trades will use real funds. Confirm live execution for this session.');if(!accepted)return;liveConfirmedRef.current=true;setLiveConfirmed(true);}
   if(!currency){setRuntimeMessage('Deriv did not provide an account currency. Refresh the account connection.');return;}
@@ -136,7 +134,7 @@ const DashboardComponent = () => {
   if(![stakeValue,sl,tp,limit,ticks].every(Number.isFinite)||stakeValue<=0||sl<=0||tp<=0||!Number.isInteger(limit)||limit<1||!Number.isInteger(ticks)||ticks<1){setRuntimeMessage('Check stake, stop loss, take profit, trade limit and duration values.');return;}
   const symbols=[...DANTE_VOLATILITY_SYMBOLS];
   const precisionBySymbol=Object.fromEntries(symbols.map(symbol=>[symbol,Number(api_base.pip_sizes?.[symbol]??2)]));
-  setDecision(null);setEngineReport(null);setRuntimeStatus('STARTING');setRuntimeMessage('Checking live contract availability and opening the Deriv tick stream…');
+  setDecision(null);setRuntimeStatus('STARTING');setRuntimeMessage('Checking live contract availability and opening the Deriv tick stream…');
   try{
    const baseRisk=buildRisk();
    const handle=await startStrategyRuntime({
@@ -151,7 +149,6 @@ const DashboardComponent = () => {
        .catch(()=>setJournalError('A runtime status could not be saved to the persistent journal.'));
      }
     },
-    onEngineReport:report=>setEngineReport(report),
     onDecision:result=>{
      setDecision(result);
      const decisionKey=[result.decision,result.reason,result.contractType].join(':');
@@ -175,7 +172,7 @@ const DashboardComponent = () => {
      setTrades(previous=>previous.map(row=>row.contractId===result.contractId?{...row,status:result.settlement,profit:result.profit}:row));
      void appendDanteJournalEvent({botKey:selectedStrategy,derivAccountId:accountId,contractId:result.contractId,eventType:'SETTLED',eventData:{settlement:result.settlement,profit:result.profit,buyPrice:result.buyPrice,settledAt:result.settledAt}})
       .catch(()=>setJournalError('A contract settlement could not be saved to the persistent journal.'));
-     if(pnlRef.current<=-sl||pnlRef.current>=tp||tradeCountRef.current>=limit){runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setRuntimeMessage('Session limit reached. The bot has stopped and settlement is recorded.');}
+     if(pnlRef.current<=-sl||pnlRef.current>=tp||tradeCountRef.current>=limit){runtimeRef.current?.stop();runtimeRef.current=null;currentStakeRef.current=null;setRuntimeStatus('STOPPED');setRuntimeMessage('Session limit reached. Sara AI has stopped and settlement is recorded.');}
     },
     onError:error=>{
     setRuntimeMessage(error.message);
@@ -187,7 +184,7 @@ const DashboardComponent = () => {
    runtimeRef.current=handle;
   }catch(error){setRuntimeStatus('STOPPED');setRuntimeMessage(error instanceof Error?error.message:'The Deriv bot runtime could not start.');}
  };
- const selectStrategy=(id:BotStrategyId)=>{startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedStrategy(id);setDecision(null);setEngineReport(null);currentStakeRef.current=null;setRuntimeMessage('Contract type selected. Sara AI will analyse the live Deriv market when you press Start.');};
+ const selectStrategy=(id:BotStrategyId)=>{startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedStrategy(id);setDecision(null);currentStakeRef.current=null;setRuntimeMessage('Contract type selected. Sara AI will analyse the live Deriv market when you press Start.');};
  const currentRows=useMemo(()=>trades.slice(0,10),[trades]);
 
  return <main className="dante-platform">
@@ -198,13 +195,13 @@ const DashboardComponent = () => {
   </header>
   <section className="dante-system-hero">
    <div className="dante-system-copy"><span className="dante-eyebrow">DANTE BUILDERS · SARA AI ANALYSIS</span><h1>One chart.<br/><em>One intelligent assistant.</em></h1><p>Connect your Deriv account, choose a Deriv contract type and press Start. Sara AI analyses live market data and only requests a trade when the selected contract passes its checks.</p><div className="dante-system-tags"><span>DERIV OAUTH</span><span>LIVE MARKET DATA</span><span>RISK-GATED EXECUTION</span></div></div>
-   <div className="dante-system-portrait"><img src="/assets/images/dante-bot-portraits.webp" alt="Dante Builders robotic assistant"/><div className="portrait-glow"/><div className="portrait-caption"><span>AI CORE</span><strong>Sara AI assistant</strong></div></div>
+   <div className="dante-system-portrait"><img src="/assets/images/dante-bot-portraits.webp" alt="Sara AI robotic woman assistant"/><div className="portrait-glow"/><div className="portrait-caption"><span>AI CORE</span><strong>Sara AI assistant</strong></div></div>
    <div className="dante-system-status"><div><span>PLATFORM SESSION</span><strong>{client.is_logged_in?'SIGNED IN':'ACCOUNT REQUIRED'}</strong></div><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Awaiting OAuth'}</strong></div><div><span>SARA AI STATUS</span><strong>{runtimeStatus.replace(/_/g,' ')}</strong></div></div>
   </section>
   <section className="dante-native-chart" aria-label="Deriv live chart"><div className="dante-chart-heading"><span className="dante-eyebrow">DERIV SMARTCHARTS</span><strong>Live market chart</strong><small>Use the chart controls to change market and timeframe</small></div><ChartWrapper show_digits_stats={true}/></section>
   <section className="dante-terminal" id="bot-terminal">
    <div className="dante-terminal-purple">
-    <div className="terminal-identity"><img src="/assets/images/dante-bot-portraits.webp" alt=""/><div><span className="dante-eyebrow">SARA AI · CONTRACT ANALYSIS</span><h2>Sara AI Workstation</h2><p>Selected contract: <strong>{STRATEGY_LABELS[selectedStrategy]}</strong> · Live Deriv market feed</p></div></div>
+    <div className="terminal-identity"><img src="/assets/images/dante-bot-portraits.webp" alt="Sara AI robotic woman portrait"/><div><span className="dante-eyebrow">SARA AI · CONTRACT ANALYSIS</span><h2>Sara AI Workstation</h2><p>Selected contract: <strong>{STRATEGY_LABELS[selectedStrategy]}</strong> · Live Deriv market feed</p></div></div>
     <div className="terminal-account-strip"><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Not connected'}</strong></div><div><span>ACCOUNT TYPE</span><strong>{accountType}</strong></div><div><span>LIVE BALANCE</span><strong>{isDerivConnected?(liveBalance===null?'Loading balance…':liveBalance.toFixed(2)+' '+currency):'—'}</strong></div><div className="terminal-connect-actions"><button type="button" className="terminal-connect" onClick={connectDeriv}>{isDerivConnected?'RECONNECT DERIV':'CONNECT DERIV'}</button><a className="terminal-open-deriv" href="https://app.deriv.com/" target="_blank" rel="noopener noreferrer">OPEN DERIV PLATFORM ↗</a><a className="terminal-open-deriv" href="https://developers.deriv.com/" target="_blank" rel="noopener noreferrer">API TOKEN MANAGER ↗</a></div></div>
     {loginError&&<p className="dante-error" role="alert">{loginError}</p>}
     <div className="terminal-state-row"><div><span>RUNTIME</span><strong>{runtimeStatus.replace(/_/g,' ')}</strong></div><div><span>STRATEGY DECISION</span><strong>{decision?.decision||'WAITING'}</strong></div><div><span>LAST EVIDENCE</span><strong>{decision?decision.evidenceScore+'%':'—'}</strong></div></div>
