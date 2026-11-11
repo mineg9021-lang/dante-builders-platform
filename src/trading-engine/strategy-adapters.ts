@@ -193,7 +193,7 @@ export function evaluateBotStrategy(input: {
         const barrier = id === 'OVER_TWO' ? 2 : Number.isInteger(input.config.barrier) ? Number(input.config.barrier) : 4;
         if (barrier < 0 || barrier > 8) return { ...wait(id, sample.length, 'Barrier must be an integer from 0 to 8.'), decision: 'REJECTED' };
         proposalFields.barrier = String(barrier);
-        const qualifying = digits.filter(digit => id === 'DIGIT_OVER' ? digit > barrier : digit < barrier);
+        const qualifying = digits.filter(digit => (id === 'DIGIT_OVER' || id === 'OVER_TWO') ? digit > barrier : digit < barrier);
         const rate = qualifying.length / digits.length;
         if (rate < 0.65) return { ...wait(id, sample.length, 'Observed barrier frequency is below the configured entry threshold.'), evidenceScore: Math.round(rate * 100) };
         return {
