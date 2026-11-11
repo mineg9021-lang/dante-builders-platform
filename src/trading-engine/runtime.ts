@@ -1,3 +1,4 @@
+import { executeDerivBulk } from './bulk-execution';
 import {
     executeDerivContract,
     type DerivTradingApi,
