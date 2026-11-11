@@ -27,8 +27,8 @@ describe('getSocketURL server-side Deriv session handling', () => {
         await expect(getSocketURL()).rejects.toThrow('DERIV_REAUTHORIZATION_REQUIRED');
         expect(DerivWSAccountsService.getAuthenticatedWebSocketURL).not.toHaveBeenCalled();
     });
-    it('rejects an unauthenticated Dante session', async () => {
+    it('uses the public market socket before Dante sign-in', async () => {
         jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false, status: 401, json: async () => ({ error: 'DANTE_LOGIN_REQUIRED' }) } as Response);
-        await expect(getSocketURL()).rejects.toThrow('DANTE_LOGIN_REQUIRED');
+        await expect(getSocketURL()).resolves.toContain('/options/ws/public');
     });
 });
