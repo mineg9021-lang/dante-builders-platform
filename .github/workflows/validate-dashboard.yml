@@ -2,9 +2,9 @@ name: Validate dashboard changes
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, security/deriv-oauth-backend-session]
   push:
-    branches: [main, feature/ai-even-odd-dashboard]
+    branches: [main, feature/ai-even-odd-dashboard, feature/sara-ai-unified-workstation]
 
 permissions:
   contents: read
