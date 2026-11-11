@@ -65,6 +65,10 @@ export function checkSameOrigin(request) {
 }
 export function randomBase64url(bytes = 32) { return randomBytes(bytes).toString('base64url'); }
 export function pkceChallenge(verifier) { return createHash('sha256').update(verifier).digest('base64url'); }
+export function constantTimeEqual(left, right) {
+  const a = Buffer.from(String(left)); const b = Buffer.from(String(right));
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 export function config() {
   const clientId = process.env.DERIV_APP_ID || process.env.NEXT_PUBLIC_DERIV_APP_ID || '';
   const redirectUri = process.env.DERIV_REDIRECT_URI || process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI || '';
