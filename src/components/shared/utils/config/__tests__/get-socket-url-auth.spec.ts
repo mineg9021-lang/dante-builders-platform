@@ -16,9 +16,11 @@ import { getSocketURL } from '../config';
 
 describe('getSocketURL authenticated connection handling', () => {
     const previousEnvironment = process.env.NEXT_PUBLIC_DERIV_ENV;
+    const previousAppId = process.env.NEXT_PUBLIC_DERIV_APP_ID;
 
     beforeEach(() => {
         process.env.NEXT_PUBLIC_DERIV_ENV = 'staging';
+        process.env.NEXT_PUBLIC_DERIV_APP_ID = 'test-app-id';
         jest.clearAllMocks();
         (getStoredAuthInfo as jest.Mock).mockReturnValue(null);
     });
@@ -28,6 +30,11 @@ describe('getSocketURL authenticated connection handling', () => {
             delete process.env.NEXT_PUBLIC_DERIV_ENV;
         } else {
             process.env.NEXT_PUBLIC_DERIV_ENV = previousEnvironment;
+        }
+        if (previousAppId === undefined) {
+            delete process.env.NEXT_PUBLIC_DERIV_APP_ID;
+        } else {
+            process.env.NEXT_PUBLIC_DERIV_APP_ID = previousAppId;
         }
     });
 
@@ -62,7 +69,7 @@ describe('getSocketURL authenticated connection handling', () => {
         await expect(getSocketURL()).resolves.toBe('wss://authenticated.example.test');
         expect(refreshAccessToken).toHaveBeenCalledWith(
             'stored-refresh-token',
-            process.env.NEXT_PUBLIC_DERIV_APP_ID
+            'test-app-id'
         );
         expect(DerivWSAccountsService.getAuthenticatedWebSocketURL)
             .toHaveBeenCalledWith('refreshed-access-token');
@@ -82,8 +89,9 @@ describe('getSocketURL authenticated connection handling', () => {
     });
 
     it('rejects when an authenticated socket cannot be created instead of downgrading', async () => {
-        (getAuthInfo as jest.Mock).mockReturnValue({
+        (getStoredAuthInfo as jest.Mock).mockReturnValue({
             access_token: 'test-access-token',
+            refresh_token: 'test-refresh-token',
             expires_at: Math.floor(Date.now() / 1000) + 3600,
         });
         (DerivWSAccountsService.getAuthenticatedWebSocketURL as jest.Mock)
