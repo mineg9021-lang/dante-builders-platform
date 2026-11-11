@@ -1,3 +1,5 @@
+import { deleteDerivToken, requireDanteUser } from './_shared/deriv-oauth.mjs';
+
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers },
@@ -70,7 +72,17 @@ export default async request => {
     let body;
     try { body = await request.json(); } catch { return json({ error: 'INVALID_JSON' }, 400); }
 
-    if (body?.action === 'logout') return json({ authenticated: false }, 200, { 'Set-Cookie': clearCookie });
+    if (body?.action === 'logout') {
+        try {
+            const user = await requireDanteUser(request);
+            if (user) await deleteDerivToken(user.id);
+        } catch {
+            // Always clear the Dante browser session even if vault cleanup is unavailable.
+        }
+        return json({ authenticated: false }, 200, {
+            'Set-Cookie': [clearCookie, 'dante_deriv_oauth_tx=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0'],
+        });
+    }
 
     const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
     const password = typeof body?.password === 'string' ? body.password : '';
