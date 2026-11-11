@@ -1,14 +1,9 @@
 import type { AuthConfig, AuthInfo, CallbackParams, TokenExchangeParams } from '../types';
-import { generateRandomBase64url } from './crypto';
-import {
-  clearAllAuthData,
-} from './storage';
-import { getAuthBaseUrl } from '../config/urls';
 
-/**
- * Build the base PKCE URLSearchParams shared by login and sign-up.
- * Stores a fresh CSRF token and code verifier in sessionStorage.
- */
+export class OAuthError extends Error {
+  constructor(message: string) { super(message); this.name = 'OAuthError'; }
+}
+
 async function requestAuthorizationUrl(config: AuthConfig, mode: 'login' | 'signup'): Promise<string> {
   const response = await fetch('/.netlify/functions/deriv-oauth-start', {
     method: 'POST', credentials: 'same-origin',
@@ -25,33 +20,53 @@ async function requestAuthorizationUrl(config: AuthConfig, mode: 'login' | 'sign
   return result.authorizationUrl;
 }
 
-/** Start login through the server-held PKCE transaction. */
-export async function buildAuthorizationUrl(config: AuthConfig): Promise<string> {
-  return requestAuthorizationUrl(config, 'login');
+export const buildAuthorizationUrl = (config: AuthConfig): Promise<string> => requestAuthorizationUrl(config, 'login');
+export const buildSignUpUrl = (config: AuthConfig): Promise<string> => requestAuthorizationUrl(config, 'signup');
+
+export async function initiateLogin(config: AuthConfig): Promise<void> {
+  window.location.assign(await buildAuthorizationUrl(config));
+}
+export async function initiateSignUp(config: AuthConfig): Promise<void> {
+  window.location.assign(await buildSignUpUrl(config));
 }
 
-/** Start registration through the server-held PKCE transaction. */
-export async function buildSignUpUrl(config: AuthConfig): Promise<string> {
-  return requestAuthorizationUrl(config, 'signup');
+export function parseCallbackParams(url: string): CallbackParams {
+  const parsed = new URL(url);
+  return {
+    code: parsed.searchParams.get('code'), state: parsed.searchParams.get('state'),
+    scope: parsed.searchParams.get('scope'), error: parsed.searchParams.get('error'),
+    error_description: parsed.searchParams.get('error_description'),
+  };
 }
 
-/**
- * Direct browser token exchange is intentionally disabled. Deriv credentials
- * are exchanged and stored only by the authenticated Netlify callback.
- */
+/** Client-side presence check only; the backend validates the state against its encrypted HttpOnly transaction cookie. */
+export function validateCallback(params: CallbackParams, _redirectUri: string): string {
+  if (params.error) throw new OAuthError(params.error_description || params.error);
+  if (!params.code || !params.state) throw new OAuthError('OAuth callback is missing code or state');
+  return params.code;
+}
+
+/** Direct browser token exchange is disabled by design. */
 export async function exchangeCodeForTokens(_params: TokenExchangeParams): Promise<AuthInfo> {
   throw new OAuthError('Direct browser token exchange is disabled; use the secure server callback.');
 }
-
-/** Deriv third-party OAuth does not issue refresh tokens. Reauthorization is required on expiry. */
 export async function refreshAccessToken(_refreshToken: string, _clientId: string): Promise<AuthInfo> {
   throw new OAuthError('Deriv OAuth sessions must be reauthorized after expiry.');
 }
 
-export async function handleOAuthCallback(
-  callbackUrl: string,
-  config: AuthConfig
-): Promise<void> {
+function assertCallbackLocation(callbackUrl: string, redirectUri: string): void {
+  try {
+    const callback = new URL(callbackUrl), expected = new URL(redirectUri);
+    if (callback.origin !== expected.origin || callback.pathname !== expected.pathname) {
+      throw new OAuthError('OAuth callback URL does not match the configured redirect URI');
+    }
+  } catch (error) {
+    if (error instanceof OAuthError) throw error;
+    throw new OAuthError('OAuth callback URL or configured redirect URI is invalid');
+  }
+}
+
+export async function handleOAuthCallback(callbackUrl: string, config: AuthConfig): Promise<void> {
   assertCallbackLocation(callbackUrl, config.redirectUri);
   const params = parseCallbackParams(callbackUrl);
   if (params.error) throw new OAuthError(params.error_description || params.error);
@@ -70,4 +85,9 @@ export async function handleOAuthCallback(
   cleanupUrl(config.redirectUri);
 }
 
-
+export function cleanupUrl(_baseUrl: string): void {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  ['code', 'state', 'scope', 'error', 'error_description'].forEach(param => url.searchParams.delete(param));
+  window.history.replaceState(window.history.state, '', url.pathname + url.search);
+}
