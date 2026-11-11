@@ -36,6 +36,7 @@ export {
   clearCodeVerifier,
   storeAuthInfo,
   getAuthInfo,
+  getStoredAuthInfo,
   clearAuthInfo,
   storeDerivAccounts,
   getDerivAccounts,
