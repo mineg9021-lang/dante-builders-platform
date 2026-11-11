@@ -71,7 +71,7 @@ const getDefaultServerURL = () => {
  */
 export const getSocketURL = async (): Promise<string> => {
     const response = await fetch('/.netlify/functions/deriv-session-status', { credentials: 'same-origin' });
-    if (response.status === 401) throw new Error('DANTE_LOGIN_REQUIRED');
+    if (response.status === 401) return getDefaultServerURL();
     if (!response.ok) throw new Error('DERIV_SESSION_STATUS_UNAVAILABLE');
     const status = await response.json() as { status?: string };
     if (status.status === 'not_connected') {
