@@ -1,4 +1,4 @@
-import { checkSameOrigin, clearOAuthCookie, config, json, readOAuthCookie, requireDanteUser, saveDerivToken } from './_shared/deriv-oauth.mjs';
+import { checkSameOrigin, clearOAuthCookie, config, constantTimeEqual, json, readOAuthCookie, requireDanteUser, saveDerivToken } from './_shared/deriv-oauth.mjs';
 
 export default async request => {
   if (request.method !== 'POST') return json({ error: 'METHOD_NOT_ALLOWED' }, 405);
@@ -11,7 +11,7 @@ export default async request => {
   }
   let body;
   try { body = await request.json(); } catch { return json({ error: 'INVALID_JSON' }, 400, { 'Set-Cookie': clearOAuthCookie }); }
-  if (typeof body?.state !== 'string' || body.state !== transaction.state || typeof body?.code !== 'string' || body.code.length > 4096) {
+  if (typeof body?.state !== 'string' || !constantTimeEqual(body.state, transaction.state) || typeof body?.code !== 'string' || body.code.length > 4096) {
     return json({ error: 'OAUTH_STATE_INVALID' }, 400, { 'Set-Cookie': clearOAuthCookie });
   }
   try {
