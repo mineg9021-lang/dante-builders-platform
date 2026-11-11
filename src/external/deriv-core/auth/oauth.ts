@@ -1,15 +1,6 @@
 import type { AuthConfig, AuthInfo, CallbackParams, TokenExchangeParams } from '../types';
-import { generateRandomBase64url, sha256Base64url } from './crypto';
+import { generateRandomBase64url } from './crypto';
 import {
-  storeCSRFToken,
-  getCSRFToken,
-  clearCSRFToken,
-  storeCodeVerifier,
-  getCodeVerifier,
-  clearCodeVerifier,
-  storeAuthInfo,
-  getAuthInfo,
-  getStoredAuthInfo,
   clearAllAuthData,
 } from './storage';
 import { getAuthBaseUrl } from '../config/urls';
@@ -18,355 +9,65 @@ import { getAuthBaseUrl } from '../config/urls';
  * Build the base PKCE URLSearchParams shared by login and sign-up.
  * Stores a fresh CSRF token and code verifier in sessionStorage.
  */
-async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
-  const csrfToken = generateRandomBase64url(32);
-  const codeVerifier = generateRandomBase64url(32);
-  const codeChallenge = await sha256Base64url(codeVerifier);
-
-  storeCSRFToken(csrfToken);
-  storeCodeVerifier(codeVerifier);
-
-  return new URLSearchParams({
-    // 'trade' only: a request for a scope the app is not registered with is
-    // rejected outright (error=invalid_scope), so the fallback stays minimal.
-    scope: config.scopes ?? 'trade',
-    response_type: 'code',
-    client_id: config.clientId,
-    redirect_uri: config.redirectUri,
-    state: csrfToken,
-    code_challenge: codeChallenge,
-    code_challenge_method: 'S256',
+async function requestAuthorizationUrl(config: AuthConfig, mode: 'login' | 'signup'): Promise<string> {
+  const response = await fetch('/.netlify/functions/deriv-oauth-start', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      mode, lang: config.lang, affiliateToken: config.affiliateToken,
+      affiliateTokenParam: config.affiliateTokenParam,
+    }),
   });
-}
-
-/**
- * Append partner attribution + language params shared by login and sign-up.
- * One helper rather than two copies so login can never drift from sign-up —
- * `lang` was added to sign-up's twin in `packages/core` and missed here, which
- * sent a Bot deployed in ES/FR/PT to an English login (#804).
- */
-function appendAttributionParams(params: URLSearchParams, config: AuthConfig): void {
-  if (config.affiliateToken) {
-    const tokenParam = config.affiliateTokenParam ?? 't';
-    params.set(tokenParam, config.affiliateToken);
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || typeof result.authorizationUrl !== 'string') {
+    throw new OAuthError(result.message || 'Secure Deriv sign-in could not be started. Sign in to Dante Builders first.');
   }
-  if (config.utmSource)   params.set('utm_source', config.utmSource);
-  if (config.utmMedium)   params.set('utm_medium', config.utmMedium);
-  if (config.utmCampaign) params.set('utm_campaign', config.utmCampaign);
-  if (config.lang)        params.set('lang', config.lang.toUpperCase());
+  return result.authorizationUrl;
 }
 
-/**
- * Build the OAuth 2.0 login authorization URL with PKCE parameters.
- * Includes optional partner attribution params (affiliate token, utm_*) when
- * present in config — so attribution carries through if the user clicks Login
- * then signs up from Deriv's home page — plus `lang` when provided.
- * Stores CSRF token and code verifier in sessionStorage.
- */
+/** Start login through the server-held PKCE transaction. */
 export async function buildAuthorizationUrl(config: AuthConfig): Promise<string> {
-  const params = await buildPkceParams(config);
-  appendAttributionParams(params, config);
-  return `${getAuthBaseUrl()}/auth?${params.toString()}`;
+  return requestAuthorizationUrl(config, 'login');
 }
 
-/**
- * Build the OAuth 2.0 sign-up authorization URL.
- * Includes prompt=registration (required to show the Deriv registration form)
- * and optional partner attribution params forwarded using the exact parameter
- * name from the referral link (t, affiliate_token, sidi, or ca), plus `lang`.
- * Stores CSRF token and code verifier in sessionStorage.
- */
+/** Start registration through the server-held PKCE transaction. */
 export async function buildSignUpUrl(config: AuthConfig): Promise<string> {
-  const params = await buildPkceParams(config);
-  params.set('prompt', 'registration');
-  appendAttributionParams(params, config);
-  return `${getAuthBaseUrl()}/auth?${params.toString()}`;
+  return requestAuthorizationUrl(config, 'signup');
 }
 
 /**
- * Initiate login by redirecting to the Deriv auth page.
+ * Direct browser token exchange is intentionally disabled. Deriv credentials
+ * are exchanged and stored only by the authenticated Netlify callback.
  */
-export async function initiateLogin(config: AuthConfig): Promise<void> {
-  const url = await buildAuthorizationUrl(config);
-  window.location.href = url;
+export async function exchangeCodeForTokens(_params: TokenExchangeParams): Promise<AuthInfo> {
+  throw new OAuthError('Direct browser token exchange is disabled; use the secure server callback.');
 }
 
-/**
- * Initiate sign-up by redirecting to the Deriv registration page.
- * Appends prompt=registration and any partner attribution params from config.
- */
-export async function initiateSignUp(config: AuthConfig): Promise<void> {
-  const url = await buildSignUpUrl(config);
-  window.location.href = url;
+/** Deriv third-party OAuth does not issue refresh tokens. Reauthorization is required on expiry. */
+export async function refreshAccessToken(_refreshToken: string, _clientId: string): Promise<AuthInfo> {
+  throw new OAuthError('Deriv OAuth sessions must be reauthorized after expiry.');
 }
 
-/**
- * Parse callback URL parameters from the OAuth redirect.
- */
-export function parseCallbackParams(url: string): CallbackParams {
-  const urlObj = new URL(url);
-  return {
-    code: urlObj.searchParams.get('code'),
-    state: urlObj.searchParams.get('state'),
-    scope: urlObj.searchParams.get('scope'),
-    error: urlObj.searchParams.get('error'),
-    error_description: urlObj.searchParams.get('error_description'),
-  };
-}
-
-/**
- * Validate the OAuth callback parameters.
- * Returns the authorization code on success, or throws on failure.
- */
-export function validateCallback(params: CallbackParams, redirectUri: string): string {
-  // Check for error response
-  if (params.error) {
-    cleanupUrl(redirectUri);
-    throw new OAuthError(`OAuth error: ${params.error} - ${params.error_description || ''}`);
-  }
-
-  // State must be present
-  if (!params.state) {
-    clearAllAuthData();
-    cleanupUrl(redirectUri);
-    throw new OAuthError('Missing state parameter — possible CSRF attack');
-  }
-
-  // Validate CSRF token matches
-  const storedToken = getCSRFToken();
-  if (!storedToken || storedToken !== params.state) {
-    clearAllAuthData();
-    cleanupUrl(redirectUri);
-    throw new OAuthError('CSRF token mismatch — possible CSRF attack');
-  }
-
-  // Clear CSRF token after successful validation
-  clearCSRFToken();
-
-  if (!params.code) {
-    throw new OAuthError('Missing authorization code');
-  }
-
-  return params.code;
-}
-
-/**
- * Parse the provider response without exposing response bodies, which can
- * contain sensitive OAuth details, in application errors.
- */
-async function readTokenResponse(
-  response: Response,
-  operation: string
-): Promise<Record<string, unknown>> {
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new OAuthError(`${operation} returned invalid JSON`);
-  }
-
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    throw new OAuthError(`${operation} returned an invalid token response`);
-  }
-  return payload as Record<string, unknown>;
-}
-
-/**
- * Validate all security-critical token fields before credentials are persisted.
- * Refresh responses may omit refresh_token or scope; in that case retain the
- * supplied refresh token and previously granted scope.
- */
-function validateTokenResponse(
-  tokenData: Record<string, unknown>,
-  fallbacks: { refreshTokenFallback?: string; scopeFallback?: string } = {}
-): AuthInfo {
-  const accessToken = tokenData.access_token;
-  const tokenType = tokenData.token_type;
-  const expiresIn = tokenData.expires_in;
-  const suppliedExpiresAt = tokenData.expires_at;
-  const refreshToken = tokenData.refresh_token ?? fallbacks.refreshTokenFallback;
-  const scope = tokenData.scope ?? fallbacks.scopeFallback ?? '';
-
-  if (typeof accessToken !== 'string' || !accessToken.trim()) {
-    throw new OAuthError('OAuth token response is missing a valid access token');
-  }
-  if (typeof tokenType !== 'string' || tokenType.toLowerCase() !== 'bearer') {
-    throw new OAuthError('OAuth token response has an unsupported token type');
-  }
-  if (typeof expiresIn !== 'number' || !Number.isFinite(expiresIn) || expiresIn <= 0) {
-    throw new OAuthError('OAuth token response has an invalid expiry duration');
-  }
-  const expiresAt = suppliedExpiresAt === undefined
-    ? Math.floor(Date.now() / 1000) + expiresIn
-    : suppliedExpiresAt;
-  if (typeof expiresAt !== 'number' || !Number.isFinite(expiresAt) ||
-      expiresAt <= Math.floor(Date.now() / 1000)) {
-    throw new OAuthError('OAuth token response has an invalid expiry timestamp');
-  }
-  if (typeof refreshToken !== 'string' || !refreshToken.trim()) {
-    throw new OAuthError('OAuth token response is missing a valid refresh token');
-  }
-  if (typeof scope !== 'string') {
-    throw new OAuthError('OAuth token response has an invalid scope');
-  }
-
-  return {
-    access_token: accessToken,
-    token_type: 'Bearer',
-    expires_in: expiresIn,
-    expires_at: expiresAt,
-    scope,
-    refresh_token: refreshToken,
-  };
-}
-
-/**
- * Exchange authorization code for access and refresh tokens.
- */
-export async function exchangeCodeForTokens(params: TokenExchangeParams): Promise<AuthInfo> {
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    code: params.code,
-    client_id: params.clientId,
-    redirect_uri: params.redirectUri,
-    code_verifier: params.codeVerifier,
-  });
-
-  const response = await fetch(`${getAuthBaseUrl()}/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
-
-  if (!response.ok) {
-    // Do not copy provider response bodies into errors or logs; they may contain
-    // sensitive OAuth diagnostics or credential-related details.
-    throw new OAuthError(`Token exchange failed (${response.status})`);
-  }
-
-  const tokenData = await readTokenResponse(response, 'Token exchange');
-  const authInfo = validateTokenResponse(tokenData);
-
-  storeAuthInfo(authInfo);
-  clearCodeVerifier();
-
-  return authInfo;
-}
-
-/**
- * Refresh an expired access token using the refresh token.
- */
-export async function refreshAccessToken(
-  refreshToken: string,
-  clientId: string
-): Promise<AuthInfo> {
-  const sessionAtStart = getStoredAuthInfo();
-  if (sessionAtStart && sessionAtStart.refresh_token !== refreshToken) {
-    throw new OAuthError('Stored OAuth session changed before token refresh');
-  }
-
-  const body = new URLSearchParams({
-    grant_type: 'refresh_token',
-    refresh_token: refreshToken,
-    client_id: clientId,
-  });
-
-  // A network/HTTP failure is not proof that a refresh token was revoked.
-  // Preserve the stored credential so transient outages do not destroy login.
-  const response = await fetch(`${getAuthBaseUrl()}/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
-
-  if (!response.ok) {
-    throw new OAuthError(`Token refresh failed (${response.status})`);
-  }
-
-  const tokenData = await readTokenResponse(response, 'Token refresh');
-  const currentSession = getStoredAuthInfo();
-  if (sessionAtStart && (
-    !currentSession ||
-    currentSession.refresh_token !== sessionAtStart.refresh_token
-  )) {
-    // Logout or account replacement happened while the request was in flight.
-    // Never write a refreshed credential back into a cleared/replaced session.
-    throw new OAuthError('Stored OAuth session changed during token refresh');
-  }
-
-  const authInfo = validateTokenResponse(tokenData, {
-    refreshTokenFallback: refreshToken,
-    scopeFallback: sessionAtStart?.scope ?? currentSession?.scope ?? getAuthInfo()?.scope,
-  });
-  storeAuthInfo(authInfo);
-  return authInfo;
-}
-
-/**
- * Reject callbacks delivered to a different origin or path than the URI
- * registered for this OAuth client. Query parameters are intentionally
- * ignored because the provider adds code/state/error values to the callback.
- */
-function assertCallbackLocation(callbackUrl: string, redirectUri: string): void {
-  try {
-    const callback = new URL(callbackUrl);
-    const expected = new URL(redirectUri);
-    if (callback.origin !== expected.origin || callback.pathname !== expected.pathname) {
-      throw new OAuthError('OAuth callback URL does not match the configured redirect URI');
-    }
-  } catch (error) {
-    if (error instanceof OAuthError) throw error;
-    throw new OAuthError('OAuth callback URL or configured redirect URI is invalid');
-  }
-}
-
-/**
- * Handle the complete OAuth callback flow:
- * validate → exchange code → return auth info.
- */
 export async function handleOAuthCallback(
   callbackUrl: string,
   config: AuthConfig
-): Promise<AuthInfo> {
+): Promise<void> {
   assertCallbackLocation(callbackUrl, config.redirectUri);
   const params = parseCallbackParams(callbackUrl);
-  const code = validateCallback(params, config.redirectUri);
-
-  const codeVerifier = getCodeVerifier();
-  if (!codeVerifier) {
-    throw new OAuthError('Code verifier expired or missing');
-  }
-
-  const authInfo = await exchangeCodeForTokens({
-    code,
-    clientId: config.clientId,
-    redirectUri: config.redirectUri,
-    codeVerifier,
+  if (params.error) throw new OAuthError(params.error_description || params.error);
+  if (!params.code || !params.state) throw new OAuthError('OAuth callback is missing code or state');
+  const response = await fetch('/.netlify/functions/deriv-oauth-callback', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: params.code, state: params.state }),
   });
-
-  cleanupUrl(config.redirectUri);
-  return authInfo;
-}
-
-/**
- * Clean OAuth parameters from the URL using history.replaceState.
- */
-export function cleanupUrl(baseUrl: string): void {
-  if (typeof window === 'undefined') return;
-
-  const url = new URL(window.location.href);
-  const paramsToRemove = ['code', 'state', 'scope', 'error', 'error_description'];
-  paramsToRemove.forEach((param) => url.searchParams.delete(param));
-
-  window.history.replaceState(window.history.state, '', url.pathname + url.search);
-}
-
-/**
- * Custom error class for OAuth-specific errors.
- */
-export class OAuthError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'OAuthError';
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.connected !== true) {
+    throw new OAuthError(result.error === 'OAUTH_TRANSACTION_EXPIRED'
+      ? 'The Deriv sign-in expired. Please connect again.'
+      : 'Deriv connection could not be completed. Please try again.');
   }
+  cleanupUrl(config.redirectUri);
 }
+
+
