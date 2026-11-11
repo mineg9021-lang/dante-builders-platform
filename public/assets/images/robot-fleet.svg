@@ -1,1 +1,289 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480"><defs><radialGradient id="bg"><stop stop-color="#22284d"/><stop offset="1" stop-color="#0b0d22"/></radialGradient></defs><rect width="640" height="480" rx="24" fill="url(#bg)" opacity=".18"/><g><circle cx="80" cy="80" r="67" fill="#10132d" stroke="#20d8ff" stroke-width="3" opacity=".96"/><path d="M 28 47 Q 33 19 80 19 Q 127 19 132 47 L 125 113 Q 115 137 80 137 Q 45 137 35 113 Z" fill="#202847" stroke="#20d8ff" stroke-width="4"/><path d="M 38 48 Q 80 25 122 48" fill="none" stroke="#20d8ff" stroke-width="5" opacity=".8"/><rect x="38" y="66" width="34" height="18" rx="8" fill="#20d8ff"/><rect x="88" y="66" width="34" height="18" rx="8" fill="#20d8ff"/><path d="M 65 108 Q 80 118 95 108" fill="none" stroke="#20d8ff" stroke-width="4" stroke-linecap="round"/><path d="M 80 20 V 4" stroke="#20d8ff" stroke-width="5" stroke-linecap="round"/><circle cx="80" cy="0" r="6" fill="#20d8ff"/><path d="M 56 141 L 45 158 H 115 L 104 141" fill="#202847" stroke="#20d8ff" stroke-width="3"/><circle cx="23" cy="85" r="5" fill="#20d8ff"/><circle cx="137" cy="85" r="5" fill="#20d8ff"/></g><g><circle cx="240" cy="80" r="67" fill="#10132d" stroke="#ff4e70" stroke-width="3" opacity=".96"/><path d="M 188 47 Q 193 19 240 19 Q 287 19 292 47 L 285 113 Q 275 137 240 137 Q 205 137 195 113 Z" fill="#202847" stroke="#ff4e70" stroke-width="4"/><path d="M 198 48 Q 240 25 282 48" fill="none" stroke="#ff4e70" stroke-width="5" opacity=".8"/><path d="M 201 77 Q 217 60 232 77 Q 217 88 201 77 M 248 77 Q 263 60 279 77 Q 263 88 248 77" fill="#ff4e70"/><path d="M 225 108 Q 240 118 255 108" fill="none" stroke="#ff4e70" stroke-width="4" stroke-linecap="round"/><path d="M 216 141 L 205 158 H 275 L 264 141" fill="#202847" stroke="#ff4e70" stroke-width="3"/><circle cx="183" cy="85" r="5" fill="#ff4e70"/><circle cx="297" cy="85" r="5" fill="#ff4e70"/></g><g><circle cx="400" cy="80" r="67" fill="#10132d" stroke="#ffbf3c" stroke-width="3" opacity=".96"/><path d="M 348 47 Q 353 19 400 19 Q 447 19 452 47 L 445 113 Q 435 137 400 137 Q 365 137 355 113 Z" fill="#202847" stroke="#ffbf3c" stroke-width="4"/><path d="M 358 48 Q 400 25 442 48" fill="none" stroke="#ffbf3c" stroke-width="5" opacity=".8"/><rect x="358" y="66" width="34" height="18" rx="8" fill="#ffbf3c"/><rect x="408" y="66" width="34" height="18" rx="8" fill="#ffbf3c"/><path d="M 385 108 Q 400 118 415 108" fill="none" stroke="#ffbf3c" stroke-width="4" stroke-linecap="round"/><path d="M 376 141 L 365 158 H 435 L 424 141" fill="#202847" stroke="#ffbf3c" stroke-width="3"/><circle cx="343" cy="85" r="5" fill="#ffbf3c"/><circle cx="457" cy="85" r="5" fill="#ffbf3c"/></g><g><circle cx="560" cy="80" r="67" fill="#10132d" stroke="#38e0a0" stroke-width="3" opacity=".96"/><path d="M 508 47 Q 513 19 560 19 Q 607 19 612 47 L 605 113 Q 595 137 560 137 Q 525 137 515 113 Z" fill="#202847" stroke="#38e0a0" stroke-width="4"/><path d="M 518 48 Q 560 25 602 48" fill="none" stroke="#38e0a0" stroke-width="5" opacity=".8"/><rect x="518" y="66" width="34" height="18" rx="8" fill="#38e0a0"/><rect x="568" y="66" width="34" height="18" rx="8" fill="#38e0a0"/><path d="M 545 108 Q 560 118 575 108" fill="none" stroke="#38e0a0" stroke-width="4" stroke-linecap="round"/><path d="M 560 20 V 4" stroke="#38e0a0" stroke-width="5" stroke-linecap="round"/><circle cx="560" cy="0" r="6" fill="#38e0a0"/><path d="M 536 141 L 525 158 H 595 L 584 141" fill="#202847" stroke="#38e0a0" stroke-width="3"/><circle cx="503" cy="85" r="5" fill="#38e0a0"/><circle cx="617" cy="85" r="5" fill="#38e0a0"/></g><g><circle cx="80" cy="240" r="67" fill="#10132d" stroke="#a66bff" stroke-width="3" opacity=".96"/><path d="M 28 207 Q 33 179 80 179 Q 127 179 132 207 L 125 273 Q 115 297 80 297 Q 45 297 35 273 Z" fill="#202847" stroke="#a66bff" stroke-width="4"/><path d="M 38 208 Q 80 185 122 208" fill="none" stroke="#a66bff" stroke-width="5" opacity=".8"/><rect x="38" y="226" width="34" height="18" rx="8" fill="#a66bff"/><rect x="88" y="226" width="34" height="18" rx="8" fill="#a66bff"/><path d="M 65 268 Q 80 278 95 268" fill="none" stroke="#a66bff" stroke-width="4" stroke-linecap="round"/><path d="M 56 301 L 45 318 H 115 L 104 301" fill="#202847" stroke="#a66bff" stroke-width="3"/><circle cx="23" cy="245" r="5" fill="#a66bff"/><circle cx="137" cy="245" r="5" fill="#a66bff"/></g><g><circle cx="240" cy="240" r="67" fill="#10132d" stroke="#49aaff" stroke-width="3" opacity=".96"/><path d="M 188 207 Q 193 179 240 179 Q 287 179 292 207 L 285 273 Q 275 297 240 297 Q 205 297 195 273 Z" fill="#202847" stroke="#49aaff" stroke-width="4"/><path d="M 198 208 Q 240 185 282 208" fill="none" stroke="#49aaff" stroke-width="5" opacity=".8"/><path d="M 201 237 Q 217 220 232 237 Q 217 248 201 237 M 248 237 Q 263 220 279 237 Q 263 248 248 237" fill="#49aaff"/><path d="M 225 268 Q 240 278 255 268" fill="none" stroke="#49aaff" stroke-width="4" stroke-linecap="round"/><path d="M 216 301 L 205 318 H 275 L 264 301" fill="#202847" stroke="#49aaff" stroke-width="3"/><circle cx="183" cy="245" r="5" fill="#49aaff"/><circle cx="297" cy="245" r="5" fill="#49aaff"/></g><g><circle cx="400" cy="240" r="67" fill="#10132d" stroke="#fb7c36" stroke-width="3" opacity=".96"/><path d="M 348 207 Q 353 179 400 179 Q 447 179 452 207 L 445 273 Q 435 297 400 297 Q 365 297 355 273 Z" fill="#202847" stroke="#fb7c36" stroke-width="4"/><path d="M 358 208 Q 400 185 442 208" fill="none" stroke="#fb7c36" stroke-width="5" opacity=".8"/><rect x="358" y="226" width="34" height="18" rx="8" fill="#fb7c36"/><rect x="408" y="226" width="34" height="18" rx="8" fill="#fb7c36"/><path d="M 385 268 Q 400 278 415 268" fill="none" stroke="#fb7c36" stroke-width="4" stroke-linecap="round"/><path d="M 400 180 V 164" stroke="#fb7c36" stroke-width="5" stroke-linecap="round"/><circle cx="400" cy="160" r="6" fill="#fb7c36"/><path d="M 376 301 L 365 318 H 435 L 424 301" fill="#202847" stroke="#fb7c36" stroke-width="3"/><circle cx="343" cy="245" r="5" fill="#fb7c36"/><circle cx="457" cy="245" r="5" fill="#fb7c36"/></g><g><circle cx="560" cy="240" r="67" fill="#10132d" stroke="#e45cff" stroke-width="3" opacity=".96"/><path d="M 508 207 Q 513 179 560 179 Q 607 179 612 207 L 605 273 Q 595 297 560 297 Q 525 297 515 273 Z" fill="#202847" stroke="#e45cff" stroke-width="4"/><path d="M 518 208 Q 560 185 602 208" fill="none" stroke="#e45cff" stroke-width="5" opacity=".8"/><rect x="518" y="226" width="34" height="18" rx="8" fill="#e45cff"/><rect x="568" y="226" width="34" height="18" rx="8" fill="#e45cff"/><path d="M 545 268 Q 560 278 575 268" fill="none" stroke="#e45cff" stroke-width="4" stroke-linecap="round"/><path d="M 536 301 L 525 318 H 595 L 584 301" fill="#202847" stroke="#e45cff" stroke-width="3"/><circle cx="503" cy="245" r="5" fill="#e45cff"/><circle cx="617" cy="245" r="5" fill="#e45cff"/></g><g><circle cx="80" cy="400" r="67" fill="#10132d" stroke="#2ad3b5" stroke-width="3" opacity=".96"/><path d="M 28 367 Q 33 339 80 339 Q 127 339 132 367 L 125 433 Q 115 457 80 457 Q 45 457 35 433 Z" fill="#202847" stroke="#2ad3b5" stroke-width="4"/><path d="M 38 368 Q 80 345 122 368" fill="none" stroke="#2ad3b5" stroke-width="5" opacity=".8"/><rect x="38" y="386" width="34" height="18" rx="8" fill="#2ad3b5"/><rect x="88" y="386" width="34" height="18" rx="8" fill="#2ad3b5"/><path d="M 65 428 Q 80 438 95 428" fill="none" stroke="#2ad3b5" stroke-width="4" stroke-linecap="round"/><path d="M 56 461 L 45 478 H 115 L 104 461" fill="#202847" stroke="#2ad3b5" stroke-width="3"/><circle cx="23" cy="405" r="5" fill="#2ad3b5"/><circle cx="137" cy="405" r="5" fill="#2ad3b5"/></g><g><circle cx="240" cy="400" r="67" fill="#10132d" stroke="#f36b9b" stroke-width="3" opacity=".96"/><path d="M 188 367 Q 193 339 240 339 Q 287 339 292 367 L 285 433 Q 275 457 240 457 Q 205 457 195 433 Z" fill="#202847" stroke="#f36b9b" stroke-width="4"/><path d="M 198 368 Q 240 345 282 368" fill="none" stroke="#f36b9b" stroke-width="5" opacity=".8"/><path d="M 201 397 Q 217 380 232 397 Q 217 408 201 397 M 248 397 Q 263 380 279 397 Q 263 408 248 397" fill="#f36b9b"/><path d="M 225 428 Q 240 438 255 428" fill="none" stroke="#f36b9b" stroke-width="4" stroke-linecap="round"/><path d="M 240 340 V 324" stroke="#f36b9b" stroke-width="5" stroke-linecap="round"/><circle cx="240" cy="320" r="6" fill="#f36b9b"/><path d="M 216 461 L 205 478 H 275 L 264 461" fill="#202847" stroke="#f36b9b" stroke-width="3"/><circle cx="183" cy="405" r="5" fill="#f36b9b"/><circle cx="297" cy="405" r="5" fill="#f36b9b"/></g><g><circle cx="400" cy="400" r="67" fill="#10132d" stroke="#72a7ff" stroke-width="3" opacity=".96"/><path d="M 348 367 Q 353 339 400 339 Q 447 339 452 367 L 445 433 Q 435 457 400 457 Q 365 457 355 433 Z" fill="#202847" stroke="#72a7ff" stroke-width="4"/><path d="M 358 368 Q 400 345 442 368" fill="none" stroke="#72a7ff" stroke-width="5" opacity=".8"/><rect x="358" y="386" width="34" height="18" rx="8" fill="#72a7ff"/><rect x="408" y="386" width="34" height="18" rx="8" fill="#72a7ff"/><path d="M 385 428 Q 400 438 415 428" fill="none" stroke="#72a7ff" stroke-width="4" stroke-linecap="round"/><path d="M 376 461 L 365 478 H 435 L 424 461" fill="#202847" stroke="#72a7ff" stroke-width="3"/><circle cx="343" cy="405" r="5" fill="#72a7ff"/><circle cx="457" cy="405" r="5" fill="#72a7ff"/></g><g><circle cx="560" cy="400" r="67" fill="#10132d" stroke="#c38bff" stroke-width="3" opacity=".96"/><path d="M 508 367 Q 513 339 560 339 Q 607 339 612 367 L 605 433 Q 595 457 560 457 Q 525 457 515 433 Z" fill="#202847" stroke="#c38bff" stroke-width="4"/><path d="M 518 368 Q 560 345 602 368" fill="none" stroke="#c38bff" stroke-width="5" opacity=".8"/><rect x="518" y="386" width="34" height="18" rx="8" fill="#c38bff"/><rect x="568" y="386" width="34" height="18" rx="8" fill="#c38bff"/><path d="M 545 428 Q 560 438 575 428" fill="none" stroke="#c38bff" stroke-width="4" stroke-linecap="round"/><path d="M 536 461 L 525 478 H 595 L 584 461" fill="#202847" stroke="#c38bff" stroke-width="3"/><circle cx="503" cy="405" r="5" fill="#c38bff"/><circle cx="617" cy="405" r="5" fill="#c38bff"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="640" height="640" role="img" aria-label="Sixteen distinct futuristic robotic woman portraits for Dante Builders specialist robots"><defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#111a38"/><stop offset="1" stop-color="#281c48"/></linearGradient></defs><rect width="640" height="640" rx="28" fill="url(#bg)"/><g>
+ <rect x="5" y="5" width="150" height="150" rx="25" fill="#14234a" stroke="#6fe8ff" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="80" cy="77" r="57" fill="#6fe8ff" opacity=".12"/>
+ <path d="M47 132 Q48 111 63 105 L97 105 Q112 111 113 132 L125 149 H35Z" fill="#253454" stroke="#6fe8ff" stroke-width="2"/>
+ <path d="M69 102 L66 119 L80 130 L94 119 L91 102" fill="#d4e5f5" stroke="#6fe8ff" stroke-width="2"/>
+ <path d="M37 79 Q31 25 80 23 Q132 25 123 87 L116 122 Q108 96 108 70 Q80 55 52 72 Q53 100 43 121Z
+ <path d="M48 68 Q49 42 80 41 Q111 42 112 68 L108 101 Q103 119 80 122 Q57 119 52 101Z" fill="#d7e5f2" stroke="#6fe8ff" stroke-width="2.5"/>
+ <path d="M51 70 Q80 52 109 70" fill="none" stroke="#9a78ff" stroke-width="5" stroke-linecap="round"/>
+ <path d="M58 81 Q67 73 75 81 M85 81 Q94 73 102 81" fill="none" stroke="#14234a" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="67" cy="85" rx="4" ry="3" fill="#9a78ff"/><ellipse cx="93" cy="85" rx="4" ry="3" fill="#9a78ff"/>
+ <path d="M80 86 L76 98 L84 99" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M69 107 Q80 114 91 107" fill="none" stroke="#9a78ff" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M47 75 L38 87 L43 100 M113 75 L122 87 L117 100" fill="none" stroke="#6fe8ff" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="39" cy="91" r="5" fill="#9a78ff"/><circle cx="121" cy="91" r="5" fill="#9a78ff"/>
+ <path d="M61 37 Q80 28 99 37" fill="none" stroke="#6fe8ff" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="80" cy="25" r="5" fill="#9a78ff" stroke="#6fe8ff" stroke-width="2"/>
+ <path d="M57 139 H103" stroke="#6fe8ff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="80" y="150" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#6fe8ff" opacity=".8">DANTE · 01</text>
+ </g><g>
+ <rect x="165" y="5" width="150" height="150" rx="25" fill="#321d49" stroke="#ff86c8" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="240" cy="77" r="57" fill="#ff86c8" opacity=".12"/>
+ <path d="M207 132 Q208 111 223 105 L257 105 Q272 111 273 132 L285 149 H195Z" fill="#253454" stroke="#ff86c8" stroke-width="2"/>
+ <path d="M229 102 L226 119 L240 130 L254 119 L251 102" fill="#d4e5f5" stroke="#ff86c8" stroke-width="2"/>
+ <path d="M195 78 Q195 22 242 22 Q289 24 286 88 L279 135 Q269 114 271 78 Q240 53 209 78 L203 132Z"/>
+ <path d="M208 68 Q209 42 240 41 Q271 42 272 68 L268 101 Q263 119 240 122 Q217 119 212 101Z" fill="#d7e5f2" stroke="#ff86c8" stroke-width="2.5"/>
+ <path d="M211 70 Q240 52 269 70" fill="none" stroke="#8e7cff" stroke-width="5" stroke-linecap="round"/>
+ <path d="M218 81 Q227 73 235 81 M245 81 Q254 73 262 81" fill="none" stroke="#321d49" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="227" cy="85" rx="4" ry="3" fill="#8e7cff"/><ellipse cx="253" cy="85" rx="4" ry="3" fill="#8e7cff"/>
+ <path d="M240 86 L236 98 L244 99" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M229 107 Q240 114 251 107" fill="none" stroke="#8e7cff" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M207 75 L198 87 L203 100 M273 75 L282 87 L277 100" fill="none" stroke="#ff86c8" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="199" cy="91" r="5" fill="#8e7cff"/><circle cx="281" cy="91" r="5" fill="#8e7cff"/>
+ <path d="M221 37 Q240 28 259 37" fill="none" stroke="#ff86c8" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="240" cy="25" r="5" fill="#8e7cff" stroke="#ff86c8" stroke-width="2"/>
+ <path d="M217 139 H263" stroke="#ff86c8" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="240" y="150" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#ff86c8" opacity=".8">DANTE · 02</text>
+ </g><g>
+ <rect x="325" y="5" width="150" height="150" rx="25" fill="#3a2945" stroke="#ffd37a" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="400" cy="77" r="57" fill="#ffd37a" opacity=".12"/>
+ <path d="M367 132 Q368 111 383 105 L417 105 Q432 111 433 132 L445 149 H355Z" fill="#253454" stroke="#ffd37a" stroke-width="2"/>
+ <path d="M389 102 L386 119 L400 130 L414 119 L411 102" fill="#d4e5f5" stroke="#ffd37a" stroke-width="2"/>
+ <path d="M355 78 Q355 22 402 22 Q449 24 446 88 L439 135 Q429 114 431 78 Q400 53 369 78 L363 132Z"/>
+ <path d="M368 68 Q369 42 400 41 Q431 42 432 68 L428 101 Q423 119 400 122 Q377 119 372 101Z" fill="#d7e5f2" stroke="#ffd37a" stroke-width="2.5"/>
+ <path d="M371 70 Q400 52 429 70" fill="none" stroke="#ff8b6a" stroke-width="5" stroke-linecap="round"/>
+ <path d="M378 81 Q387 73 395 81 M405 81 Q414 73 422 81" fill="none" stroke="#3a2945" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="387" cy="85" rx="4" ry="3" fill="#ff8b6a"/><ellipse cx="413" cy="85" rx="4" ry="3" fill="#ff8b6a"/>
+ <path d="M400 86 L396 98 L404 99" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M389 107 Q400 114 411 107" fill="none" stroke="#ff8b6a" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M367 75 L358 87 L363 100 M433 75 L442 87 L437 100" fill="none" stroke="#ffd37a" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="359" cy="91" r="5" fill="#ff8b6a"/><circle cx="441" cy="91" r="5" fill="#ff8b6a"/>
+ <path d="M381 37 Q400 28 419 37" fill="none" stroke="#ffd37a" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="400" cy="25" r="5" fill="#ff8b6a" stroke="#ffd37a" stroke-width="2"/>
+ <path d="M377 139 H423" stroke="#ffd37a" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="400" y="150" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#ffd37a" opacity=".8">DANTE · 03</text>
+ </g><g>
+ <rect x="485" y="5" width="150" height="150" rx="25" fill="#12394a" stroke="#83f4d1" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="560" cy="77" r="57" fill="#83f4d1" opacity=".12"/>
+ <path d="M527 132 Q528 111 543 105 L577 105 Q592 111 593 132 L605 149 H515Z" fill="#253454" stroke="#83f4d1" stroke-width="2"/>
+ <path d="M549 102 L546 119 L560 130 L574 119 L571 102" fill="#d4e5f5" stroke="#83f4d1" stroke-width="2"/>
+ <path d="M515 78 Q515 22 562 22 Q609 24 606 88 L599 135 Q589 114 591 78 Q560 53 529 78 L523 132Z"/>
+ <path d="M528 68 Q529 42 560 41 Q591 42 592 68 L588 101 Q583 119 560 122 Q537 119 532 101Z" fill="#d7e5f2" stroke="#83f4d1" stroke-width="2.5"/>
+ <path d="M531 70 Q560 52 589 70" fill="none" stroke="#39b9e8" stroke-width="5" stroke-linecap="round"/>
+ <path d="M538 81 Q547 73 555 81 M565 81 Q574 73 582 81" fill="none" stroke="#12394a" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="547" cy="85" rx="4" ry="3" fill="#39b9e8"/><ellipse cx="573" cy="85" rx="4" ry="3" fill="#39b9e8"/>
+ <path d="M560 86 L556 98 L564 99" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M549 107 Q560 114 571 107" fill="none" stroke="#39b9e8" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M527 75 L518 87 L523 100 M593 75 L602 87 L597 100" fill="none" stroke="#83f4d1" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="519" cy="91" r="5" fill="#39b9e8"/><circle cx="601" cy="91" r="5" fill="#39b9e8"/>
+ <path d="M541 37 Q560 28 579 37" fill="none" stroke="#83f4d1" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="560" cy="25" r="5" fill="#39b9e8" stroke="#83f4d1" stroke-width="2"/>
+ <path d="M537 139 H583" stroke="#83f4d1" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="560" y="150" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#83f4d1" opacity=".8">DANTE · 04</text>
+ </g><g>
+ <rect x="5" y="165" width="150" height="150" rx="25" fill="#1c2854" stroke="#b4a2ff" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="80" cy="237" r="57" fill="#b4a2ff" opacity=".12"/>
+ <path d="M47 292 Q48 271 63 265 L97 265 Q112 271 113 292 L125 309 H35Z" fill="#253454" stroke="#b4a2ff" stroke-width="2"/>
+ <path d="M69 262 L66 279 L80 290 L94 279 L91 262" fill="#d4e5f5" stroke="#b4a2ff" stroke-width="2"/>
+ <path d="M37 239 Q31 185 80 183 Q132 185 123 247 L116 282 Q108 256 108 230 Q80 215 52 232 Q53 260 43 281Z
+ <path d="M48 228 Q49 202 80 201 Q111 202 112 228 L108 261 Q103 279 80 282 Q57 279 52 261Z" fill="#d7e5f2" stroke="#b4a2ff" stroke-width="2.5"/>
+ <path d="M51 230 Q80 212 109 230" fill="none" stroke="#6a9dff" stroke-width="5" stroke-linecap="round"/>
+ <path d="M58 241 Q67 233 75 241 M85 241 Q94 233 102 241" fill="none" stroke="#1c2854" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="67" cy="245" rx="4" ry="3" fill="#6a9dff"/><ellipse cx="93" cy="245" rx="4" ry="3" fill="#6a9dff"/>
+ <path d="M80 246 L76 258 L84 259" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M69 267 Q80 274 91 267" fill="none" stroke="#6a9dff" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M47 235 L38 247 L43 260 M113 235 L122 247 L117 260" fill="none" stroke="#b4a2ff" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="39" cy="251" r="5" fill="#6a9dff"/><circle cx="121" cy="251" r="5" fill="#6a9dff"/>
+ <path d="M61 197 Q80 188 99 197" fill="none" stroke="#b4a2ff" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="80" cy="185" r="5" fill="#6a9dff" stroke="#b4a2ff" stroke-width="2"/>
+ <path d="M57 299 H103" stroke="#b4a2ff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="80" y="310" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#b4a2ff" opacity=".8">DANTE · 05</text>
+ </g><g>
+ <rect x="165" y="165" width="150" height="150" rx="25" fill="#492b3b" stroke="#ff9b8c" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="240" cy="237" r="57" fill="#ff9b8c" opacity=".12"/>
+ <path d="M207 292 Q208 271 223 265 L257 265 Q272 271 273 292 L285 309 H195Z" fill="#253454" stroke="#ff9b8c" stroke-width="2"/>
+ <path d="M229 262 L226 279 L240 290 L254 279 L251 262" fill="#d4e5f5" stroke="#ff9b8c" stroke-width="2"/>
+ <path d="M195 238 Q195 182 242 182 Q289 184 286 248 L279 295 Q269 274 271 238 Q240 213 209 238 L203 292Z"/>
+ <path d="M208 228 Q209 202 240 201 Q271 202 272 228 L268 261 Q263 279 240 282 Q217 279 212 261Z" fill="#d7e5f2" stroke="#ff9b8c" stroke-width="2.5"/>
+ <path d="M211 230 Q240 212 269 230" fill="none" stroke="#f4c06a" stroke-width="5" stroke-linecap="round"/>
+ <path d="M218 241 Q227 233 235 241 M245 241 Q254 233 262 241" fill="none" stroke="#492b3b" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="227" cy="245" rx="4" ry="3" fill="#f4c06a"/><ellipse cx="253" cy="245" rx="4" ry="3" fill="#f4c06a"/>
+ <path d="M240 246 L236 258 L244 259" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M229 267 Q240 274 251 267" fill="none" stroke="#f4c06a" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M207 235 L198 247 L203 260 M273 235 L282 247 L277 260" fill="none" stroke="#ff9b8c" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="199" cy="251" r="5" fill="#f4c06a"/><circle cx="281" cy="251" r="5" fill="#f4c06a"/>
+ <path d="M221 197 Q240 188 259 197" fill="none" stroke="#ff9b8c" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="240" cy="185" r="5" fill="#f4c06a" stroke="#ff9b8c" stroke-width="2"/>
+ <path d="M217 299 H263" stroke="#ff9b8c" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="240" y="310" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#ff9b8c" opacity=".8">DANTE · 06</text>
+ </g><g>
+ <rect x="325" y="165" width="150" height="150" rx="25" fill="#153c49" stroke="#8ee7ff" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="400" cy="237" r="57" fill="#8ee7ff" opacity=".12"/>
+ <path d="M367 292 Q368 271 383 265 L417 265 Q432 271 433 292 L445 309 H355Z" fill="#253454" stroke="#8ee7ff" stroke-width="2"/>
+ <path d="M389 262 L386 279 L400 290 L414 279 L411 262" fill="#d4e5f5" stroke="#8ee7ff" stroke-width="2"/>
+ <path d="M355 238 Q355 182 402 182 Q449 184 446 248 L439 295 Q429 274 431 238 Q400 213 369 238 L363 292Z"/>
+ <path d="M368 228 Q369 202 400 201 Q431 202 432 228 L428 261 Q423 279 400 282 Q377 279 372 261Z" fill="#d7e5f2" stroke="#8ee7ff" stroke-width="2.5"/>
+ <path d="M371 230 Q400 212 429 230" fill="none" stroke="#6cdbb0" stroke-width="5" stroke-linecap="round"/>
+ <path d="M378 241 Q387 233 395 241 M405 241 Q414 233 422 241" fill="none" stroke="#153c49" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="387" cy="245" rx="4" ry="3" fill="#6cdbb0"/><ellipse cx="413" cy="245" rx="4" ry="3" fill="#6cdbb0"/>
+ <path d="M400 246 L396 258 L404 259" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M389 267 Q400 274 411 267" fill="none" stroke="#6cdbb0" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M367 235 L358 247 L363 260 M433 235 L442 247 L437 260" fill="none" stroke="#8ee7ff" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="359" cy="251" r="5" fill="#6cdbb0"/><circle cx="441" cy="251" r="5" fill="#6cdbb0"/>
+ <path d="M381 197 Q400 188 419 197" fill="none" stroke="#8ee7ff" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="400" cy="185" r="5" fill="#6cdbb0" stroke="#8ee7ff" stroke-width="2"/>
+ <path d="M377 299 H423" stroke="#8ee7ff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="400" y="310" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#8ee7ff" opacity=".8">DANTE · 07</text>
+ </g><g>
+ <rect x="485" y="165" width="150" height="150" rx="25" fill="#34204c" stroke="#e9a6ff" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="560" cy="237" r="57" fill="#e9a6ff" opacity=".12"/>
+ <path d="M527 292 Q528 271 543 265 L577 265 Q592 271 593 292 L605 309 H515Z" fill="#253454" stroke="#e9a6ff" stroke-width="2"/>
+ <path d="M549 262 L546 279 L560 290 L574 279 L571 262" fill="#d4e5f5" stroke="#e9a6ff" stroke-width="2"/>
+ <path d="M515 238 Q515 182 562 182 Q609 184 606 248 L599 295 Q589 274 591 238 Q560 213 529 238 L523 292Z"/>
+ <path d="M528 228 Q529 202 560 201 Q591 202 592 228 L588 261 Q583 279 560 282 Q537 279 532 261Z" fill="#d7e5f2" stroke="#e9a6ff" stroke-width="2.5"/>
+ <path d="M531 230 Q560 212 589 230" fill="none" stroke="#a58cff" stroke-width="5" stroke-linecap="round"/>
+ <path d="M538 241 Q547 233 555 241 M565 241 Q574 233 582 241" fill="none" stroke="#34204c" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="547" cy="245" rx="4" ry="3" fill="#a58cff"/><ellipse cx="573" cy="245" rx="4" ry="3" fill="#a58cff"/>
+ <path d="M560 246 L556 258 L564 259" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M549 267 Q560 274 571 267" fill="none" stroke="#a58cff" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M527 235 L518 247 L523 260 M593 235 L602 247 L597 260" fill="none" stroke="#e9a6ff" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="519" cy="251" r="5" fill="#a58cff"/><circle cx="601" cy="251" r="5" fill="#a58cff"/>
+ <path d="M541 197 Q560 188 579 197" fill="none" stroke="#e9a6ff" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="560" cy="185" r="5" fill="#a58cff" stroke="#e9a6ff" stroke-width="2"/>
+ <path d="M537 299 H583" stroke="#e9a6ff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="560" y="310" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#e9a6ff" opacity=".8">DANTE · 08</text>
+ </g><g>
+ <rect x="5" y="325" width="150" height="150" rx="25" fill="#173c42" stroke="#a5f0a0" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="80" cy="397" r="57" fill="#a5f0a0" opacity=".12"/>
+ <path d="M47 452 Q48 431 63 425 L97 425 Q112 431 113 452 L125 469 H35Z" fill="#253454" stroke="#a5f0a0" stroke-width="2"/>
+ <path d="M69 422 L66 439 L80 450 L94 439 L91 422" fill="#d4e5f5" stroke="#a5f0a0" stroke-width="2"/>
+ <path d="M37 399 Q31 345 80 343 Q132 345 123 407 L116 442 Q108 416 108 390 Q80 375 52 392 Q53 420 43 441Z
+ <path d="M48 388 Q49 362 80 361 Q111 362 112 388 L108 421 Q103 439 80 442 Q57 439 52 421Z" fill="#d7e5f2" stroke="#a5f0a0" stroke-width="2.5"/>
+ <path d="M51 390 Q80 372 109 390" fill="none" stroke="#42c9c9" stroke-width="5" stroke-linecap="round"/>
+ <path d="M58 401 Q67 393 75 401 M85 401 Q94 393 102 401" fill="none" stroke="#173c42" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="67" cy="405" rx="4" ry="3" fill="#42c9c9"/><ellipse cx="93" cy="405" rx="4" ry="3" fill="#42c9c9"/>
+ <path d="M80 406 L76 418 L84 419" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M69 427 Q80 434 91 427" fill="none" stroke="#42c9c9" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M47 395 L38 407 L43 420 M113 395 L122 407 L117 420" fill="none" stroke="#a5f0a0" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="39" cy="411" r="5" fill="#42c9c9"/><circle cx="121" cy="411" r="5" fill="#42c9c9"/>
+ <path d="M61 357 Q80 348 99 357" fill="none" stroke="#a5f0a0" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="80" cy="345" r="5" fill="#42c9c9" stroke="#a5f0a0" stroke-width="2"/>
+ <path d="M57 459 H103" stroke="#a5f0a0" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="80" y="470" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#a5f0a0" opacity=".8">DANTE · 09</text>
+ </g><g>
+ <rect x="165" y="325" width="150" height="150" rx="25" fill="#42284d" stroke="#ffb6d5" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="240" cy="397" r="57" fill="#ffb6d5" opacity=".12"/>
+ <path d="M207 452 Q208 431 223 425 L257 425 Q272 431 273 452 L285 469 H195Z" fill="#253454" stroke="#ffb6d5" stroke-width="2"/>
+ <path d="M229 422 L226 439 L240 450 L254 439 L251 422" fill="#d4e5f5" stroke="#ffb6d5" stroke-width="2"/>
+ <path d="M195 398 Q195 342 242 342 Q289 344 286 408 L279 455 Q269 434 271 398 Q240 373 209 398 L203 452Z"/>
+ <path d="M208 388 Q209 362 240 361 Q271 362 272 388 L268 421 Q263 439 240 442 Q217 439 212 421Z" fill="#d7e5f2" stroke="#ffb6d5" stroke-width="2.5"/>
+ <path d="M211 390 Q240 372 269 390" fill="none" stroke="#b58cff" stroke-width="5" stroke-linecap="round"/>
+ <path d="M218 401 Q227 393 235 401 M245 401 Q254 393 262 401" fill="none" stroke="#42284d" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="227" cy="405" rx="4" ry="3" fill="#b58cff"/><ellipse cx="253" cy="405" rx="4" ry="3" fill="#b58cff"/>
+ <path d="M240 406 L236 418 L244 419" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M229 427 Q240 434 251 427" fill="none" stroke="#b58cff" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M207 395 L198 407 L203 420 M273 395 L282 407 L277 420" fill="none" stroke="#ffb6d5" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="199" cy="411" r="5" fill="#b58cff"/><circle cx="281" cy="411" r="5" fill="#b58cff"/>
+ <path d="M221 357 Q240 348 259 357" fill="none" stroke="#ffb6d5" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="240" cy="345" r="5" fill="#b58cff" stroke="#ffb6d5" stroke-width="2"/>
+ <path d="M217 459 H263" stroke="#ffb6d5" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="240" y="470" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#ffb6d5" opacity=".8">DANTE · 10</text>
+ </g><g>
+ <rect x="325" y="325" width="150" height="150" rx="25" fill="#432c3a" stroke="#ffd18a" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="400" cy="397" r="57" fill="#ffd18a" opacity=".12"/>
+ <path d="M367 452 Q368 431 383 425 L417 425 Q432 431 433 452 L445 469 H355Z" fill="#253454" stroke="#ffd18a" stroke-width="2"/>
+ <path d="M389 422 L386 439 L400 450 L414 439 L411 422" fill="#d4e5f5" stroke="#ffd18a" stroke-width="2"/>
+ <path d="M355 398 Q355 342 402 342 Q449 344 446 408 L439 455 Q429 434 431 398 Q400 373 369 398 L363 452Z"/>
+ <path d="M368 388 Q369 362 400 361 Q431 362 432 388 L428 421 Q423 439 400 442 Q377 439 372 421Z" fill="#d7e5f2" stroke="#ffd18a" stroke-width="2.5"/>
+ <path d="M371 390 Q400 372 429 390" fill="none" stroke="#ff9eae" stroke-width="5" stroke-linecap="round"/>
+ <path d="M378 401 Q387 393 395 401 M405 401 Q414 393 422 401" fill="none" stroke="#432c3a" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="387" cy="405" rx="4" ry="3" fill="#ff9eae"/><ellipse cx="413" cy="405" rx="4" ry="3" fill="#ff9eae"/>
+ <path d="M400 406 L396 418 L404 419" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M389 427 Q400 434 411 427" fill="none" stroke="#ff9eae" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M367 395 L358 407 L363 420 M433 395 L442 407 L437 420" fill="none" stroke="#ffd18a" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="359" cy="411" r="5" fill="#ff9eae"/><circle cx="441" cy="411" r="5" fill="#ff9eae"/>
+ <path d="M381 357 Q400 348 419 357" fill="none" stroke="#ffd18a" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="400" cy="345" r="5" fill="#ff9eae" stroke="#ffd18a" stroke-width="2"/>
+ <path d="M377 459 H423" stroke="#ffd18a" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="400" y="470" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#ffd18a" opacity=".8">DANTE · 11</text>
+ </g><g>
+ <rect x="485" y="325" width="150" height="150" rx="25" fill="#202b54" stroke="#8acbff" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="560" cy="397" r="57" fill="#8acbff" opacity=".12"/>
+ <path d="M527 452 Q528 431 543 425 L577 425 Q592 431 593 452 L605 469 H515Z" fill="#253454" stroke="#8acbff" stroke-width="2"/>
+ <path d="M549 422 L546 439 L560 450 L574 439 L571 422" fill="#d4e5f5" stroke="#8acbff" stroke-width="2"/>
+ <path d="M515 398 Q515 342 562 342 Q609 344 606 408 L599 455 Q589 434 591 398 Q560 373 529 398 L523 452Z"/>
+ <path d="M528 388 Q529 362 560 361 Q591 362 592 388 L588 421 Q583 439 560 442 Q537 439 532 421Z" fill="#d7e5f2" stroke="#8acbff" stroke-width="2.5"/>
+ <path d="M531 390 Q560 372 589 390" fill="none" stroke="#7e8cff" stroke-width="5" stroke-linecap="round"/>
+ <path d="M538 401 Q547 393 555 401 M565 401 Q574 393 582 401" fill="none" stroke="#202b54" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="547" cy="405" rx="4" ry="3" fill="#7e8cff"/><ellipse cx="573" cy="405" rx="4" ry="3" fill="#7e8cff"/>
+ <path d="M560 406 L556 418 L564 419" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M549 427 Q560 434 571 427" fill="none" stroke="#7e8cff" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M527 395 L518 407 L523 420 M593 395 L602 407 L597 420" fill="none" stroke="#8acbff" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="519" cy="411" r="5" fill="#7e8cff"/><circle cx="601" cy="411" r="5" fill="#7e8cff"/>
+ <path d="M541 357 Q560 348 579 357" fill="none" stroke="#8acbff" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="560" cy="345" r="5" fill="#7e8cff" stroke="#8acbff" stroke-width="2"/>
+ <path d="M537 459 H583" stroke="#8acbff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="560" y="470" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#8acbff" opacity=".8">DANTE · 12</text>
+ </g><g>
+ <rect x="5" y="485" width="150" height="150" rx="25" fill="#173b51" stroke="#a4f2e5" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="80" cy="557" r="57" fill="#a4f2e5" opacity=".12"/>
+ <path d="M47 612 Q48 591 63 585 L97 585 Q112 591 113 612 L125 629 H35Z" fill="#253454" stroke="#a4f2e5" stroke-width="2"/>
+ <path d="M69 582 L66 599 L80 610 L94 599 L91 582" fill="#d4e5f5" stroke="#a4f2e5" stroke-width="2"/>
+ <path d="M37 559 Q31 505 80 503 Q132 505 123 567 L116 602 Q108 576 108 550 Q80 535 52 552 Q53 580 43 601Z
+ <path d="M48 548 Q49 522 80 521 Q111 522 112 548 L108 581 Q103 599 80 602 Q57 599 52 581Z" fill="#d7e5f2" stroke="#a4f2e5" stroke-width="2.5"/>
+ <path d="M51 550 Q80 532 109 550" fill="none" stroke="#6eafff" stroke-width="5" stroke-linecap="round"/>
+ <path d="M58 561 Q67 553 75 561 M85 561 Q94 553 102 561" fill="none" stroke="#173b51" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="67" cy="565" rx="4" ry="3" fill="#6eafff"/><ellipse cx="93" cy="565" rx="4" ry="3" fill="#6eafff"/>
+ <path d="M80 566 L76 578 L84 579" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M69 587 Q80 594 91 587" fill="none" stroke="#6eafff" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M47 555 L38 567 L43 580 M113 555 L122 567 L117 580" fill="none" stroke="#a4f2e5" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="39" cy="571" r="5" fill="#6eafff"/><circle cx="121" cy="571" r="5" fill="#6eafff"/>
+ <path d="M61 517 Q80 508 99 517" fill="none" stroke="#a4f2e5" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="80" cy="505" r="5" fill="#6eafff" stroke="#a4f2e5" stroke-width="2"/>
+ <path d="M57 619 H103" stroke="#a4f2e5" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="80" y="630" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#a4f2e5" opacity=".8">DANTE · 13</text>
+ </g><g>
+ <rect x="165" y="485" width="150" height="150" rx="25" fill="#42264b" stroke="#f5a5a5" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="240" cy="557" r="57" fill="#f5a5a5" opacity=".12"/>
+ <path d="M207 612 Q208 591 223 585 L257 585 Q272 591 273 612 L285 629 H195Z" fill="#253454" stroke="#f5a5a5" stroke-width="2"/>
+ <path d="M229 582 L226 599 L240 610 L254 599 L251 582" fill="#d4e5f5" stroke="#f5a5a5" stroke-width="2"/>
+ <path d="M195 558 Q195 502 242 502 Q289 504 286 568 L279 615 Q269 594 271 558 Q240 533 209 558 L203 612Z"/>
+ <path d="M208 548 Q209 522 240 521 Q271 522 272 548 L268 581 Q263 599 240 602 Q217 599 212 581Z" fill="#d7e5f2" stroke="#f5a5a5" stroke-width="2.5"/>
+ <path d="M211 550 Q240 532 269 550" fill="none" stroke="#d18bff" stroke-width="5" stroke-linecap="round"/>
+ <path d="M218 561 Q227 553 235 561 M245 561 Q254 553 262 561" fill="none" stroke="#42264b" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="227" cy="565" rx="4" ry="3" fill="#d18bff"/><ellipse cx="253" cy="565" rx="4" ry="3" fill="#d18bff"/>
+ <path d="M240 566 L236 578 L244 579" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M229 587 Q240 594 251 587" fill="none" stroke="#d18bff" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M207 555 L198 567 L203 580 M273 555 L282 567 L277 580" fill="none" stroke="#f5a5a5" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="199" cy="571" r="5" fill="#d18bff"/><circle cx="281" cy="571" r="5" fill="#d18bff"/>
+ <path d="M221 517 Q240 508 259 517" fill="none" stroke="#f5a5a5" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="240" cy="505" r="5" fill="#d18bff" stroke="#f5a5a5" stroke-width="2"/>
+ <path d="M217 619 H263" stroke="#f5a5a5" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="240" y="630" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#f5a5a5" opacity=".8">DANTE · 14</text>
+ </g><g>
+ <rect x="325" y="485" width="150" height="150" rx="25" fill="#263e38" stroke="#d6e58c" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="400" cy="557" r="57" fill="#d6e58c" opacity=".12"/>
+ <path d="M367 612 Q368 591 383 585 L417 585 Q432 591 433 612 L445 629 H355Z" fill="#253454" stroke="#d6e58c" stroke-width="2"/>
+ <path d="M389 582 L386 599 L400 610 L414 599 L411 582" fill="#d4e5f5" stroke="#d6e58c" stroke-width="2"/>
+ <path d="M355 558 Q355 502 402 502 Q449 504 446 568 L439 615 Q429 594 431 558 Q400 533 369 558 L363 612Z"/>
+ <path d="M368 548 Q369 522 400 521 Q431 522 432 548 L428 581 Q423 599 400 602 Q377 599 372 581Z" fill="#d7e5f2" stroke="#d6e58c" stroke-width="2.5"/>
+ <path d="M371 550 Q400 532 429 550" fill="none" stroke="#68c5ae" stroke-width="5" stroke-linecap="round"/>
+ <path d="M378 561 Q387 553 395 561 M405 561 Q414 553 422 561" fill="none" stroke="#263e38" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="387" cy="565" rx="4" ry="3" fill="#68c5ae"/><ellipse cx="413" cy="565" rx="4" ry="3" fill="#68c5ae"/>
+ <path d="M400 566 L396 578 L404 579" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M389 587 Q400 594 411 587" fill="none" stroke="#68c5ae" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M367 555 L358 567 L363 580 M433 555 L442 567 L437 580" fill="none" stroke="#d6e58c" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="359" cy="571" r="5" fill="#68c5ae"/><circle cx="441" cy="571" r="5" fill="#68c5ae"/>
+ <path d="M381 517 Q400 508 419 517" fill="none" stroke="#d6e58c" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="400" cy="505" r="5" fill="#68c5ae" stroke="#d6e58c" stroke-width="2"/>
+ <path d="M377 619 H423" stroke="#d6e58c" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="400" y="630" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#d6e58c" opacity=".8">DANTE · 15</text>
+ </g><g>
+ <rect x="485" y="485" width="150" height="150" rx="25" fill="#30234b" stroke="#a6b5ff" stroke-opacity=".55" stroke-width="1.5"/>
+ <circle cx="560" cy="557" r="57" fill="#a6b5ff" opacity=".12"/>
+ <path d="M527 612 Q528 591 543 585 L577 585 Q592 591 593 612 L605 629 H515Z" fill="#253454" stroke="#a6b5ff" stroke-width="2"/>
+ <path d="M549 582 L546 599 L560 610 L574 599 L571 582" fill="#d4e5f5" stroke="#a6b5ff" stroke-width="2"/>
+ <path d="M515 558 Q515 502 562 502 Q609 504 606 568 L599 615 Q589 594 591 558 Q560 533 529 558 L523 612Z"/>
+ <path d="M528 548 Q529 522 560 521 Q591 522 592 548 L588 581 Q583 599 560 602 Q537 599 532 581Z" fill="#d7e5f2" stroke="#a6b5ff" stroke-width="2.5"/>
+ <path d="M531 550 Q560 532 589 550" fill="none" stroke="#ff9acb" stroke-width="5" stroke-linecap="round"/>
+ <path d="M538 561 Q547 553 555 561 M565 561 Q574 553 582 561" fill="none" stroke="#30234b" stroke-width="3.5" stroke-linecap="round"/>
+ <ellipse cx="547" cy="565" rx="4" ry="3" fill="#ff9acb"/><ellipse cx="573" cy="565" rx="4" ry="3" fill="#ff9acb"/>
+ <path d="M560 566 L556 578 L564 579" fill="none" stroke="#8096b3" stroke-width="2" stroke-linecap="round"/>
+ <path d="M549 587 Q560 594 571 587" fill="none" stroke="#ff9acb" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M527 555 L518 567 L523 580 M593 555 L602 567 L597 580" fill="none" stroke="#a6b5ff" stroke-width="4" stroke-linecap="round"/>
+ <circle cx="519" cy="571" r="5" fill="#ff9acb"/><circle cx="601" cy="571" r="5" fill="#ff9acb"/>
+ <path d="M541 517 Q560 508 579 517" fill="none" stroke="#a6b5ff" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="560" cy="505" r="5" fill="#ff9acb" stroke="#a6b5ff" stroke-width="2"/>
+ <path d="M537 619 H583" stroke="#a6b5ff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+ <text x="560" y="630" font-size="6" text-anchor="middle" letter-spacing="1.2" fill="#a6b5ff" opacity=".8">DANTE · 16</text>
+ </g></svg>
