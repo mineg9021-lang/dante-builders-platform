@@ -25,7 +25,7 @@ const AppContent = observer(() => {
             app.setDBotEngineStores();
             ApiHelpers.setInstance(app.api_helpers_store);
         } catch (error) {
-            console.error('Dante engine initialization failed:', error);
+            console.error('PRIME engine initialization failed:', error);
             setReady(true);
             return;
         }
@@ -42,7 +42,7 @@ const AppContent = observer(() => {
             }
             if (interval) clearInterval(interval);
             Promise.resolve(activeSymbols.retrieveActiveSymbols(true))
-                .catch(error => console.error('Market catalogue load failed:', error))
+                .catch(error => console.error('Deriv market catalogue load failed:', error))
                 .finally(() => { if (!cancelled) setReady(true); });
         };
 
@@ -54,7 +54,7 @@ const AppContent = observer(() => {
         };
     }, [app, common]);
 
-    if (!store || !ready) return <ChunkLoader message={localize('Preparing Dante workspaces…')} />;
+    if (!store || !ready) return <ChunkLoader message={localize('Preparing PRIME parity engine…')} />;
 
     return (
         <ThemeProvider theme={is_dark_mode_on ? 'dark' : 'light'}>
