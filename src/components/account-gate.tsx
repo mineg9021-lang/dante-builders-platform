@@ -1,4 +1,7 @@
 import React, { FormEvent, useEffect, useState } from 'react';
+import { api_base } from '@/external/bot-skeleton/services/api/api-base';
+import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
+import { setAccountList, setAuthData, setIsAuthorized } from '@/external/bot-skeleton/services/api/observables/connection-status-stream';
 import './account-gate.scss';
 
 type PlatformUser = { id: string; email: string };
@@ -73,6 +76,13 @@ const DanteAccountGate = ({ children }: Props) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'logout' }),
         });
+        api_base.terminate();
+        DerivWSAccountsService.clearCache();
+        DerivWSAccountsService.clearStoredAccounts();
+        ['active_loginid', 'account_type', 'client_account_details'].forEach(key => localStorage.removeItem(key));
+        setAccountList([]);
+        setAuthData(null);
+        setIsAuthorized(false);
         setUser(null);
         setMode('login');
         setMessage('You have been signed out.');
