@@ -36,7 +36,7 @@ describe('signal-gated Deriv bulk execution', () => {
         const results = await executeDerivBulk({
             api, symbol: 'R_100', contractType: 'DIGITOVER', currency: 'USD',
             proposalFields: { duration: 1, duration_unit: 't', barrier: '3' },
-            risk: risk(), runs: 3, idempotencyKey: 'bulk-signal-1',
+            risk: risk({ balance: 200 }), runs: 3, idempotencyKey: 'bulk-signal-1',
             onPurchased: purchased, onSettled: settled,
         });
         expect(send.mock.calls.filter(([request]) => request.proposal)).toHaveLength(3);
