@@ -1,104 +1,52 @@
-/**
- * A Bot deployed in ES/FR/PT was sending its clients to an English login: the
- * authorize URL carried no `lang` (#804). `packages/core`'s twin already
- * appended it — bot's vendored copy had drifted.
- */
 import { buildAuthorizationUrl, buildSignUpUrl, handleOAuthCallback, OAuthError } from '../oauth';
 import type { AuthConfig } from '../../types';
 
-jest.mock('../../config/urls', () => ({
-    getAuthBaseUrl: () => 'https://staging-auth.deriv.com/oauth2',
-}));
+const config: AuthConfig = { clientId: 'app-id', redirectUri: 'https://partner.example.com' };
+const authorizationUrl = 'https://auth.deriv.com/oauth2/auth?state=server-state';
 
-const config: AuthConfig = {
-    clientId: 'app-id',
-    redirectUri: 'https://partner.example.com',
-};
-
-/** PKCE needs a real digest; jsdom exposes no `crypto.subtle`. */
-beforeAll(() => {
-    Object.defineProperty(globalThis, 'crypto', {
-        value: {
-            getRandomValues: (array: Uint8Array) => {
-                for (let i = 0; i < array.length; i += 1) array[i] = i % 256;
-                return array;
-            },
-            subtle: {
-                digest: async () => new Uint8Array(32).buffer,
-            },
-        },
-        configurable: true,
+describe('server-managed OAuth authorization', () => {
+  beforeEach(() => {
+    jest.restoreAllMocks();
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true, json: async () => ({ authorizationUrl }),
+    } as Response);
+  });
+  it.each([buildAuthorizationUrl, buildSignUpUrl])('requests a backend-generated PKCE URL', async build => {
+    await expect(build({ ...config, lang: 'fr' })).resolves.toBe(authorizationUrl);
+    expect(fetch).toHaveBeenCalledWith('/.netlify/functions/deriv-oauth-start', expect.objectContaining({
+      method: 'POST', credentials: 'same-origin',
+      body: JSON.stringify({ mode: build === buildSignUpUrl ? 'signup' : 'login', lang: 'fr', affiliateToken: undefined, affiliateTokenParam: undefined }),
+    }));
+  });
+  it('forwards partner attribution to the backend, not to browser-generated OAuth parameters', async () => {
+    await buildAuthorizationUrl({ ...config, lang: 'es', affiliateToken: 'partner-code', affiliateTokenParam: 'sidi' });
+    expect(JSON.parse(String((fetch as jest.Mock).mock.calls[0][1].body))).toMatchObject({
+      lang: 'es', affiliateToken: 'partner-code', affiliateTokenParam: 'sidi',
     });
+  });
+  it('rejects when the backend cannot start a secure transaction', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({ ok: false, json: async () => ({ message: 'Dante login required' }) });
+    await expect(buildAuthorizationUrl(config)).rejects.toThrow('Dante login required');
+  });
 });
 
-describe.each([
-    ['buildAuthorizationUrl', buildAuthorizationUrl],
-    ['buildSignUpUrl', buildSignUpUrl],
-])('%s', (_name, build) => {
-    it('forwards lang so the Deriv login continues in the app’s language', async () => {
-        const url = await build({ ...config, lang: 'fr' });
-        expect(new URL(url).searchParams.get('lang')).toBe('FR');
-    });
-
-    it('upper-cases the code, matching what the WebSocket handshake sends', async () => {
-        const url = await build({ ...config, lang: 'pt' });
-        expect(new URL(url).searchParams.get('lang')).toBe('PT');
-    });
-
-    it.each([undefined, ''])('omits lang entirely when the config carries %p', async (lang) => {
-        const url = await build({ ...config, lang });
-        expect(new URL(url).searchParams.has('lang')).toBe(false);
-    });
-
-    it('keeps the affiliate and utm params alongside lang', async () => {
-        const url = await build({
-            ...config,
-            lang: 'es',
-            affiliateToken: 'A7ANELWCRU7J',
-            affiliateTokenParam: 'sidi',
-            utmSource: 'affiliate_248640',
-            utmMedium: 'affiliate',
-            utmCampaign: 'dynamicworks',
-        });
-        const params = new URL(url).searchParams;
-        expect(params.get('lang')).toBe('ES');
-        expect(params.get('sidi')).toBe('A7ANELWCRU7J');
-        expect(params.get('utm_source')).toBe('affiliate_248640');
-        expect(params.get('utm_medium')).toBe('affiliate');
-        expect(params.get('utm_campaign')).toBe('dynamicworks');
-    });
-});
-
-it('sign-up keeps prompt=registration once lang is appended', async () => {
-    const url = await buildSignUpUrl({ ...config, lang: 'fr' });
-    const params = new URL(url).searchParams;
-    expect(params.get('prompt')).toBe('registration');
-    expect(params.get('lang')).toBe('FR');
-});
-
-
-describe('OAuth callback redirect validation', () => {
-    it('rejects a callback from an unexpected origin before exchanging a code', async () => {
-        await expect(handleOAuthCallback(
-            'https://attacker.example.com/?code=auth-code&state=state',
-            config,
-        )).rejects.toThrow(new OAuthError('OAuth callback URL does not match the configured redirect URI'));
-        expect(global.fetch).not.toHaveBeenCalled();
-    });
-
-    it('rejects a callback delivered to an unexpected path', async () => {
-        await expect(handleOAuthCallback(
-            'https://partner.example.com/unregistered?code=auth-code&state=state',
-            config,
-        )).rejects.toThrow(new OAuthError('OAuth callback URL does not match the configured redirect URI'));
-        expect(global.fetch).not.toHaveBeenCalled();
-    });
-
-    it('allows provider query parameters on the configured callback URL', async () => {
-        await expect(handleOAuthCallback(
-            'https://partner.example.com/?code=auth-code&state=state',
-            config,
-        )).rejects.toThrow('CSRF token mismatch');
-        expect(global.fetch).not.toHaveBeenCalled();
-    });
+describe('server-managed OAuth callback', () => {
+  beforeEach(() => {
+    jest.restoreAllMocks();
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true, json: async () => ({ connected: true }),
+    } as Response);
+  });
+  it('rejects a callback from an unexpected origin before contacting the backend', async () => {
+    await expect(handleOAuthCallback('https://attacker.example.com/?code=c&state=s', config))
+      .rejects.toThrow(new OAuthError('OAuth callback URL does not match the configured redirect URI'));
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it('posts the code and state to the backend without exchanging tokens in the browser', async () => {
+    await handleOAuthCallback('https://partner.example.com/?code=auth-code&state=server-state', config);
+    expect(fetch).toHaveBeenCalledWith('/.netlify/functions/deriv-oauth-callback', expect.objectContaining({
+      method: 'POST', credentials: 'same-origin',
+      body: JSON.stringify({ code: 'auth-code', state: 'server-state' }),
+    }));
+  });
 });
