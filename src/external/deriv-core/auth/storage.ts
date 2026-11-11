@@ -80,30 +80,43 @@ export function storeAuthInfo(authInfo: AuthInfo): void {
   localStorage.setItem(AUTH_INFO_KEY, JSON.stringify(authInfo));
 }
 
-export function getAuthInfo(): AuthInfo | null {
+/**
+ * Read a structurally valid stored OAuth session, including an expired access
+ * token. This is only for the refresh flow; callers must check expires_at
+ * before using access_token for authenticated API requests.
+ */
+export function getStoredAuthInfo(): AuthInfo | null {
   const raw = localStorage.getItem(AUTH_INFO_KEY);
   if (!raw) return null;
 
   try {
-    const authInfo: unknown = JSON.parse(raw);
+    const value: unknown = JSON.parse(raw);
     if (
-      !authInfo ||
-      typeof authInfo !== 'object' ||
-      typeof (authInfo as AuthInfo).access_token !== 'string' ||
-      !(authInfo as AuthInfo).access_token ||
-      typeof (authInfo as AuthInfo).expires_at !== 'number' ||
-      !Number.isFinite((authInfo as AuthInfo).expires_at) ||
-      (authInfo as AuthInfo).expires_at <= 0 ||
-      Date.now() >= (authInfo as AuthInfo).expires_at * 1000
+      !value ||
+      typeof value !== 'object' ||
+      typeof (value as AuthInfo).access_token !== 'string' ||
+      !(value as AuthInfo).access_token ||
+      typeof (value as AuthInfo).refresh_token !== 'string' ||
+      !(value as AuthInfo).refresh_token ||
+      typeof (value as AuthInfo).expires_at !== 'number' ||
+      !Number.isFinite((value as AuthInfo).expires_at) ||
+      (value as AuthInfo).expires_at <= 0
     ) {
       clearAuthInfo();
       return null;
     }
-    return authInfo as AuthInfo;
+    return value as AuthInfo;
   } catch {
     clearAuthInfo();
     return null;
   }
+}
+
+/** Return only a currently usable access token; retain expired sessions for refresh. */
+export function getAuthInfo(): AuthInfo | null {
+  const authInfo = getStoredAuthInfo();
+  if (!authInfo || Date.now() >= authInfo.expires_at * 1000) return null;
+  return authInfo;
 }
 
 export function clearAuthInfo(): void {
