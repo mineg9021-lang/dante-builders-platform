@@ -9,6 +9,7 @@ import {
   clearCodeVerifier,
   storeAuthInfo,
   getAuthInfo,
+  getStoredAuthInfo,
   clearAllAuthData,
 } from './storage';
 import { getAuthBaseUrl } from '../config/urls';
@@ -259,12 +260,19 @@ export async function refreshAccessToken(
   refreshToken: string,
   clientId: string
 ): Promise<AuthInfo> {
+  const sessionAtStart = getStoredAuthInfo();
+  if (sessionAtStart && sessionAtStart.refresh_token !== refreshToken) {
+    throw new OAuthError('Stored OAuth session changed before token refresh');
+  }
+
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
     client_id: clientId,
   });
 
+  // A network/HTTP failure is not proof that a refresh token was revoked.
+  // Preserve the stored credential so transient outages do not destroy login.
   const response = await fetch(`${getAuthBaseUrl()}/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -272,24 +280,26 @@ export async function refreshAccessToken(
   });
 
   if (!response.ok) {
-    clearAllAuthData();
     throw new OAuthError(`Token refresh failed (${response.status})`);
   }
 
-  let tokenData: Record<string, unknown>;
-  try {
-    tokenData = await readTokenResponse(response, 'Token refresh');
-    const previousAuth = getAuthInfo();
-    const authInfo = validateTokenResponse(tokenData, {
-      refreshTokenFallback: refreshToken,
-      scopeFallback: previousAuth?.scope,
-    });
-    storeAuthInfo(authInfo);
-    return authInfo;
-  } catch (error) {
-    clearAllAuthData();
-    throw error;
+  const tokenData = await readTokenResponse(response, 'Token refresh');
+  const currentSession = getStoredAuthInfo();
+  if (sessionAtStart && (
+    !currentSession ||
+    currentSession.refresh_token !== sessionAtStart.refresh_token
+  )) {
+    // Logout or account replacement happened while the request was in flight.
+    // Never write a refreshed credential back into a cleared/replaced session.
+    throw new OAuthError('Stored OAuth session changed during token refresh');
   }
+
+  const authInfo = validateTokenResponse(tokenData, {
+    refreshTokenFallback: refreshToken,
+    scopeFallback: sessionAtStart?.scope ?? currentSession?.scope ?? getAuthInfo()?.scope,
+  });
+  storeAuthInfo(authInfo);
+  return authInfo;
 }
 
 /**
