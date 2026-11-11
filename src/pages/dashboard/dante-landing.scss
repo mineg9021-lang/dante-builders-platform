@@ -38,7 +38,7 @@ html,body,#root{min-height:100%;margin:0;background:#f5f3fb;color:#241b3d}body{f
 @media(max-width:600px){.dante-activity-list li{grid-template-columns:9px minmax(0,1fr)}.dante-activity-list time{grid-column:2;text-align:left}}
 
 
-/* Individual robot identity cards powered by the same shared 18-layer runtime */
+/* Individual specialist robot identity cards */
 .dante-robot-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
 .dante-robot-card{display:flex;align-items:flex-start;text-align:left;gap:9px;min-height:250px;cursor:pointer;color:inherit;width:100%;font:inherit}
 .robot-logo-frame{width:76px;height:76px;flex:0 0 76px;overflow:hidden;border-radius:18px;border:1px solid #d9c8f6;background:radial-gradient(circle at 50% 35%,#e8ddff,#f9f7ff 68%);box-shadow:0 7px 22px rgba(92,56,151,.13)}
@@ -54,24 +54,7 @@ html,body,#root{min-height:100%;margin:0;background:#f5f3fb;color:#241b3d}body{f
 @media(max-width:420px){.dante-robot-grid{grid-template-columns:1fr}}
 
 
-/* Live 18-layer execution diagnostics shared by every specialist Robot */
-.robot-engine-report{margin-top:16px;padding:16px;border:1px solid #e5def0;border-radius:12px;background:#fbfaff}
-.robot-engine-report-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.robot-engine-report-heading div{display:grid;gap:5px}
-.robot-engine-report-heading span{color:#8b819b;font-size:8px;font-weight:900;letter-spacing:1px}
-.robot-engine-report-heading strong{color:#342653;font-size:13px}
-.robot-engine-report-heading>b{color:#6945a6;font-size:10px}
-.robot-engine-report>p{margin:10px 0;color:#776d88;font-size:10px;line-height:1.5}
-.robot-engine-layer-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
-.robot-engine-layer-grid>div{display:flex;align-items:flex-start;gap:8px;min-width:0;padding:9px;border:1px solid #e8e3ef;border-radius:8px;background:#fff}
-.robot-engine-layer-grid>div>span{display:grid;place-items:center;width:17px;height:17px;flex:0 0 17px;border-radius:50%;font-size:10px;font-weight:900}
-.robot-engine-layer-grid .layer-pass>span{color:#16794f;background:#e8f8f0}
-.robot-engine-layer-grid .layer-block>span{color:#b33d50;background:#fff0f1}
-.robot-engine-layer-grid strong,.robot-engine-layer-grid small{display:block;overflow-wrap:anywhere}
-.robot-engine-layer-grid strong{color:#514568;font-size:8px;letter-spacing:.3px}
-.robot-engine-layer-grid small{margin-top:3px;color:#91879f;font-size:8px;line-height:1.4}
-@media(max-width:720px){.robot-engine-layer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:420px){.robot-engine-layer-grid{grid-template-columns:1fr}}
+
 
 
 .parity-analysis-panel {

@@ -7,7 +7,6 @@ import { useStore } from '@/hooks/useStore';
 import { startStrategyRuntime, type RuntimeHandle, type RuntimeStatus } from '@/trading-engine/runtime';
 import type { DerivTradingApi, ExecutionRiskContext } from '@/trading-engine/execution';
 import { getImplementedStrategyIds, type BotStrategyId, type StrategyDecisionResult } from '@/trading-engine/strategy-adapters';
-import type { RobotEngineReport } from '@/trading-engine/robot-18-layer-engine';
 import { DANTE_VOLATILITY_SYMBOLS } from './market-universe';
 import { appendDanteJournalEvent, loadDanteJournal } from '@/services/dante-journal.service';
 import PlatformActivity from './platform-activity';
@@ -53,7 +52,6 @@ const DashboardComponent = () => {
  const [runtimeStatus,setRuntimeStatus] = useState<RuntimeStatus>('STOPPED');
  const [runtimeMessage,setRuntimeMessage] = useState('Connect your Deriv account, configure the Robot and press Start.');
  const [decision,setDecision] = useState<StrategyDecisionResult|null>(null);
- const [engineReport,setEngineReport] = useState<RobotEngineReport|null>(null);
  const [trades,setTrades] = useState<TradeRow[]>([]);
  const [sessionPnl,setSessionPnl] = useState(0);
  const [wins,setWins] = useState(0);
@@ -153,7 +151,7 @@ const DashboardComponent = () => {
   if(![stakeValue,sl,tp,limit,ticks].every(Number.isFinite)||stakeValue<=0||sl<=0||tp<=0||!Number.isInteger(limit)||limit<1||!Number.isInteger(ticks)||ticks<1||(selectedBot==='BULK'&&(!Number.isInteger(batchRuns)||batchRuns<2||batchRuns>20||limit<batchRuns))){setRuntimeMessage('Check stake, stop loss, take profit, trade limit and duration values.');return;}
   const symbols=[...DANTE_VOLATILITY_SYMBOLS];
   const precisionBySymbol=Object.fromEntries(symbols.map(symbol=>[symbol,Number(api_base.pip_sizes?.[symbol]??2)]));
-  setDecision(null);setEngineReport(null);setRuntimeStatus('STARTING');setRuntimeMessage('Checking live contract availability and opening the Deriv tick stream…');
+  setDecision(null);setRuntimeStatus('STARTING');setRuntimeMessage('Checking live contract availability and opening the Deriv tick stream…');
   try{
    const baseRisk=buildRisk();
    const handle=await startStrategyRuntime({
@@ -169,7 +167,6 @@ const DashboardComponent = () => {
        .catch(()=>setJournalError('A runtime status could not be saved to the persistent journal.'));
      }
     },
-    onEngineReport:report=>setEngineReport(report),
     onDecision:result=>{
      setDecision(result);
      const decisionKey=[result.decision,result.reason,result.contractType].join(':');
@@ -203,7 +200,7 @@ const DashboardComponent = () => {
    runtimeRef.current=handle;
   }catch(error){setRuntimeStatus('STOPPED');setRuntimeMessage(error instanceof Error?error.message:'The Deriv bot runtime could not start.');}
  };
- const selectBot=(id:RobotId)=>{startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedBot(id);setDecision(null);setEngineReport(null);setRuntimeMessage('Robot selected. Configure the controls below and press Start.');};
+ const selectBot=(id:RobotId)=>{startAttemptRef.current += 1;runtimeRef.current?.stop();runtimeRef.current=null;setRuntimeStatus('STOPPED');setSelectedBot(id);setDecision(null);setRuntimeMessage('Robot selected. Configure the controls below and press Start.');};
  const currentRows=useMemo(()=>trades.slice(0,10),[trades]);
 
  return <main className="dante-platform">
@@ -213,18 +210,18 @@ const DashboardComponent = () => {
    <div className={isDerivConnected?'dante-connection is-connected':'dante-connection'}><span className="connection-dot"/>{isDerivConnected?'DERIV CONNECTED':'DERIV NOT CONNECTED'}</div>
   </header>
   <section className="dante-system-hero">
-   <div className="dante-system-copy"><span className="dante-eyebrow">DANTE AI CORE · SHARED 18-LAYER ROBOT ENGINE</span><h1>One platform.<br/><em>Specialist trading engines.</em></h1><p>Connect your Deriv account once. Select a specialist Robot, configure risk and let its contract-specific runtime handle live market data, validation, proposal, purchase and settlement.</p><div className="dante-system-tags"><span>DERIV OAUTH</span><span>LIVE MARKET DATA</span><span>RISK-GATED EXECUTION</span></div></div>
-   <div className="dante-system-portrait"><img src="/assets/images/dante-bot-portraits.webp" alt="Dante Builders robotic assistant"/><div className="portrait-glow"/><div className="portrait-caption"><span>AI CORE</span><strong>Specialist runtime</strong></div></div>
+   <div className="dante-system-copy"><span className="dante-eyebrow">DANTE BUILDERS · SPECIALIST ROBOT COLLECTION</span><h1>One platform.<br/><em>Specialist trading engines.</em></h1><p>Connect your Deriv account once. Select a specialist Robot, configure risk and let its contract-specific runtime handle live market data, validation, proposal, purchase and settlement.</p><div className="dante-system-tags"><span>DERIV OAUTH</span><span>LIVE MARKET DATA</span><span>RISK-GATED EXECUTION</span></div></div>
+   <div className="dante-system-portrait"><img src="/assets/images/dante-bot-portraits.webp" alt="Dante Builders robotic assistant"/><div className="portrait-glow"/><div className="portrait-caption"><span>ROBOT ASSISTANT</span><strong>Ready when you are</strong></div></div>
    <div className="dante-system-status"><div><span>PLATFORM SESSION</span><strong>{client.is_logged_in?'SIGNED IN':'ACCOUNT REQUIRED'}</strong></div><div><span>DERIV ACCOUNT</span><strong>{isDerivConnected?accountId:'Awaiting OAuth'}</strong></div><div><span>ROBOT STATUS</span><strong>{runtimeStatus.replace(/_/g,' ')}</strong></div></div>
   </section>
   <SarahMarketChart connected={isDerivConnected}/>
   <section className="dante-library dante-robot-library" id="bot-library">
-   <div className="dante-section-heading"><div><span className="dante-eyebrow">SPECIALIST ROBOT FLEET · SHARED 18-LAYER ENGINE</span><h2>Choose your robot</h2></div><p>{ROBOT_LIBRARY.length} robot workspaces · one protected engine</p></div>
+   <div className="dante-section-heading"><div><span className="dante-eyebrow">MEET YOUR SPECIALIST ROBOTS</span><h2>Choose your robot</h2></div><p>{ROBOT_LIBRARY.length} specialist workspaces</p></div>
    <div className="dante-bot-grid dante-robot-grid">{ROBOT_LIBRARY.map((robot,index)=>{
     const active=selectedBot===robot.id;
     return <button key={robot.id} type="button" className={active?'dante-bot-card dante-robot-card selected':'dante-bot-card dante-robot-card'} onClick={()=>selectBot(robot.id)} aria-pressed={active}>
-     <span role="img" aria-label={robot.title+' logo'} className={'robot-logo-frame robot-logo-'+robot.id.toLowerCase()} style={{backgroundImage:'url(/assets/images/robot-fleet.svg)',backgroundSize:'400% 300%',backgroundPosition:(index%4)*100/3+'% '+Math.floor(index/4)*50+'%'}}/>
-     <span className="bot-card-group">18-LAYER ENGINE</span><strong>{robot.title}</strong><small>{robot.description}</small>
+     <span role="img" aria-label={robot.title+' logo'} className={'robot-logo-frame robot-logo-'+robot.id.toLowerCase()} style={{backgroundImage:'url(/assets/images/robot-fleet.svg)',backgroundSize:'400% 400%',backgroundPosition:(index%4)*100/3+'% '+Math.floor(index/4)*100/3+'%'}}/>
+     <span className="bot-card-group">{robot.group.toUpperCase()}</span><strong>{robot.title}</strong><small>{robot.description}</small>
      <span className="robot-contract-tag">{robot.contract}</span>
      <span className="bot-card-action">{active?'ACTIVE ROBOT':'SELECT ROBOT'} <b>↗</b></span>
     </button>;
@@ -256,7 +253,7 @@ const DashboardComponent = () => {
     <div className="dante-metric-grid"><div><span>SESSION P/L</span><strong className={sessionPnl>=0?'metric-positive':'metric-negative'}>{sessionPnl.toFixed(2)} {currency}</strong></div><div><span>SETTLED WINS</span><strong>{wins}</strong></div><div><span>SETTLED LOSSES</span><strong>{losses}</strong></div><div><span>WIN RATE</span><strong>{winRate}%</strong></div></div>
     <div className="dante-decision-panel"><div><span>STRATEGY DECISION</span><strong>{decision?.decision||'WAIT'}</strong></div><p>{decision?.reason||'The strategy will report a decision after it receives a sufficient sample of fresh Deriv ticks.'}</p><small>{decision?decision.sampleSize+' source ticks · '+decision.contractType+' · '+decision.evidenceScore+'% evidence score':'No market data is fabricated or displayed before a real Deriv stream is connected.'}</small></div>
     {(selectedBot==='EVEN'||selectedBot==='ODD')&&decision?.strategyMetrics&&<div className="parity-analysis-panel"><div className="parity-analysis-heading"><strong>{selectedBot==='EVEN'?'Even':'Odd'} parity analysis</strong><span>{decision.sampleSize} observed ticks</span></div><div className="parity-analysis-grid"><div><span>EVEN DIGITS</span><strong>{decision.strategyMetrics.evenCount}</strong></div><div><span>ODD DIGITS</span><strong>{decision.strategyMetrics.oddCount}</strong></div><div><span>FULL WINDOW</span><strong>{Math.round(decision.strategyMetrics.fullRate*100)}%</strong></div><div><span>FIRST HALF</span><strong>{Math.round(decision.strategyMetrics.firstRate*100)}%</strong></div><div><span>SECOND HALF</span><strong>{Math.round(decision.strategyMetrics.secondRate*100)}%</strong></div></div><p>These figures describe the observed sample only. They are not calibrated probabilities or a prediction guarantee.</p></div>}
-    <section className="robot-engine-report" aria-live="polite"><div className="robot-engine-report-heading"><div><span>SHARED EXECUTION GATE</span><strong>18-layer engine diagnostics</strong></div><b>{engineReport?engineReport.passedLayers+'/18 passed':'Awaiting READY signal'}</b></div>{engineReport?<><p>{engineReport.reason}</p><div className="robot-engine-layer-grid">{engineReport.layers.map(layer=><div key={layer.name} className={layer.passed?'layer-pass':'layer-block'}><span>{layer.passed?'✓':'!'}</span><div><strong>{layer.name.replace(/_/g,' ')}</strong><small>{layer.detail}</small></div></div>)}</div></>:<p>All 18 checks run when this Robot produces a READY opportunity. WAIT decisions cannot purchase.</p>}</section>
+
    </div>
   </section>
   <section className="dante-journal" id="trade-journal">
