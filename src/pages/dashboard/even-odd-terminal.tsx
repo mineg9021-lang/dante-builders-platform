@@ -451,7 +451,7 @@ const EvenOddTerminal = () => {
         setRunning(true);
     };
 
-    const consecutiveLossCount = accountJournal.reduce((count, row) => row.status === 'LOST' && count === accountJournal.slice(0, count + 1).filter(item => item.status === 'LOST').length ? count + 1 : count, 0);
+    const consecutiveLossCount = accountJournal.reduce((count, row, index) => index === count && row.status === 'LOST' ? count + 1 : count, 0);
 
     const armOneTrade = () => {
         if (consecutiveLossCount >= Math.max(1, Number(maxConsecutiveLosses) || 1)) { setNotice('Maximum consecutive losses reached. Review the session before starting again.'); return; }
