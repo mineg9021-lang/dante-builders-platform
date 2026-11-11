@@ -73,17 +73,19 @@ const getDefaultServerURL = () => {
  * @returns Promise with WebSocket URL or fallback to default server
  */
 export const getSocketURL = async (): Promise<string> => {
-    try {
-        const authInfo = getAuthInfo();
-        if (!authInfo || !authInfo.access_token) {
-            return getDefaultServerURL();
-        }
-
-        const wsUrl = await DerivWSAccountsService.getAuthenticatedWebSocketURL(authInfo.access_token);
-        return wsUrl;
-    } catch (error) {
-        console.error('[DerivWS] Error in getSocketURL:', error);
+    const authInfo = getAuthInfo();
+    if (!authInfo || !authInfo.access_token) {
         return getDefaultServerURL();
+    }
+
+    try {
+        return await DerivWSAccountsService.getAuthenticatedWebSocketURL(authInfo.access_token);
+    } catch {
+        // Never downgrade an authenticated session to a public socket. Doing so
+        // can make a disconnected trading account look like a successful login.
+        // Keep provider errors and credential-bearing request details out of logs.
+        console.error('[DerivWS] Authenticated WebSocket setup failed; public fallback was blocked.');
+        throw new Error('DERIV_AUTHENTICATED_CONNECTION_FAILED');
     }
 };
 
