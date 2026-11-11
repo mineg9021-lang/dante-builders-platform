@@ -73,7 +73,7 @@ export const generateDerivApiInstance = async (forceNew = false) => {
 
             currentWebSocketURL = wsURL;
 
-            console.log('[DerivAPI] Creating new WebSocket connection to:', wsURL);
+            console.log('[DerivAPI] Creating new WebSocket connection');
             const deriv_socket = new WebSocket(wsURL);
             const deriv_api = new DerivAPIBasic({
                 connection: deriv_socket,
