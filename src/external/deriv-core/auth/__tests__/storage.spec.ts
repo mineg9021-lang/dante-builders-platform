@@ -1,5 +1,6 @@
 import {
   getAuthInfo,
+  getStoredAuthInfo,
   getCodeVerifier,
   getCSRFToken,
   getDerivAccounts,
@@ -76,12 +77,23 @@ describe('OAuth and Deriv browser storage validation', () => {
     ['malformed JSON', '{invalid'],
     ['missing expiry', JSON.stringify({ access_token: 'token' })],
     ['invalid expiry', JSON.stringify({ access_token: 'token', expires_at: 'later' })],
-    ['expired token', JSON.stringify({ access_token: 'token', expires_at: 1 })],
   ])('clears an auth record with %s', (_label, raw) => {
     localStorage.setItem('auth_info', raw);
 
     expect(getAuthInfo()).toBeNull();
     expect(localStorage.getItem('auth_info')).toBeNull();
+  });
+
+  it('keeps a structurally valid expired session available for refresh', () => {
+    const expiredAuth: AuthInfo = {
+      ...validAuthInfo,
+      expires_at: 1,
+    };
+    storeAuthInfo(expiredAuth);
+
+    expect(getAuthInfo()).toBeNull();
+    expect(getStoredAuthInfo()).toEqual(expiredAuth);
+    expect(localStorage.getItem('auth_info')).not.toBeNull();
   });
 
   it('reads a valid Deriv account list', () => {
