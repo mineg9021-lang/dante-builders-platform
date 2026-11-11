@@ -41,7 +41,7 @@ const EvenOddTerminal = () => {
     const [stopLoss, setStopLoss] = useState('10');
     const [takeProfit, setTakeProfit] = useState('10');
     const [running, setRunning] = useState(false);
-    const [mode, setMode] = useState<'analysis' | 'demo' | 'live'>('analysis');
+    const [mode, setMode] = useState<'analysis' | 'demo' | 'live'>('demo');
     useEffect(() => {
         // Demo accounts open in demo mode for a one-click guarded bot run; real accounts stay analysis-only until Live is explicitly selected.
         if (authData?.is_virtual && mode === 'analysis') setMode('demo');
@@ -221,7 +221,7 @@ const EvenOddTerminal = () => {
         };
         setNotice(executionArmed
             ? `BOT RUNNING · collecting up to ${MAX_TICKS} valid ticks per market across ${initial.length} supported Volatility streams; a Deriv proposal is requested only when signal and risk checks pass.`
-            : `Analysis scan active · collecting up to ${MAX_TICKS} valid ticks per market across ${initial.length} supported Volatility streams. Select Demo or Live and press Run bot to enable guarded execution.`);
+            : `Bot scan active · collecting up to ${MAX_TICKS} valid ticks per market across ${initial.length} supported Volatility streams. The bot submits a trade only after its entry and risk checks pass.`);
         connect();
         const timeout = window.setTimeout(() => {
             if (mounted) {
@@ -438,24 +438,20 @@ const EvenOddTerminal = () => {
         }
     }, [executionArmed, running, symbols, pipeline.executionAuthorized]);
 
-    const changeMode = (nextMode: 'analysis' | 'demo' | 'live') => {
+    const changeMode = (nextMode: 'demo' | 'live') => {
         if (nextMode === 'live' && !window.confirm('Live mode can place real-money trades. Continue only if you understand the risk.')) return;
         setExecutionArmed(false);
         autoRestartAllowed.current = false;
         setAutoRestart(false);
         setMode(nextMode);
-        setExecutionStatus(nextMode === 'analysis' ? 'Analysis only · orders disabled' : `${nextMode.toUpperCase()} mode · disarmed`);
+        setExecutionStatus(`${nextMode.toUpperCase()} mode · disarmed; press START BOT to begin guarded execution`);
     };
 
     const consecutiveLossCount = accountJournal.reduce((count, row, index) => index === count && row.status === 'LOST' ? count + 1 : count, 0);
 
     const armOneTrade = () => {
         if (consecutiveLossCount >= Math.max(1, Number(maxConsecutiveLosses) || 1)) { setNotice('Maximum consecutive losses reached. Review the session before starting again.'); return; }
-        if (mode === 'analysis') {
-            setNotice('Choose Demo or Live mode before arming execution. Analysis mode never places orders.');
-            return;
-        }
-        if (!isAuthorized || connectionStatus !== 'opened') {
+                if (!isAuthorized || connectionStatus !== 'opened') {
             setNotice('Connect and authorize your Deriv account with an open WebSocket before arming execution.');
             return;
         }
@@ -497,7 +493,7 @@ const EvenOddTerminal = () => {
 
             <div className='eo-prime-timers'>
                 <div><small>ENGINE STATUS</small><strong>{running ? 'Running' : executionLock.current ? 'Settling' : 'Idle'}</strong></div>
-                <div><small>ANALYSIS WINDOW</small><strong>10 seconds max</strong></div>
+                <div><small>SCAN WINDOW</small><strong>10 seconds max</strong></div>
             </div>
 
             <nav className='eo-prime-tabs'><span className='is-active'>Trading Bot</span><span>Trading History · {accountJournal.length}</span></nav>
@@ -512,7 +508,7 @@ const EvenOddTerminal = () => {
                     <label>TARGET PROFIT ({authData?.currency || '$'})<input type='number' min='0.01' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
                     <label>STOP LOSS ({authData?.currency || '$'})<input type='number' min='0.01' step='0.01' value={stopLoss} onChange={event => setStopLoss(event.target.value)} /></label>
                     <label>MAX CONSECUTIVE LOSSES<input type='number' min='1' max='20' step='1' value={maxConsecutiveLosses} onChange={event => setMaxConsecutiveLosses(event.target.value)} /></label>
-                    <label>ACCOUNT MODE<select value={mode} onChange={event => changeMode(event.target.value as 'analysis' | 'demo' | 'live')}><option value='analysis'>Analysis only</option><option value='demo'>Demo account</option><option value='live'>Real account · explicit opt-in</option></select></label>
+                    <label>DERIV EXECUTION ACCOUNT<select value={mode === 'live' ? 'live' : 'demo'} onChange={event => changeMode(event.target.value as 'demo' | 'live')}><option value='demo'>Demo account · trading enabled</option><option value='live'>Real account · explicit confirmation</option></select></label>
                 </div>
                 <div className='eo-prime-actions'>
                     <button type='button' onClick={armOneTrade} disabled={executionArmed || executionLock.current || running}>START BOT</button>
@@ -529,12 +525,8 @@ const EvenOddTerminal = () => {
                     <div className='eo-prime-result eo-prime-result--loss'><small>LOSS</small><strong>{sessionLosses}</strong><span>{accountJournal.find(row => row.status === 'LOST')?.contractType || 'Awaiting verified loss'}</span></div>
                 </div>
                 <div className='eo-prime-prediction'><div><small>SELECTED PARITY CANDIDATE</small><strong>{candidateReady ? pipeline.selectedParity : 'WAIT'}</strong><span>{selected?.name || 'No market selected'} · sample {total}/30 · observed evidence {pipeline.evidenceScore}%</span></div><div><small>LATEST OBSERVED DIGIT</small><strong>{latest ? latest.digit : '—'}</strong><span>{latest ? (latest.digit % 2 === 0 ? 'EVEN' : 'ODD') : 'No validated tick yet'}</span></div></div>
-                <div className='eo-prime-markets'><div className='eo-prime-result-heading'><h3>Volatility Markets</h3><span>{availableSymbols.length}/13 active in Deriv catalogue</span></div>
-                    {availableSymbols.map((item: any) => { const symbol = String(item.symbol || item.underlying_symbol || ''); const market = symbols.find(row => row.symbol === symbol); const isSelected = selected?.symbol === symbol; return <div className='eo-prime-market-row' key={symbol}><span>{item.display_name || item.symbol_display_name || symbol}</span><small>{market?.ticks.length || 0}/30 ticks · {market?.status || 'Standby'}</small><b className={isSelected ? 'is-selected' : ''}>{isSelected ? 'SELECTED' : market?.status === 'Unavailable' ? 'UNAVAILABLE' : 'MONITOR'}</b></div>; })}
-                    {!availableSymbols.length && <p className='eo-terminal__journal-empty'>Connect Deriv to retrieve the active market catalogue and monitor the 13 configured indices.</p>}
-                </div>
-                <div className='eo-prime-history'><div className='eo-prime-result-heading'><h3>Trading History</h3><span>{accountJournal.length} records</span></div>
-                    {accountJournal.slice(0,10).map(row => <div className='eo-terminal__journal-row' key={row.id}><div><strong>{row.symbol} · {row.contractType || 'PARITY'}</strong><small>{row.contractId ? 'Contract #' + row.contractId : row.reason || 'Analysis record'} · {new Date(row.createdAt).toLocaleTimeString()}</small></div><b className={`eo-terminal__journal-status eo-terminal__journal-status--${row.status.toLowerCase()}`}>{row.status}</b><span>{row.profit === undefined ? '—' : row.profit.toFixed(2)}</span></div>)}
+                                <div className='eo-prime-history'><div className='eo-prime-result-heading'><h3>Trading History</h3><span>{accountJournal.length} records</span></div>
+                    {accountJournal.slice(0,10).map(row => <div className='eo-terminal__journal-row' key={row.id}><div><strong>{row.contractType || 'EVEN / ODD'} · {row.status === 'WON' ? 'WON' : row.status === 'LOST' ? 'LOST' : 'TRADE'}</strong><small>{row.contractId ? 'Contract #' + row.contractId : row.reason || 'Analysis record'} · {new Date(row.createdAt).toLocaleTimeString()}</small></div><b className={`eo-terminal__journal-status eo-terminal__journal-status--${row.status.toLowerCase()}`}>{row.status}</b><span>{row.profit === undefined ? '—' : row.profit.toFixed(2)}</span></div>)}
                     {!accountJournal.length && <p className='eo-terminal__journal-empty'>No verified trades yet. Results appear here after Deriv settlement.</p>}
                 </div>
             </div>
