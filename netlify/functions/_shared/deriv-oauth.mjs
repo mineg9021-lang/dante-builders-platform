@@ -93,13 +93,22 @@ export async function saveDerivToken(userId, token) {
   });
   if (!response.ok) throw new Error('DERIV_TOKEN_VAULT_WRITE_FAILED');
 }
+export async function getDerivTokenStatus(userId) {
+  const response = await supabaseAdmin('deriv_token_vault?user_id=eq.' + encodeURIComponent(userId) + '&select=expires_at&limit=1');
+  if (!response.ok) throw new Error('DERIV_TOKEN_VAULT_READ_FAILED');
+  const rows = await response.json();
+  if (!Array.isArray(rows) || !rows[0]) return { status: 'not_connected' };
+  if (Date.parse(rows[0].expires_at) <= Date.now()) return { status: 'reauthorization_required' };
+  return { status: 'connected' };
+}
 export async function getDerivToken(userId) {
   const response = await supabaseAdmin('deriv_token_vault?user_id=eq.' + encodeURIComponent(userId) + '&select=encrypted_token,expires_at&limit=1');
   if (!response.ok) throw new Error('DERIV_TOKEN_VAULT_READ_FAILED');
   const rows = await response.json();
   if (!Array.isArray(rows) || !rows[0]) return null;
   const token = unseal(rows[0].encrypted_token);
-  if (!token || typeof token.access_token !== 'string' || token.expires_at <= Math.floor(Date.now() / 1000)) return null;
+  if (!token || typeof token.access_token !== 'string') return null;
+  if (token.expires_at <= Math.floor(Date.now() / 1000)) throw new Error('DERIV_REAUTHORIZATION_REQUIRED');
   return token;
 }
 export async function saveSelectedAccount(userId, accountId) {
