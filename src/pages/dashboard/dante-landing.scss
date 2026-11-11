@@ -109,3 +109,9 @@ html,body,#root{min-height:100%;margin:0;background:#f5f3fb;color:#241b3d}body{f
 @media (max-width: 700px) {
   .parity-analysis-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Deriv account connection and external platform shortcut */
+.terminal-connect-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+.terminal-open-deriv{display:inline-flex;min-height:36px;align-items:center;padding:0 12px;border:1px solid #ffffff57;border-radius:8px;color:#e7e2ff;background:#ffffff0d;font-size:9px;font-weight:900;letter-spacing:.35px;text-decoration:none}
+.terminal-open-deriv:hover{background:#ffffff20;color:#fff}
+@media(max-width:720px){.terminal-connect-actions{grid-column:1/-1;justify-content:flex-start}}
