@@ -19,10 +19,10 @@ type SymbolState = { symbol: string; name: string; precision: number; ticks: Tic
 type TradeJournalRow = { id: string; accountId: string; contractId?: number; contractType?: ParityContractType; symbol: string; buyPrice?: number; status: 'SKIPPED' | 'EXECUTED' | 'WON' | 'LOST' | 'VOID'; profit?: number; createdAt: number; settledAt?: number; sampleSize?: number; evenCount?: number; oddCount?: number; evidenceScore?: number; reason?: string };
 
 const MAX_TICKS = 30;
-const MAX_ANALYSIS_DURATION_MS = 180_000;
+const MAX_ANALYSIS_DURATION_MS = 10_000;
 
 const getPrecision = (pipSize?: number) => {
-    if (pipSize === undefined || !Number.isFinite(pipSize) || pipSize <= 0) return 2;
+    if (pipSize === undefined || !Number.isFinite(pipSize) || pipSize < 0) return -1;
     const value = String(pipSize).toLowerCase();
     if (value.includes('e')) {
         const [coefficient, exponentText] = value.split('e');
