@@ -4,7 +4,7 @@ export type BotStrategyId =
     | 'RISE' | 'FALL' | 'ONLY_UP' | 'ONLY_DOWN'
     | 'ASIAN_UP' | 'ASIAN_DOWN'
     | 'DIGIT_MATCH' | 'DIGIT_DIFFERS' | 'DIGIT_OVER' | 'DIGIT_UNDER'
-    | 'EVEN' | 'ODD';
+    | 'EVEN' | 'ODD' | 'OVER_TWO';
 
 export type StrategyTick = {
     symbol: string;
@@ -52,6 +52,7 @@ const CONTRACT_BY_STRATEGY: Record<BotStrategyId, DerivContractType> = {
     DIGIT_UNDER: 'DIGITUNDER',
     EVEN: 'DIGITEVEN',
     ODD: 'DIGITODD',
+    OVER_TWO: 'DIGITOVER',
 };
 
 const wait = (id: BotStrategyId, sampleSize: number, reason: string): StrategyDecisionResult => ({
@@ -188,8 +189,8 @@ export function evaluateBotStrategy(input: {
         };
     }
 
-    if (id === 'DIGIT_OVER' || id === 'DIGIT_UNDER') {
-        const barrier = Number.isInteger(input.config.barrier) ? Number(input.config.barrier) : 4;
+    if (id === 'DIGIT_OVER' || id === 'DIGIT_UNDER' || id === 'OVER_TWO') {
+        const barrier = id === 'OVER_TWO' ? 2 : Number.isInteger(input.config.barrier) ? Number(input.config.barrier) : 4;
         if (barrier < 0 || barrier > 8) return { ...wait(id, sample.length, 'Barrier must be an integer from 0 to 8.'), decision: 'REJECTED' };
         proposalFields.barrier = String(barrier);
         const qualifying = digits.filter(digit => id === 'DIGIT_OVER' ? digit > barrier : digit < barrier);
@@ -232,5 +233,5 @@ export function evaluateBotStrategy(input: {
 
 export const getImplementedStrategyIds = (): BotStrategyId[] => [
     'RISE', 'FALL', 'ONLY_UP', 'ONLY_DOWN', 'ASIAN_UP', 'ASIAN_DOWN',
-    'DIGIT_MATCH', 'DIGIT_DIFFERS', 'DIGIT_OVER', 'DIGIT_UNDER', 'EVEN', 'ODD',
+    'DIGIT_MATCH', 'DIGIT_DIFFERS', 'DIGIT_OVER', 'DIGIT_UNDER', 'EVEN', 'ODD', 'OVER_TWO',
 ];
