@@ -17,7 +17,8 @@ export default async request => {
       account_id: account.account_id, account_type: account.account_type, currency: account.currency,
       balance: account.balance, group: account.group, status: account.status,
     })) });
-  } catch {
+  } catch (error) {
+    if (error?.message === 'DERIV_REAUTHORIZATION_REQUIRED') return json({ error: 'DERIV_REAUTHORIZATION_REQUIRED', reauthorizationRequired: true }, 401);
     return json({ error: 'DERIV_ACCOUNT_SERVICE_UNAVAILABLE' }, 503);
   }
 };
