@@ -2,6 +2,8 @@ import {
     buildAuthorizationUrl,
     buildSignUpUrl,
     getAuthInfo,
+    getStoredAuthInfo,
+    refreshAccessToken,
     parseReferralLink,
     parseLandingParams,
     resolveReferralViaProxy,
@@ -72,17 +74,47 @@ const getDefaultServerURL = () => {
  *
  * @returns Promise with WebSocket URL or fallback to default server
  */
+let refreshInFlight: Promise<import('@/external/deriv-core').AuthInfo> | null = null;
+const TOKEN_REFRESH_SKEW_SECONDS = 60;
+
 export const getSocketURL = async (): Promise<string> => {
-    const authInfo = getAuthInfo();
-    if (!authInfo || !authInfo.access_token) {
+    // getStoredAuthInfo deliberately includes expired sessions so they cannot
+    // be mistaken for anonymous users and silently downgraded to a public socket.
+    const storedAuth = getStoredAuthInfo();
+    if (!storedAuth) {
         return getDefaultServerURL();
     }
 
     try {
-        return await DerivWSAccountsService.getAuthenticatedWebSocketURL(authInfo.access_token);
+        let accessToken = storedAuth.access_token;
+        const refreshRequired = storedAuth.expires_at <=
+            Math.floor(Date.now() / 1000) + TOKEN_REFRESH_SKEW_SECONDS;
+
+        if (refreshRequired) {
+            const clientId = process.env.NEXT_PUBLIC_DERIV_APP_ID;
+            if (!clientId || !storedAuth.refresh_token) {
+                throw new Error('DERIV_TOKEN_REFRESH_UNAVAILABLE');
+            }
+
+            // Share one refresh request across concurrent socket initializations.
+            if (!refreshInFlight) {
+                refreshInFlight = refreshAccessToken(storedAuth.refresh_token, clientId)
+                    .finally(() => { refreshInFlight = null; });
+            }
+            const refreshedAuth = await refreshInFlight;
+            accessToken = refreshedAuth.access_token;
+        } else {
+            // A second read ensures the session was not logged out/replaced
+            // between the first read and authenticated socket setup.
+            const currentAuth = getAuthInfo();
+            if (!currentAuth || currentAuth.access_token !== storedAuth.access_token) {
+                throw new Error('DERIV_AUTH_SESSION_CHANGED');
+            }
+        }
+
+        return await DerivWSAccountsService.getAuthenticatedWebSocketURL(accessToken);
     } catch {
-        // Never downgrade an authenticated session to a public socket. Doing so
-        // can make a disconnected trading account look like a successful login.
+        // Never downgrade a stored authenticated session to a public socket.
         // Keep provider errors and credential-bearing request details out of logs.
         console.error('[DerivWS] Authenticated WebSocket setup failed; public fallback was blocked.');
         throw new Error('DERIV_AUTHENTICATED_CONNECTION_FAILED');
