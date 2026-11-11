@@ -2,6 +2,7 @@ import {
     buildProposalRequest,
     monitorDerivContract,
     validateExecutionRisk,
+    type ContractProposalFields,
     type DerivTradingApi,
     type ExecutionRiskContext,
     type VerifiedTradeResult,
@@ -13,7 +14,7 @@ export type DerivBulkExecutionInput = {
     symbol: string;
     contractType: DerivContractType;
     currency: string;
-    proposalFields: Record<string, unknown>;
+    proposalFields: ContractProposalFields;
     risk: ExecutionRiskContext;
     runs: number;
     idempotencyKey: string;
