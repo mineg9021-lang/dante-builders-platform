@@ -126,6 +126,7 @@ const DashboardComponent = () => {
  const stopBot = () => { startAttemptRef.current += 1; runtimeRef.current?.stop(); runtimeRef.current=null; currentStakeRef.current=null; setRuntimeStatus('STOPPED'); setRuntimeMessage('Sara AI stopped. No new purchases will be initiated.'); };
  const startBot = async () => {
   const attempt = ++startAttemptRef.current;
+  currentStakeRef.current=null;
   if(runtimeRef.current){setRuntimeMessage('Sara AI already has an active session. Stop it before starting another one.');return;}
   if(!isDerivConnected||!api_base.api){setRuntimeMessage('Deriv is not authorised. Connect your Deriv account before starting.');return;}
   if(mode==='live'){const accepted=window.confirm('You selected a REAL Deriv account. Trades will use real funds. Confirm live execution for this session.');if(!accepted)return;liveConfirmedRef.current=true;setLiveConfirmed(true);}
