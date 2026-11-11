@@ -29,7 +29,8 @@ export default async request => {
     const payload = await response.json();
     if (typeof payload?.data?.url !== 'string' || !payload.data.url.startsWith('wss://')) return json({ error: 'DERIV_WEBSOCKET_URL_INVALID' }, 502);
     return json({ url: payload.data.url, account: { account_id: account.account_id, account_type: account.account_type } });
-  } catch {
+  } catch (error) {
+    if (error?.message === 'DERIV_REAUTHORIZATION_REQUIRED') return json({ error: 'DERIV_REAUTHORIZATION_REQUIRED', reauthorizationRequired: true }, 401);
     return json({ error: 'DERIV_WEBSOCKET_SERVICE_UNAVAILABLE' }, 503);
   }
 };
