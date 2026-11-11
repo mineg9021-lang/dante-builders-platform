@@ -9,7 +9,8 @@ create table if not exists public.deriv_token_vault (
   updated_at timestamptz not null default now()
 );
 alter table public.deriv_token_vault enable row level security;
-revoke all on table public.deriv_token_vault from anon, authenticated;
+revoke all on table public.deriv_token_vault from public, anon, authenticated;
+grant all on table public.deriv_token_vault to service_role;
 drop policy if exists "No client access to Deriv token vault" on public.deriv_token_vault;
 create policy "No client access to Deriv token vault"
   on public.deriv_token_vault for all
