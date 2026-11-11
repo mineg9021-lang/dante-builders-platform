@@ -1,6 +1,8 @@
 import { exchangeCodeForTokens, refreshAccessToken, OAuthError } from '../oauth';
 
 describe('Deriv OAuth browser credential boundary', () => {
+  beforeEach(() => { jest.restoreAllMocks(); jest.spyOn(global, 'fetch'); });
+  afterEach(() => { jest.restoreAllMocks(); });
   it('disables direct browser authorization-code exchange', async () => {
     await expect(exchangeCodeForTokens({
       code: 'authorization-code', clientId: 'app-id',
