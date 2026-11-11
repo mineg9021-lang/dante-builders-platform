@@ -63,7 +63,8 @@ export class DerivWSAccountsService {
         finally { if (this.accountsFetchPromise === request) this.accountsFetchPromise = null; }
     }
 
-    static async fetchOTPWebSocketURL(_legacyAccessToken: string | undefined, accountId: string): Promise<string> {
+    static async fetchOTPWebSocketURL(accountOrLegacyToken: string | undefined, maybeAccountId?: string): Promise<string> {
+        const accountId = maybeAccountId ?? accountOrLegacyToken ?? '';
         if (!accountId) throw new Error('DERIV_ACCOUNT_ID_REQUIRED');
         const existing = this.otpFetchPromises.get(accountId);
         if (existing) return existing;
