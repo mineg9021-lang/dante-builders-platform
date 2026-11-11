@@ -50,12 +50,15 @@ const router = createBrowserRouter(
 
 function App() {
     useAccountSwitching();
-    const [oauthProcessing, setOauthProcessing] = useState(() => new URLSearchParams(window.location.search).has('code'));
+    const [oauthProcessing, setOauthProcessing] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        return params.has('code') || params.has('error');
+    });
     const [oauthError, setOauthError] = useState('');
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
-        if (!urlParams.has('code')) { setOauthProcessing(false); return; }
+        if (!urlParams.has('code') && !urlParams.has('error')) { setOauthProcessing(false); return; }
 
         const handleCallback = async () => {
             try {
