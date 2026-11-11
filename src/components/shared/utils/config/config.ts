@@ -74,7 +74,13 @@ export const getSocketURL = async (): Promise<string> => {
     if (response.status === 401) throw new Error('DANTE_LOGIN_REQUIRED');
     if (!response.ok) throw new Error('DERIV_SESSION_STATUS_UNAVAILABLE');
     const status = await response.json() as { status?: string };
-    if (status.status === 'not_connected') return getDefaultServerURL();
+    if (status.status === 'not_connected') {
+        // Do not let stale legacy login IDs trigger an authorize request on a public socket.
+        localStorage.removeItem('active_loginid');
+        localStorage.removeItem('account_type');
+        sessionStorage.removeItem('deriv_accounts');
+        return getDefaultServerURL();
+    }
     if (status.status === 'reauthorization_required') throw new Error('DERIV_REAUTHORIZATION_REQUIRED');
     if (status.status !== 'connected') throw new Error('DERIV_SESSION_STATUS_INVALID');
     return DerivWSAccountsService.getAuthenticatedWebSocketURL();
