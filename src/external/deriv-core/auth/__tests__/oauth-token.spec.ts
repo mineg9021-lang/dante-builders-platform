@@ -117,11 +117,11 @@ describe('OAuth token response validation', () => {
     expect(result.scope).toBe('trade payments');
   });
 
-  it('clears stored credentials when a refresh response is invalid', async () => {
+  it('preserves stored credentials when a refresh response is invalid', async () => {
     storeAuthInfo(storedAuth);
     mockTokenResponse({ access_token: 'missing-required-fields' });
 
     await expect(refreshAccessToken('old-refresh-token', 'app-id')).rejects.toBeInstanceOf(OAuthError);
-    expect(getAuthInfo()).toBeNull();
+    expect(getAuthInfo()).toEqual(storedAuth);
   });
 });
