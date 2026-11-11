@@ -3,7 +3,6 @@ import { api_base } from '@/external/bot-skeleton';
 import { useApiBase } from '@/hooks/useApiBase';
 import { validateTick } from './even-odd-analysis-engine';
 import { runParityPipeline } from './even-odd-parity-engine';
-import { advanceMartingaleAfterSettlement, calculateParityStake, MAX_MARTINGALE_STEPS } from './even-odd-martingale';
 import { executeParityContract, type DerivParityApi, type ParityContractType } from './even-odd-parity-execution';
 import './even-odd-terminal.scss';
 import { isDanteVolatilitySymbol } from './market-universe';
@@ -19,7 +18,7 @@ type SymbolState = { symbol: string; name: string; precision: number; ticks: Tic
 type TradeJournalRow = { id: string; accountId: string; contractId?: number; contractType?: ParityContractType; symbol: string; buyPrice?: number; status: 'SKIPPED' | 'EXECUTED' | 'WON' | 'LOST' | 'VOID'; profit?: number; createdAt: number; settledAt?: number; sampleSize?: number; evenCount?: number; oddCount?: number; evidenceScore?: number; reason?: string };
 
 const MAX_TICKS = 30;
-const MAX_ANALYSIS_DURATION_MS = 180_000;
+const MAX_ANALYSIS_DURATION_MS = 10_000;
 
 const getPrecision = (pipSize?: number) => {
     if (pipSize === undefined || !Number.isFinite(pipSize) || pipSize <= 0) return 2;
@@ -36,11 +35,9 @@ const EvenOddTerminal = () => {
     const { isAuthorized, connectionStatus, authData } = useApiBase();
     const [symbols, setSymbols] = useState<SymbolState[]>([]);
     const [stake, setStake] = useState('1');
-    const [martingaleEnabled, setMartingaleEnabled] = useState(false);
-    const [lossProgression, setLossProgression] = useState(0);
-    const [recoveryStep, setRecoveryStep] = useState(0);
-    const [cooldown, setCooldown] = useState(false);
-    const effectiveStake = calculateParityStake(Number(stake), martingaleEnabled, lossProgression);
+    const effectiveStake = Number(stake);
+    const [numberOfRuns, setNumberOfRuns] = useState('10');
+    const [maxConsecutiveLosses, setMaxConsecutiveLosses] = useState('2');
     const [stopLoss, setStopLoss] = useState('10');
     const [takeProfit, setTakeProfit] = useState('10');
     const [running, setRunning] = useState(false);
@@ -261,7 +258,7 @@ const EvenOddTerminal = () => {
         sessionLoss: Math.max(0, -sessionPnl),
         sessionProfit: Math.max(0, sessionPnl),
         tradesThisSession,
-        maxTradesPerSession: 10,
+        maxTradesPerSession: Math.max(1, Number(numberOfRuns) || 1),
         stopLoss: Number(stopLoss),
         takeProfit: Number(takeProfit),
     };
@@ -369,32 +366,10 @@ const EvenOddTerminal = () => {
                 ? { ...row, status: result.settlement, profit: result.profit, settledAt: result.settledAt }
                 : row));
             setExecutionStatus(`${result.settlement} · ${result.contractType} · P/L ${result.profit.toFixed(2)} ${authData.currency}`);
-            const martingaleProgress = advanceMartingaleAfterSettlement(lossProgression, result.settlement, martingaleEnabled);
-            setLossProgression(martingaleProgress.nextStep);
-            const nextRecoveryStep = result.settlement === 'WON' ? 0 : result.settlement === 'LOST' ? recoveryStep + 1 : recoveryStep;
-            if (result.settlement === 'WON') setRecoveryStep(0);
-            else if (result.settlement === 'LOST') setRecoveryStep(nextRecoveryStep);
             const nextSessionPnl = sessionPnl + result.profit;
             const nextTradeCount = tradesThisSession + 1;
             const withinSessionLimits = Math.max(0, -nextSessionPnl) < Number(stopLoss) && Math.max(0, nextSessionPnl) < Number(takeProfit) && nextTradeCount < 10;
-            if (result.settlement === 'LOST' && recoveryStep >= 3) {
-                setCooldown(true);
-                executionAllowed.current = false;
-                setExecutionArmed(false);
-                autoRestartAllowed.current = false;
-                setAutoRestart(false);
-                setRunning(false);
-                setExecutionStatus('Fourth consecutive recovery loss · cooldown active.');
-                setNotice('The fourth loss has reached the recovery cooldown. Reset only after reviewing the session.');
-            } else if (martingaleProgress.halt) {
-                executionAllowed.current = false;
-                setExecutionArmed(false);
-                autoRestartAllowed.current = false;
-                setAutoRestart(false);
-                setRunning(false);
-                setExecutionStatus('Martingale limit reached · bot paused after the maximum three 1.5× progression steps.');
-                setNotice('Martingale safety limit reached. No further trade will be placed; review the session before manually restarting.');
-            } else if (autoRestartAllowed.current && executionAllowed.current && withinSessionLimits) {
+            if (autoRestartAllowed.current && executionAllowed.current && withinSessionLimits) {
                 setSymbols([]);
                 executionAllowed.current = true;
                 setExecutionArmed(true);
@@ -421,7 +396,7 @@ const EvenOddTerminal = () => {
         }).finally(() => {
             executionLock.current = false;
         });
-    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, effectiveStake, martingaleEnabled, autoRestart, stopLoss, takeProfit, sessionPnl, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized, connectionStatus, tradesThisSession, recoveryStep]);
+    }, [executionArmed, pipeline.executionAuthorized, pipeline.contractType, selected?.symbol, latest?.epoch, pipeline.selectedParity, pipeline.evidenceScore, mode, stake, effectiveStake, autoRestart, stopLoss, takeProfit, sessionPnl, authData?.currency, authData?.is_virtual, authData?.loginid, isAuthorized, connectionStatus, tradesThisSession]);
 
     useEffect(() => {
         if (selected && latest && selected.ticks.length >= MAX_TICKS && !running && !pipeline.executionAuthorized) {
@@ -461,7 +436,6 @@ const EvenOddTerminal = () => {
         setExecutionArmed(false);
         autoRestartAllowed.current = false;
         setAutoRestart(false);
-        setLossProgression(0);
         setMode(nextMode);
         setExecutionStatus(nextMode === 'analysis' ? 'Analysis only · orders disabled' : `${nextMode.toUpperCase()} mode · disarmed`);
     };
@@ -478,7 +452,6 @@ const EvenOddTerminal = () => {
     };
 
     const armOneTrade = () => {
-        if (cooldown) { setNotice('Recovery cooldown is active after the fourth loss. Reset the session after manual review.'); return; }
         if (mode === 'analysis') {
             setNotice('Choose Demo or Live mode before arming execution. Analysis mode never places orders.');
             return;
@@ -503,16 +476,6 @@ const EvenOddTerminal = () => {
         if (!running) setRunning(true);
     };
 
-    const resetRecovery = () => {
-        setCooldown(false);
-        setRecoveryStep(0);
-        setLossProgression(0);
-        setSessionPnlByAccount(previous => ({ ...previous, [activeLoginid]: 0 }));
-        setTradeCountByAccount(previous => ({ ...previous, [activeLoginid]: 0 }));
-        setExecutionStatus('Recovery and session counters reset after manual review.');
-        setNotice('Recovery stages reset. Review the account and risk settings before restarting.');
-    };
-
     const stopBot = () => {
         executionAllowed.current = false;
         setExecutionArmed(false);
@@ -524,119 +487,59 @@ const EvenOddTerminal = () => {
     };
 
     return (
-        <section className='eo-terminal' id='parity-bot'>
+        <section className='eo-terminal eo-terminal--prime' id='prime-parity-bot'>
             <header className='eo-terminal__header'>
-                <div>
-                    <span className='eo-terminal__eyebrow'>DANTE BUILDERS · MARKET INTELLIGENCE</span>
-                    <h2>Even / Odd Parity Bot</h2>
-                    <p>Live Deriv tick analysis, evidence scoring and guarded one-trade execution.</p>
+                <div className='eo-terminal__brand'>
+                    <span className='eo-terminal__bolt'>ϟ</span>
+                    <div><span className='eo-terminal__eyebrow'>PRIME PARITY ENGINE</span><h2>Even / Odd Bot</h2><p>Fixed-stake parity trading across supported Volatility markets</p></div>
                 </div>
-                <div className={`eo-terminal__connection ${isAuthorized && connectionStatus === 'opened' ? 'is-live' : ''}`}>
-                    <span /> {isAuthorized && connectionStatus === 'opened' ? 'DERIV CONNECTED' : 'NOT CONNECTED'}
-                </div>
+                <div className={`eo-terminal__connection ${isAuthorized && connectionStatus === 'opened' ? 'is-live' : ''}`}><span />{isAuthorized && connectionStatus === 'opened' ? 'DERIV CONNECTED' : 'OFFLINE'}</div>
             </header>
 
-            <div className='eo-terminal__grid'>
-                <div className='eo-terminal__main'>
-                    <div className='eo-terminal__card eo-terminal__market'>
-                        <div className='eo-terminal__card-heading'><h3>Market scanner</h3><span>{availableSymbols.length} eligible markets detected</span></div>
-                        <div className='eo-terminal__market-row'>
-                            <span>Background market scan</span>
-                            <strong>{symbols.length} supported markets · best evidence candidate selected automatically</strong>
-                        </div>
-                        <div className='eo-terminal__stats'>
-                            <div><span>Latest digit</span><strong>{latest ? latest.digit : '—'}</strong></div>
-                            <div><span>Even observations</span><strong>{counts.even}</strong></div>
-                            <div><span>Odd observations</span><strong>{counts.odd}</strong></div>
-                            <div><span>Analysis sample</span><strong>{total}/30</strong></div>
-                        </div>
-                        <div className='eo-terminal__outcomes'>
-                            <div><span>WIN 🏆</span><strong>{sessionWins}</strong></div>
-                            <div><span>LOSS</span><strong>{sessionLosses}</strong></div>
-                        </div>
-                        <div className='eo-terminal__signal'>
-                            <span>{selected?.name || 'Scanning markets'} · observed parity lead · evidence {pipeline.evidenceScore}%</span>
-                            <strong className={prediction === 'WAIT' ? 'is-wait' : 'is-signal'}>{prediction}</strong>
-                            <small>{prediction === 'WAIT' ? 'Insufficient sample or parity difference. No entry candidate.' : `Observed sample lead only · evidence difference ${pipeline.evidenceScore}% · not a next-tick forecast.`}</small>
-                        </div>
-                    </div>
-                    <div className='eo-terminal__card'>
-                        <div className='eo-terminal__card-heading'><h3>Market feed</h3><span>Recent valid ticks</span></div>
-                        <div className='eo-terminal__feed'>
-                            {(selected?.ticks.slice(-12).reverse() || []).map((tick, index) => (
-                                <div key={`${tick.epoch}-${index}`}><span>{tick.quote}</span><b className={tick.digit % 2 === 0 ? 'is-even' : 'is-odd'}>{tick.digit % 2 === 0 ? 'EVEN' : 'ODD'}</b></div>
-                            ))}
-                            {!selected?.ticks.length && <p>Waiting for live ticks from Deriv…</p>}
-                        </div>
-                    </div>
-                    <div className='eo-terminal__card eo-terminal__journal'>
-                        <div className='eo-terminal__card-heading'><h3>Trading journal</h3><span>{accountJournal.length} saved records</span></div>
-                        {accountJournal.length ? accountJournal.slice(0, 8).map(row => (
-                            <div className='eo-terminal__journal-row' key={row.id}>
-                                <div><strong>{row.symbol}{row.contractType ? ` · ${row.contractType}` : ''}</strong><small title={row.reason}>{row.contractId ? `Contract #${row.contractId} · ` : row.status === 'SKIPPED' ? `Skipped · ${row.sampleSize || 0} ticks · E ${row.evenCount || 0}/O ${row.oddCount || 0} · score ${row.evidenceScore || 0}% · ` : ''}{new Date(row.createdAt).toLocaleTimeString()}</small></div>
-                                <b className={`eo-terminal__journal-status eo-terminal__journal-status--${row.status.toLowerCase()}`}>{row.status}</b>
-                                <span>{row.profit === undefined ? '—' : row.profit.toFixed(2)}</span>
-                            </div>
-                        )) : <p className='eo-terminal__journal-empty'>No contracts executed yet. Analysis scans remain separate from executed trades.</p>}
-                    </div>
-                </div>
-
-                <aside className='eo-terminal__side'>
-                    <div className='eo-terminal__card'>
-                        <h3>Risk configuration</h3>
-                        <label>Base stake amount<input type='number' min='0.35' step='0.01' value={stake} onChange={event => { setStake(event.target.value); setLossProgression(0); }} /></label>
-                        <div className='eo-terminal__martingale'><div><strong>Martingale · 1.5×</strong><small>{martingaleEnabled ? `Enabled · loss step ${lossProgression}/${MAX_MARTINGALE_STEPS} · next stake ${effectiveStake.toFixed(2)} ${authData?.currency || ''}` : 'Disabled · fixed base stake'}</small></div><label className='eo-terminal__switch'><input type='checkbox' checked={martingaleEnabled} onChange={event => { setMartingaleEnabled(event.target.checked); setLossProgression(0); }} /><span>{martingaleEnabled ? 'ON' : 'OFF'}</span></label></div>
-                        <div className='eo-terminal__recovery'>
-                            <div className={recoveryStep >= 1 ? 'is-active' : ''}><small>1ST RECOVERY</small><b>{recoveryStep === 1 ? 'NEXT UP' : recoveryStep > 1 ? 'COMPLETED' : 'READY'}</b></div>
-                            <div className={recoveryStep >= 2 ? 'is-active' : ''}><small>2ND RECOVERY</small><b>{recoveryStep === 2 ? 'NEXT UP' : recoveryStep > 2 ? 'COMPLETED' : 'READY'}</b></div>
-                            <div className={recoveryStep >= 3 ? 'is-active' : ''}><small>3RD RECOVERY</small><b>{recoveryStep === 3 ? 'NEXT UP' : cooldown ? 'COMPLETED' : 'READY'}</b></div>
-                            <div className={cooldown ? 'is-cooldown' : ''}><small>4TH · COOLDOWN</small><b>{cooldown ? 'ACTIVE' : 'NOT TRIGGERED'}</b></div>
-                        </div>
-                        <label>Stop-loss<input type='number' min='0' step='0.01' value={stopLoss} onChange={event => setStopLoss(event.target.value)} /></label>
-                        <label>Take-profit<input type='number' min='0' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
-                        <label>Execution mode<select value={mode} onChange={event => changeMode(event.target.value as 'analysis' | 'demo' | 'live')}><option value='analysis'>Analysis only</option><option value='demo'>Demo auto execution</option><option value='live'>Live auto execution</option></select></label>
-                        <label className='eo-terminal__toggle'><input type='checkbox' checked={autoRestart} disabled={mode === 'analysis'} onChange={event => { autoRestartAllowed.current = event.target.checked; setAutoRestart(event.target.checked); }} /> Auto-restart after settlement (fresh sample required)</label>
-                        <div className='eo-terminal__session-pnl'><span>Session P/L · Trades {tradesThisSession}/10</span><strong>{sessionPnl.toFixed(2)} {authData?.currency || ''}</strong></div>
-                        <p className='eo-terminal__execution-status'>{executionStatus}</p>
-                        
-                        <p className='eo-terminal__disclaimer'>Stake, stop-loss and take-profit are enforced by the session risk gate. One trade per fresh sample · max 10 per session. Optional Martingale is capped at three 1.5× loss steps and remains subject to the same 2% balance exposure gate; it can be blocked when the next stake exceeds that limit.</p>
-                        <button type='button' onClick={startFreshAnalysis} disabled={running || executionLock.current}>Start analysis</button>
-                        <button type='button' className='eo-terminal__arm' onClick={armOneTrade} disabled={executionArmed || executionLock.current}>Run bot · guarded execution</button>
-                        <button type='button' className='eo-terminal__stop' onClick={stopBot} disabled={!running && !executionArmed && !executionLock.current}>Stop / disarm</button>
-                        <button type='button' className='eo-terminal__reset' onClick={resetRecovery} disabled={!cooldown && recoveryStep === 0 && lossProgression === 0}>Reset recovery</button>
-                    </div>
-                    <div className='eo-terminal__card eo-terminal__portrait'>
-                        <div className='eo-terminal__robot' aria-hidden='true'>
-                            <svg viewBox='0 0 96 96' role='img'>
-                                <defs>
-                                    <linearGradient id='eo-android-metal' x1='0' y1='0' x2='1' y2='1'>
-                                        <stop offset='0%' stopColor='#f9fffb' />
-                                        <stop offset='55%' stopColor='#c6e8d2' />
-                                        <stop offset='100%' stopColor='#4d9b6c' />
-                                    </linearGradient>
-                                    <linearGradient id='eo-android-glow' x1='0' y1='0' x2='1' y2='1'>
-                                        <stop offset='0%' stopColor='#1b9b58' />
-                                        <stop offset='100%' stopColor='#063d28' />
-                                    </linearGradient>
-                                </defs>
-                                <path d='M48 5 69 13 82 31 86 55 73 80 48 92 23 80 10 55 14 31 27 13Z' fill='url(#eo-android-metal)' stroke='#247a4b' strokeWidth='2'/>
-                                <path d='M25 30Q17 17 33 10Q48 3 63 10Q79 17 71 30L77 58Q74 76 64 87L59 77L64 49Q62 28 48 25Q34 28 32 49L37 77L31 87Q22 76 19 58Z' fill='#124b32' stroke='#0d6039' strokeWidth='2'/>
-                                <path d='M29 26Q48 13 67 26L72 52Q68 72 48 78Q28 72 24 52Z' fill='#f7fff9' stroke='#287c4d' strokeWidth='2'/>
-                                <path d='M25 34 16 26 21 48 27 49M71 34 80 26 75 48 69 49' fill='url(#eo-android-glow)' stroke='#145c38' strokeWidth='2'/>
-                                <path d='M31 40Q39 34 44 40M52 40Q59 34 65 40' fill='none' stroke='#17683f' strokeWidth='2.5' strokeLinecap='round'/>
-                                <path d='M33 44 30 41M43 44 45 41M54 41 56 44M64 41 66 44' fill='none' stroke='#17683f' strokeWidth='1.5' strokeLinecap='round'/>
-                                <ellipse cx='38' cy='48' rx='4' ry='3' fill='#16834a'/><ellipse cx='59' cy='48' rx='4' ry='3' fill='#16834a'/>
-                                <path d='M48 48 45 57 51 57M39 65Q48 70 57 65' fill='none' stroke='#397e56' strokeWidth='2' strokeLinecap='round'/>
-                                <path d='M28 57 34 62M68 57 62 62' fill='none' stroke='#8ac9a0' strokeWidth='2' strokeLinecap='round'/>
-                                <path d='M36 9 48 3 60 9 56 20 40 20Z' fill='url(#eo-android-glow)' stroke='#247a4b' strokeWidth='2'/>
-                                <path d='M44 4 48 0 52 4' fill='none' stroke='#baf2cf' strokeWidth='2'/>
-                            </svg>
-                        </div>
-                        <div><strong>Parity intelligence</strong><span>Parity analysis and execution controls</span></div>
-                    </div>
-                </aside>
+            <div className='eo-prime-timers'>
+                <div><small>ENGINE STATUS</small><strong>{running ? 'Running' : executionLock.current ? 'Settling' : 'Idle'}</strong></div>
+                <div><small>ANALYSIS WINDOW</small><strong>10 seconds max</strong></div>
             </div>
-            <footer className='eo-terminal__notice'>{notice} <strong>{mode === 'analysis' ? 'Analysis-only mode · no trades will be placed.' : `${mode.toUpperCase()} mode · execution requires an armed bot and every safety gate.`}</strong></footer>
+
+            <nav className='eo-prime-tabs'><span className='is-active'>Trading Bot</span><span>Trading History · {accountJournal.length}</span></nav>
+
+            <div className='eo-prime-balance'><div><small>ACCOUNT BALANCE</small><strong>{authData?.balance !== undefined ? Number(authData.balance).toFixed(2) : '—'}</strong><span>{authData?.currency || 'Connect Deriv to load balance'}</span></div><div className='eo-prime-wallet'>▣</div></div>
+
+            <div className='eo-prime-config'>
+                <h3>Configuration</h3>
+                <div className='eo-prime-fields'>
+                    <label>STAKE ({authData?.currency || '$'})<input type='number' min='0.35' step='0.01' value={stake} onChange={event => setStake(event.target.value)} /></label>
+                    <label>NUMBER OF RUNS<input type='number' min='1' max='100' step='1' value={numberOfRuns} onChange={event => setNumberOfRuns(event.target.value)} /></label>
+                    <label>TARGET PROFIT ({authData?.currency || '$'})<input type='number' min='0.01' step='0.01' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} /></label>
+                    <label>STOP LOSS ({authData?.currency || '$'})<input type='number' min='0.01' step='0.01' value={stopLoss} onChange={event => setStopLoss(event.target.value)} /></label>
+                    <label>MAX CONSECUTIVE LOSSES<input type='number' min='1' max='20' step='1' value={maxConsecutiveLosses} onChange={event => setMaxConsecutiveLosses(event.target.value)} /></label>
+                    <label>ACCOUNT MODE<select value={mode} onChange={event => changeMode(event.target.value as 'analysis' | 'demo' | 'live')}><option value='analysis'>Analysis only</option><option value='demo'>Demo account</option><option value='live'>Real account · explicit opt-in</option></select></label>
+                </div>
+                <div className='eo-prime-actions'>
+                    <button type='button' onClick={armOneTrade} disabled={executionArmed || executionLock.current || running}>START BOT</button>
+                    <button type='button' className='eo-terminal__stop' onClick={stopBot} disabled={!running && !executionArmed && !executionLock.current}>STOP BOT</button>
+                </div>
+                <p className='eo-terminal__execution-status'>{executionStatus}</p>
+                <p className='eo-terminal__disclaimer'>No API token is entered or displayed here. Connect using the secure Deriv authorization flow. Martingale is not used. Orders are blocked until account, market, entry and risk checks pass.</p>
+            </div>
+
+            <div className='eo-prime-results'>
+                <div className='eo-prime-result-heading'><h3>Trade Results</h3><span>Verified Deriv settlements only</span></div>
+                <div className='eo-prime-result-grid'>
+                    <div className='eo-prime-result eo-prime-result--win'><small>WIN 🏆</small><strong>{sessionWins}</strong><span>{accountJournal.find(row => row.status === 'WON')?.contractType || 'Awaiting verified win'}</span></div>
+                    <div className='eo-prime-result eo-prime-result--loss'><small>LOSS</small><strong>{sessionLosses}</strong><span>{accountJournal.find(row => row.status === 'LOST')?.contractType || 'Awaiting verified loss'}</span></div>
+                </div>
+                <div className='eo-prime-prediction'><div><small>SELECTED PARITY CANDIDATE</small><strong>{candidateReady ? pipeline.selectedParity : 'WAIT'}</strong><span>{selected?.name || 'No market selected'} · sample {total}/30 · observed evidence {pipeline.evidenceScore}%</span></div><div><small>LATEST OBSERVED DIGIT</small><strong>{latest ? latest.digit : '—'}</strong><span>{latest ? (latest.digit % 2 === 0 ? 'EVEN' : 'ODD') : 'No validated tick yet'}</span></div></div>
+                <div className='eo-prime-markets'><div className='eo-prime-result-heading'><h3>Volatility Markets</h3><span>{availableSymbols.length}/13 active in Deriv catalogue</span></div>
+                    {availableSymbols.map((item: any) => { const symbol = String(item.symbol || item.underlying_symbol || ''); const market = symbols.find(row => row.symbol === symbol); const isSelected = selected?.symbol === symbol; return <div className='eo-prime-market-row' key={symbol}><span>{item.display_name || item.symbol_display_name || symbol}</span><small>{market?.ticks.length || 0}/30 ticks · {market?.status || 'Standby'}</small><b className={isSelected ? 'is-selected' : ''}>{isSelected ? 'SELECTED' : market?.status === 'Unavailable' ? 'UNAVAILABLE' : 'MONITOR'}</b></div>; })}
+                    {!availableSymbols.length && <p className='eo-terminal__journal-empty'>Connect Deriv to retrieve the active market catalogue and monitor the 13 configured indices.</p>}
+                </div>
+                <div className='eo-prime-history'><div className='eo-prime-result-heading'><h3>Trading History</h3><span>{accountJournal.length} records</span></div>
+                    {accountJournal.slice(0,10).map(row => <div className='eo-terminal__journal-row' key={row.id}><div><strong>{row.symbol} · {row.contractType || 'PARITY'}</strong><small>{row.contractId ? 'Contract #' + row.contractId : row.reason || 'Analysis record'} · {new Date(row.createdAt).toLocaleTimeString()}</small></div><b className={`eo-terminal__journal-status eo-terminal__journal-status--${row.status.toLowerCase()}`}>{row.status}</b><span>{row.profit === undefined ? '—' : row.profit.toFixed(2)}</span></div>)}
+                    {!accountJournal.length && <p className='eo-terminal__journal-empty'>No verified trades yet. Results appear here after Deriv settlement.</p>}
+                </div>
+            </div>
+            <footer className='eo-terminal__notice'>{notice}</footer>
         </section>
     );
 };
